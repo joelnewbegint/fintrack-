@@ -9,10 +9,28 @@ const getHeaders = () => {
   return headers;
 };
 
-const handleResponse = async (res) => {
-  const data = await res.json();
+export const handleResponse = async (res) => {
+  const contentType = res.headers.get('content-type') || '';
+  const text = await res.text();
+
+  let data;
+  if (contentType.includes('application/json') || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`Invalid JSON received from server (${res.status}).`);
+    }
+  } else {
+    if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+      throw new Error(
+        `Server connection error (${res.status}): Server returned HTML instead of JSON. Ensure the VK BANKER'S backend is running on http://localhost:5000.`
+      );
+    }
+    throw new Error(`Server error (${res.status}): ${text.slice(0, 120)}`);
+  }
+
   if (!res.ok || data.success === false) {
-    throw new Error(data.message || 'API request failed');
+    throw new Error(data.message || `Request failed with status ${res.status}`);
   }
   return data;
 };

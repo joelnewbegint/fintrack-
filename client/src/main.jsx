@@ -1,7 +1,31 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+export const getApiBase = () => {
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem('fintrack_api_url');
+    if (custom && custom.trim()) {
+      return custom.trim().replace(/\/+$/, '');
+    }
+  }
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl && envUrl.trim() && !envUrl.includes('YOUR-API')) {
+    return envUrl.trim().replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'http://localhost:5000';
+    }
+  }
+  return '';
+};
+
 const _fetch = window.fetch.bind(window);
-window.fetch = (url, opts) =>
-  _fetch(typeof url === 'string' && url.startsWith('/api') ? API_BASE + url : url, opts);
+window.fetch = (url, opts) => {
+  if (typeof url === 'string' && url.startsWith('/api')) {
+    const base = getApiBase();
+    return _fetch(base ? `${base}${url}` : url, opts);
+  }
+  return _fetch(url, opts);
+};
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';

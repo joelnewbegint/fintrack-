@@ -2,6 +2,27 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
+const safeParseJson = async (res) => {
+  const contentType = res.headers.get('content-type') || '';
+  const text = await res.text();
+
+  if (contentType.includes('application/json') || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`Invalid JSON received from server (${res.status}).`);
+    }
+  }
+
+  if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+    throw new Error(
+      `Unable to reach VK BANKER'S backend (${res.status}). Please verify the backend server is running on http://localhost:5000.`
+    );
+  }
+
+  throw new Error(`Server error (${res.status}): ${text.slice(0, 100)}`);
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('fintrack_user');
@@ -22,7 +43,7 @@ export const AuthProvider = ({ children }) => {
               Authorization: `Bearer ${token}`,
             },
           });
-          const data = await res.json();
+          const data = await safeParseJson(res);
           if (data.success && data.user) {
             setUser(data.user);
             localStorage.setItem('fintrack_user', JSON.stringify(data.user));
@@ -49,9 +70,9 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const data = await safeParseJson(res);
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(data.message || 'Login failed. Please check credentials.');
       }
 
       setToken(data.token);
