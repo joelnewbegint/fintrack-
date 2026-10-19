@@ -71,15 +71,21 @@ export const Login = () => {
     }
   };
 
-  const handleQuickLogin = (role) => {
-    if (role === 'owner') {
-      setEmail('owner@fintrack.com');
-      setPassword('admin123');
-    } else {
-      setEmail('agent@fintrack.com');
-      setPassword('agent123');
-    }
+  const handleQuickLogin = async (role) => {
     setError('');
+    const targetEmail = role === 'owner' ? 'owner@fintrack.com' : 'agent@fintrack.com';
+    const targetPass = role === 'owner' ? 'admin123' : 'agent123';
+    setEmail(targetEmail);
+    setPassword(targetPass);
+
+    try {
+      setLoading(true);
+      await login(targetEmail, targetPass);
+    } catch (err) {
+      setError(err.message || 'Login failed. Please check credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
