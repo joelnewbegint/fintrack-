@@ -37,13 +37,13 @@ export const Navbar = ({
     return (
       <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/60 dark:border-sky-800/40 transition-colors pt-safe">
         <div className="px-3 h-14 flex items-center justify-between gap-2 max-w-full">
-          {/* Left: Logo Icon + "FinTrack" title only */}
+          {/* Left: Logo Icon + "VK BANKER'S" title only */}
           <div className="flex items-center space-x-2.5 shrink-0 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-400 via-sky-500 to-sky-600 flex items-center justify-center text-white shadow-md shadow-sky-500/25 border border-white/60 shrink-0">
               <Wallet className="w-4 h-4" />
             </div>
             <span className="font-black text-base tracking-tight bg-gradient-to-r from-sky-600 to-sky-500 dark:from-sky-300 dark:to-sky-400 bg-clip-text text-transparent truncate">
-              FinTrack
+              VK BANKER'S
             </span>
           </div>
 
@@ -101,10 +101,10 @@ export const Navbar = ({
             <div>
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <span className="font-black text-lg sm:text-xl tracking-tight bg-gradient-to-r from-sky-600 to-sky-500 dark:from-sky-300 dark:to-sky-400 bg-clip-text text-transparent">
-                  FinTrack
+                  VK BANKER'S & FINANCE
                 </span>
                 <span className="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 border border-sky-200/60 dark:border-sky-700/60">
-                  {lang === 'ta' ? 'தமிழ்நாடு' : 'TN Finance'}
+                  {lang === 'ta' ? 'வி.கே. பேங்கர்ஸ்' : "VK BANKER'S"}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-none hidden sm:block">

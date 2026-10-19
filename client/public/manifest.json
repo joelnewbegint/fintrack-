@@ -1,7 +1,7 @@
 {
-  "name": "FinTrack - Private Finance & Installment Ledger",
-  "short_name": "FinTrack",
-  "description": "Smart Daily, Weekly, and Monthly installment finance tracker for Tamil Nadu financiers",
+  "name": "VK BANKER'S & FINANCE - Private Finance & Installment Ledger",
+  "short_name": "VK BANKER'S",
+  "description": "Smart Daily, Weekly, and Monthly installment finance tracker for VK Banker's & Finance",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

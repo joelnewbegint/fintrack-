@@ -142,7 +142,7 @@ const startServer = async () => {
       // Initialize WhatsApp client with Socket.io instance
       const defaultNumber = process.env.WHATSAPP_NUMBER || '919842112345';
       console.log(`📱 FinTrack WhatsApp service configured for default number: +${defaultNumber}`);
-      initWhatsApp(io, defaultNumber).catch((err) => {
+      if (process.env.ENABLE_WHATSAPP === 'true') initWhatsApp(io, defaultNumber).catch((err) => {
         console.warn('WhatsApp background initialization note:', err.message);
       });
     });

@@ -4,12 +4,12 @@ const settingsSchema = new mongoose.Schema(
   {
     businessName: {
       type: String,
-      default: 'Sri Murugan Finance',
+      default: "VK BANKER'S & FINANCE",
       trim: true,
     },
     businessNameTamil: {
       type: String,
-      default: 'ஸ்ரீ முருகன் பைனான்ஸ்',
+      default: 'வி.கே. பேங்கர்ஸ் & பைனான்ஸ்',
       trim: true,
     },
     ownerName: {

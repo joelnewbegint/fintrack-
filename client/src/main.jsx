@@ -1,3 +1,8 @@
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const _fetch = window.fetch.bind(window);
+window.fetch = (url, opts) =>
+  _fetch(typeof url === 'string' && url.startsWith('/api') ? API_BASE + url : url, opts);
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';

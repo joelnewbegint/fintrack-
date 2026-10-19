@@ -11,9 +11,9 @@ export const WhatsAppReminderModal = ({ item, onClose }) => {
   const dueDate = formatDate(item.dueDate || new Date());
   const loanNo = item.loanNo || '';
 
-  const tamilMessage = `வணக்கம் ${customerName},\nஸ்ரீ முருகன் பைனான்ஸ் நிறுவனத்திலிருந்து நினைவூட்டல்.\nஉங்கள் கடன் கணக்கு (${loanNo}) தவணைத் தொகை ${amount} ${dueDate} அன்று செலுத்த வேண்டியுள்ளது.\nதயவுசெய்து உரிய நேரத்தில் செலுத்தி ஒத்துழைக்குமாறு கேட்டுக்கொள்கிறோம்.\nநன்றி,\nஸ்ரீ முருகன் பைனான்ஸ், கோயம்புத்தூர்.`;
+  const tamilMessage = `வணக்கம் ${customerName},\nவி.கே. பேங்கர்ஸ் & பைனான்ஸ் நிறுவனத்திலிருந்து நினைவூட்டல்.\nஉங்கள் கடன் கணக்கு (${loanNo}) தவணைத் தொகை ${amount} ${dueDate} அன்று செலுத்த வேண்டியுள்ளது.\nதயவுசெய்து உரிய நேரத்தில் செலுத்தி ஒத்துழைக்குமாறு கேட்டுக்கொள்கிறோம்.\nநன்றி,\nவி.கே. பேங்கர்ஸ் & பைனான்ஸ், கோயம்புத்தூர்.`;
 
-  const englishMessage = `Dear ${customerName},\nReminder from Sri Murugan Finance.\nYour installment amount of ${amount} for Loan Account ${loanNo} is due on ${dueDate}.\nPlease settle the payment promptly.\nThank you,\nSri Murugan Finance, Coimbatore.`;
+  const englishMessage = `Dear ${customerName},\nReminder from VK Banker's & Finance.\nYour installment amount of ${amount} for Loan Account ${loanNo} is due on ${dueDate}.\nPlease settle the payment promptly.\nThank you,\nVK Banker's & Finance, Coimbatore.`;
 
   const [message, setMessage] = useState(tamilMessage);
   const [langChoice, setLangChoice] = useState('ta');

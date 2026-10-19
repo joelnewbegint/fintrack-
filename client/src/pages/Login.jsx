@@ -79,12 +79,12 @@ export const Login = () => {
             <Wallet className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-sky-600 to-sky-500 dark:from-sky-300 dark:to-sky-400 bg-clip-text text-transparent">
-            FinTrack
+            VK BANKER'S & FINANCE
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
             {lang === 'ta'
-              ? 'தமிழ்நாடு தவணை நிதி மேலாண்மை செயலி'
-              : 'Private Lending & Microfinance Management'}
+              ? 'வி.கே. பேங்கர்ஸ் & பைனான்ஸ் கடன் மேலாண்மை செயலி'
+              : "VK Banker's Private Finance & Lending Management"}
           </p>
         </div>
 

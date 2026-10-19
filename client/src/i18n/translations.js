@@ -1,8 +1,8 @@
 export const translations = {
   en: {
     // Navigation
-    appName: 'FinTrack',
-    appSubtitle: 'Private Finance Ledger',
+    appName: "VK BANKER'S",
+    appSubtitle: "Banker's & Finance Ledger",
     dashboard: 'Dashboard',
     customers: 'Customers',
     loans: 'Loans',
@@ -129,8 +129,8 @@ export const translations = {
   },
   ta: {
     // Navigation
-    appName: 'FinTrack',
-    appSubtitle: 'தவணை நிதி மேலாண்மை',
+    appName: 'வி.கே. பேங்கர்ஸ்',
+    appSubtitle: 'பேங்கர்ஸ் & பைனான்ஸ் மேலாண்மை',
     dashboard: 'டாஷ்போர்டு',
     customers: 'வாடிக்கையாளர்கள்',
     loans: 'கடன் கணக்குகள்',

@@ -30,8 +30,8 @@ export const Settings = () => {
   const [activeSection, setActiveSection] = useState('whatsapp');
 
   const [settings, setSettings] = useState({
-    businessName: 'Sri Murugan Finance',
-    businessNameTamil: 'ஸ்ரீ முருகன் பைனான்ஸ்',
+    businessName: "VK BANKER'S & FINANCE",
+    businessNameTamil: 'வி.கே. பேங்கர்ஸ் & பைனான்ஸ்',
     ownerName: 'K. Subramanian',
     phone: '+91 98421 12345',
     address: '45, Cross Cut Road, Gandhipuram, Coimbatore - 641012',

@@ -26,7 +26,7 @@ export const ReceiptModal = ({ payment, onClose }) => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('SRI MURUGAN FINANCE', 105, 16, { align: 'center' });
+      doc.text("VK BANKER'S & FINANCE", 105, 16, { align: 'center' });
 
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
@@ -98,7 +98,7 @@ export const ReceiptModal = ({ payment, onClose }) => {
 
   const handleShareWhatsApp = () => {
     const phone = customer.phone?.replace(/[^0-9]/g, '');
-    const message = `வணக்கம் ${customer.name || ''},\nஸ்ரீ முருகன் பைனான்ஸ் நிறுவனத்தில் உங்கள் கடன் கணக்கு (${loan.loanNo || ''}) தவணைத் தொகை ${formatCurrency(payment.amount)} (${payment.mode?.toUpperCase()}) வெற்றிகரமாக பெறப்பட்டது.\nரசீது எண்: ${payment.receiptNo}\nதேதி: ${formatDate(payment.date)}\nமீதி இருப்பு: ${formatCurrency(loan.remainingBalance || 0)}.\nநன்றி!`;
+    const message = `வணக்கம் ${customer.name || ''},\nவி.கே. பேங்கர்ஸ் & பைனான்ஸ் நிறுவனத்தில் உங்கள் கடன் கணக்கு (${loan.loanNo || ''}) தவணைத் தொகை ${formatCurrency(payment.amount)} (${payment.mode?.toUpperCase()}) வெற்றிகரமாக பெறப்பட்டது.\nரசீது எண்: ${payment.receiptNo}\nதேதி: ${formatDate(payment.date)}\nமீதி இருப்பு: ${formatCurrency(loan.remainingBalance || 0)}.\nநன்றி!`;
     const url = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
@@ -128,10 +128,10 @@ export const ReceiptModal = ({ payment, onClose }) => {
           {/* Header */}
           <div className="text-center pb-4 border-b-2 border-dashed border-slate-300 dark:border-slate-700">
             <h2 className="text-xl font-extrabold text-blue-600 dark:text-blue-400 tracking-tight">
-              ஸ்ரீ முருகன் பைனான்ஸ்
+              வி.கே. பேங்கர்ஸ் & பைனான்ஸ்
             </h2>
             <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-              SRI MURUGAN FINANCE
+              VK BANKER'S & FINANCE
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               45, Cross Cut Road, Gandhipuram, Coimbatore - 641012
@@ -205,7 +205,7 @@ export const ReceiptModal = ({ payment, onClose }) => {
               <span>Collected By: {collector.name || 'Owner'}</span>
               <div className="text-right">
                 <p className="font-semibold">Authorized Signatory</p>
-                <p className="text-[10px] text-slate-400">Sri Murugan Finance</p>
+                <p className="text-[10px] text-slate-400">VK Banker's & Finance</p>
               </div>
             </div>
           </div>

@@ -36,7 +36,7 @@ export const WhatsAppConnect = () => {
   // Initialize Socket.io connection for real-time code and status updates
   useEffect(() => {
     // Connect to server socket
-    const socket = io(window.location.origin, {
+    const socket = io(import.meta.env.VITE_API_BASE_URL || window.location.origin, {
       transports: ['websocket', 'polling'],
     });
 
