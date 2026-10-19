@@ -1,0 +1,197 @@
+import React from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useDeviceMode } from '../../context/DeviceModeContext';
+import DisplayModeSwitcher from './DisplayModeSwitcher';
+import {
+  Sun,
+  Moon,
+  Globe,
+  LogOut,
+  ShieldCheck,
+  UserCheck,
+  Wallet,
+  Menu,
+  Search,
+  Bell,
+  User,
+} from 'lucide-react';
+
+export const Navbar = ({
+  onToggleMobileMenu,
+  onOpenSearch,
+  onAddPayment,
+  onOpenMoreSheet,
+  onOpenNotifications,
+}) => {
+  const { user, logout, isOwner } = useAuth();
+  const { lang, toggleLanguage, t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
+  const { isLaptop, isMobile } = useDeviceMode();
+
+  // ----------------------------------------------------
+  // MOBILE HEADER (Max 56px, glass, safe-area-inset-top)
+  // ----------------------------------------------------
+  if (isMobile) {
+    return (
+      <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/60 dark:border-sky-800/40 transition-colors pt-safe">
+        <div className="px-3 h-14 flex items-center justify-between gap-2 max-w-full">
+          {/* Left: Logo Icon + "FinTrack" title only */}
+          <div className="flex items-center space-x-2.5 shrink-0 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-400 via-sky-500 to-sky-600 flex items-center justify-center text-white shadow-md shadow-sky-500/25 border border-white/60 shrink-0">
+              <Wallet className="w-4 h-4" />
+            </div>
+            <span className="font-black text-base tracking-tight bg-gradient-to-r from-sky-600 to-sky-500 dark:from-sky-300 dark:to-sky-400 bg-clip-text text-transparent truncate">
+              FinTrack
+            </span>
+          </div>
+
+          {/* Right: Bell / Notification Icon + Avatar Button */}
+          <div className="flex items-center space-x-2 shrink-0">
+            {/* Bell / Notification Button */}
+            <button
+              onClick={onOpenNotifications || onOpenMoreSheet}
+              className="relative p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-slate-700 dark:text-slate-300 active:scale-95 transition"
+              aria-label="Notifications"
+            >
+              <Bell className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+              {/* Notification Badge Dot */}
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900" />
+            </button>
+
+            {/* Avatar Button -> Opens Slide-in More Sheet */}
+            <button
+              onClick={onOpenMoreSheet}
+              className="p-1 min-h-[44px] min-w-[44px] flex items-center justify-center active:scale-95 transition"
+              aria-label="User profile and settings"
+            >
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-sky-600 text-white font-black text-xs flex items-center justify-center shadow-md shadow-sky-500/25 border border-white/80 ring-2 ring-sky-300/60 dark:ring-sky-700/60">
+                {user?.name ? user.name[0].toUpperCase() : 'U'}
+              </div>
+            </button>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
+  // ----------------------------------------------------
+  // DESKTOP & TABLET HEADER
+  // ----------------------------------------------------
+  return (
+    <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/60 dark:border-sky-800/40 transition-colors">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+        {/* Brand / Logo */}
+        <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
+          {onToggleMobileMenu && (
+            <button
+              onClick={onToggleMobileMenu}
+              className="md:hidden p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+            </button>
+          )}
+
+          <div className="flex items-center space-x-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-400 via-sky-500 to-sky-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/30 border border-white/60">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <span className="font-black text-lg sm:text-xl tracking-tight bg-gradient-to-r from-sky-600 to-sky-500 dark:from-sky-300 dark:to-sky-400 bg-clip-text text-transparent">
+                  FinTrack
+                </span>
+                <span className="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 border border-sky-200/60 dark:border-sky-700/60">
+                  {lang === 'ta' ? 'தமிழ்நாடு' : 'TN Finance'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-none hidden sm:block">
+                {t('appSubtitle')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Laptop Mode Search Bar with '/' Shortcut */}
+        {isLaptop && (
+          <div className="hidden lg:flex items-center flex-1 max-w-xs mx-4">
+            <button
+              onClick={onOpenSearch}
+              className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs text-slate-400 hover:border-sky-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all shadow-sm"
+              title="Search loans and customers (Press /)"
+            >
+              <div className="flex items-center space-x-2">
+                <Search className="w-3.5 h-3.5 text-sky-500" />
+                <span>தேடல் / Search...</span>
+              </div>
+              <kbd className="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 font-mono text-[10px] font-bold border border-sky-200/60 dark:border-sky-700/60">
+                /
+              </kbd>
+            </button>
+          </div>
+        )}
+
+        {/* Action Controls & Device Switcher */}
+        <div className="flex items-center space-x-1.5 sm:space-x-2.5">
+          {/* Display Mode Switcher (Mobile / Tablet / Laptop / Auto) */}
+          <DisplayModeSwitcher compact={false} />
+
+          {/* Language Toggle */}
+          <button
+            onClick={toggleLanguage}
+            className="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 min-h-[40px] rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-slate-700 dark:text-slate-200 text-xs font-bold hover:border-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition active:scale-95 shadow-sm"
+            title="Toggle Language / மொழி மாற்றம்"
+          >
+            <Globe className="w-3.5 h-3.5 text-sky-500" />
+            <span className="hidden sm:inline">{lang === 'ta' ? 'English' : 'தமிழ்'}</span>
+          </button>
+
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-slate-700 dark:text-slate-200 hover:text-amber-500 hover:border-sky-400 transition shadow-sm active:scale-95"
+            title="Toggle Dark / Light Theme"
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-4 h-4 text-sky-600" />
+            )}
+          </button>
+
+          {/* User Role Badge */}
+          {user && (
+            <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-medium">
+              {isOwner ? (
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              ) : (
+                <UserCheck className="w-4 h-4 text-sky-500" />
+              )}
+              <div className="flex flex-col text-left">
+                <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[100px]">
+                  {user.name.split(' ')[0]}
+                </span>
+                <span className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold capitalize">
+                  {user.role}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Logout */}
+          <button
+            onClick={logout}
+            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition active:scale-95"
+            title={t('logout')}
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default Navbar;

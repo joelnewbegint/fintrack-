@@ -1,0 +1,369 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* FinTrack Sky Blue + White Palette */
+  --sky-50:  #F0F9FF;
+  --sky-100: #E0F2FE;
+  --sky-200: #BAE6FD;
+  --sky-400: #38BDF8;
+  --sky-500: #0EA5E9;
+  --sky-600: #0284C7;
+  --ink:     #0C4A6E;
+  --muted:   #64748B;
+  --white:   #FFFFFF;
+
+  /* Status Tokens */
+  --status-success: #22C55E;
+  --status-warning: #F59E0B;
+  --status-danger:  #EF4444;
+
+  /* Finance Type Accents */
+  --finance-daily:   #F59E0B; /* Amber */
+  --finance-weekly:  #0EA5E9; /* Sky */
+  --finance-monthly: #14B8A6; /* Teal */
+
+  /* Comfort Spacing Defaults */
+  --density-padding: 1rem;
+  --density-gap: 1rem;
+}
+
+@layer base {
+  html {
+    font-family: 'Poppins', 'Noto Sans Tamil', system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    transition: font-size 0.2s ease;
+  }
+
+  body {
+    background: linear-gradient(135deg, #F0F9FF 0%, #FFFFFF 50%, #E0F2FE 100%);
+    background-attachment: fixed;
+    color: #0C4A6E;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .dark body {
+    background: linear-gradient(135deg, #031525 0%, #07263d 50%, #0b3956 100%);
+    background-attachment: fixed;
+    color: #F0F9FF;
+  }
+}
+
+/* ========================================================
+   COMFORT SETTINGS SCALING (Text Size, Density, Motion)
+======================================================== */
+html[data-text-size="normal"] {
+  font-size: 16px;
+}
+html[data-text-size="large"] {
+  font-size: 17.5px;
+}
+html[data-text-size="xl"] {
+  font-size: 19.5px;
+}
+
+html[data-density="compact"] {
+  --density-padding: 0.625rem;
+  --density-gap: 0.625rem;
+}
+html[data-density="comfortable"] {
+  --density-padding: 1rem;
+  --density-gap: 1rem;
+}
+
+/* Reduced Motion Override */
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Tabular Numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ========================================================
+   GLASSMORPHISM CORE (.glass, .glass-hover, .glass-panel)
+======================================================== */
+.glass {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 32px rgba(14, 165, 233, 0.15);
+  border-radius: 20px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@supports not (backdrop-filter: blur(16px)) {
+  .glass {
+    background: rgba(255, 255, 255, 0.92);
+  }
+}
+
+.dark .glass {
+  background: rgba(12, 74, 110, 0.45);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  box-shadow: 0 8px 32px rgba(2, 132, 199, 0.25);
+}
+
+.glass-hover {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+.glass-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(14, 165, 233, 0.25);
+  border-color: rgba(56, 189, 248, 0.75);
+}
+.dark .glass-hover:hover {
+  box-shadow: 0 16px 40px rgba(56, 189, 248, 0.3);
+  border-color: rgba(56, 189, 248, 0.6);
+}
+
+/* Glass Panels (Header, Sidebar, Modals) */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 32px rgba(14, 165, 233, 0.12);
+}
+
+.dark .glass-panel {
+  background: rgba(8, 47, 73, 0.65);
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  box-shadow: 0 8px 32px rgba(2, 132, 199, 0.22);
+}
+
+/* Reusable Glass Card alias */
+.glass-card {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 32px rgba(14, 165, 233, 0.12);
+  border-radius: 20px;
+}
+
+.dark .glass-card {
+  background: rgba(12, 74, 110, 0.45);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  box-shadow: 0 8px 32px rgba(2, 132, 199, 0.25);
+}
+
+/* ========================================================
+   SKY BLUE BUTTONS & INPUTS
+======================================================== */
+.btn-sky-primary {
+  background: linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%);
+  color: #FFFFFF;
+  font-weight: 700;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-sky-primary:hover {
+  background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%);
+  box-shadow: 0 10px 28px rgba(14, 165, 233, 0.5);
+  transform: translateY(-2px);
+}
+.btn-sky-primary:active {
+  transform: scale(0.97);
+}
+
+.btn-sky-secondary {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(56, 189, 248, 0.6);
+  color: #0C4A6E;
+  font-weight: 700;
+  border-radius: 14px;
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.08);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.dark .btn-sky-secondary {
+  background: rgba(12, 74, 110, 0.4);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #E0F2FE;
+}
+.btn-sky-secondary:hover {
+  background: rgba(224, 242, 254, 0.85);
+  border-color: #0EA5E9;
+  color: #0284C7;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.2);
+}
+.dark .btn-sky-secondary:hover {
+  background: rgba(14, 165, 233, 0.25);
+  border-color: #38BDF8;
+  color: #FFFFFF;
+}
+.btn-sky-secondary:active {
+  transform: scale(0.97);
+}
+
+/* Glass Input: 48px height, sky focus ring */
+.input-glass {
+  height: 48px;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(186, 230, 253, 0.8);
+  border-radius: 14px;
+  color: #0C4A6E;
+  padding: 0 16px;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+.dark .input-glass {
+  background: rgba(12, 74, 110, 0.35);
+  border-color: rgba(56, 189, 248, 0.25);
+  color: #F0F9FF;
+}
+.input-glass:focus {
+  outline: none;
+  border-color: #38BDF8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.35);
+}
+.input-glass::placeholder {
+  color: #94A3B8;
+}
+
+/* ========================================================
+   DEVICE MODE FRAME OVERRIDE (For testing mobile on desktop)
+======================================================== */
+html[data-device="mobile"][data-device-override="true"] #root {
+  max-width: 430px;
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+  overflow-x: hidden;
+  border-left: 1px solid rgba(56, 189, 248, 0.35);
+  border-right: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 70px rgba(14, 165, 233, 0.28);
+  min-height: 100vh;
+}
+
+html[data-device="tablet"][data-device-override="true"] #root {
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+  border-left: 1px solid rgba(56, 189, 248, 0.2);
+  border-right: 1px solid rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 40px rgba(14, 165, 233, 0.15);
+  min-height: 100vh;
+}
+
+/* ========================================================
+   MOBILE PERFORMANCE & TYPOGRAPHY ENHANCEMENTS
+======================================================== */
+html[data-device="mobile"] {
+  overflow-x: hidden;
+}
+
+html[data-device="mobile"] body {
+  overflow-x: hidden;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+/* Reduce blur to 8px on mobile for butter-smooth Android performance */
+html[data-device="mobile"] .glass,
+html[data-device="mobile"] .glass-panel,
+html[data-device="mobile"] .glass-card {
+  backdrop-filter: blur(8px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(140%) !important;
+}
+
+/* Mobile heading clamps: max 20px */
+html[data-device="mobile"] h1 {
+  font-size: clamp(1.125rem, 5vw, 1.25rem); /* max 20px */
+  line-height: 1.35;
+}
+
+html[data-device="mobile"] h2 {
+  font-size: clamp(1rem, 4.5vw, 1.15rem);
+  line-height: 1.35;
+}
+
+html[data-device="mobile"] h3 {
+  font-size: clamp(0.9rem, 4vw, 1rem);
+  line-height: 1.35;
+}
+
+/* Prevent iOS text auto-zoom with 16px minimum inputs */
+html[data-device="mobile"] input,
+html[data-device="mobile"] select,
+html[data-device="mobile"] textarea {
+  font-size: 16px !important;
+}
+
+/* Flex min-w-0 safety to prevent clipped flex children */
+html[data-device="mobile"] .flex-1,
+html[data-device="mobile"] .flex > div {
+  min-width: 0;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(14, 165, 233, 0.7);
+}
+
+/* Safe Area Utility */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0rem);
+}
+
+/* Print Stylesheet for Receipt Vouchers */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
