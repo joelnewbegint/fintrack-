@@ -20,9 +20,16 @@ import {
   Settings as SettingsIcon,
   ChevronRight,
   Sparkles,
+  Bell,
 } from 'lucide-react';
 
-export const MobileMoreSheet = ({ isOpen, onClose, onSelectTab }) => {
+export const MobileMoreSheet = ({
+  isOpen,
+  onClose,
+  onSelectTab,
+  onOpenNotifications,
+  unreadNotificationsCount = 0,
+}) => {
   const { user, logout, isOwner } = useAuth();
   const { lang, toggleLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
@@ -134,6 +141,37 @@ export const MobileMoreSheet = ({ isOpen, onClose, onSelectTab }) => {
           <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
             Finance Operations
           </p>
+
+          <button
+            onClick={() => {
+              onClose();
+              if (onOpenNotifications) onOpenNotifications();
+            }}
+            className="w-full min-h-[48px] p-3 rounded-2xl glass hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100 dark:border-sky-900/40 flex items-center justify-between text-left active:scale-98 transition"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="relative w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-950 flex items-center justify-center text-rose-600">
+                <Bell className="w-4 h-4" />
+                {unreadNotificationsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">
+                    {lang === 'ta' ? 'அறிவிப்புகள்' : 'Notifications & Alerts'}
+                  </p>
+                  {unreadNotificationsCount > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 font-extrabold text-[10px]">
+                      {unreadNotificationsCount}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400">Overdue alerts & scheduled dues</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          </button>
 
           {isOwner && (
             <button

@@ -11,6 +11,8 @@ import LoanModal from './components/common/LoanModal';
 import PaymentModal from './components/common/PaymentModal';
 import InvestmentModal from './components/common/InvestmentModal';
 import CustomerModal from './components/common/CustomerModal';
+import NotificationModal from './components/common/NotificationModal';
+import WhatsAppReminderModal from './components/common/WhatsAppReminderModal';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Loans from './pages/Loans';
@@ -39,6 +41,10 @@ export function App() {
   const [showGlobalInvestmentModal, setShowGlobalInvestmentModal] = useState(false);
   const [showGlobalCustomerModal, setShowGlobalCustomerModal] = useState(false);
   const [showMoreSheet, setShowMoreSheet] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [globalWhatsappItem, setGlobalWhatsappItem] = useState(null);
+  const [globalPayItem, setGlobalPayItem] = useState(null);
 
   const [customers, setCustomers] = useState([]);
   const [activeLoans, setActiveLoans] = useState([]);
@@ -55,9 +61,23 @@ export function App() {
     }
   };
 
+  const fetchNotificationsCount = async () => {
+    try {
+      const statsRes = await api.getDashboardStats();
+      const overdue = (statsRes?.overdueLoans || []).length;
+      const todayDue = (statsRes?.todayDueList || []).filter((i) => !i.isPaidToday).length;
+      setNotificationCount(overdue + todayDue);
+    } catch (e) {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchModalData();
+      fetchNotificationsCount();
+      const interval = setInterval(fetchNotificationsCount, 45000);
+      return () => clearInterval(interval);
     }
   }, [user]);
 
@@ -133,14 +153,18 @@ export function App() {
         }}
         onAddPayment={() => setShowGlobalPayModal(true)}
         onOpenMoreSheet={() => setShowMoreSheet(true)}
-        onOpenNotifications={() => {
-          setActiveTab('dashboard');
-        }}
+        onOpenNotifications={() => setShowNotifications(true)}
+        unreadNotificationsCount={notificationCount}
       />
 
       <div className="flex-1 flex max-w-7xl w-full mx-auto relative z-10">
         {/* Desktop / Tablet Sidebar */}
-        <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} />
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={handleTabChange}
+          onOpenNotifications={() => setShowNotifications(true)}
+          unreadNotificationsCount={notificationCount}
+        />
 
         {/* Main Content Area */}
         <main
@@ -224,6 +248,8 @@ export function App() {
         isOpen={showMoreSheet}
         onClose={() => setShowMoreSheet(false)}
         onSelectTab={handleTabChange}
+        onOpenNotifications={() => setShowNotifications(true)}
+        unreadNotificationsCount={notificationCount}
       />
 
       {/* Global Quick Loan Modal (N shortcut or Mobile FAB) */}
@@ -242,11 +268,16 @@ export function App() {
       {/* Global Quick Payment Modal (P shortcut, Navbar button, or Mobile FAB) */}
       {showGlobalPayModal && (
         <PaymentModal
-          loanItem={null}
-          onClose={() => setShowGlobalPayModal(false)}
+          loanItem={globalPayItem}
+          onClose={() => {
+            setShowGlobalPayModal(false);
+            setGlobalPayItem(null);
+          }}
           onSuccess={() => {
             setShowGlobalPayModal(false);
+            setGlobalPayItem(null);
             fetchModalData();
+            fetchNotificationsCount();
             setActiveTab('payments');
           }}
         />
@@ -272,6 +303,38 @@ export function App() {
             setShowGlobalInvestmentModal(false);
             setActiveTab('investments');
           }}
+        />
+      )}
+
+      {/* Global Notification Modal / Drawer */}
+      {showNotifications && (
+        <NotificationModal
+          isOpen={showNotifications}
+          onClose={() => {
+            setShowNotifications(false);
+            fetchNotificationsCount();
+          }}
+          onRecordPayment={(item) => {
+            setShowNotifications(false);
+            setGlobalPayItem(item);
+            setShowGlobalPayModal(true);
+          }}
+          onOpenWhatsApp={(item) => {
+            setShowNotifications(false);
+            setGlobalWhatsappItem(item);
+          }}
+          onViewLoan={(id) => {
+            setShowNotifications(false);
+            setSelectedLoanId(id);
+          }}
+        />
+      )}
+
+      {/* Global WhatsApp Reminder Modal */}
+      {globalWhatsappItem && (
+        <WhatsAppReminderModal
+          item={globalWhatsappItem}
+          onClose={() => setGlobalWhatsappItem(null)}
         />
       )}
     </div>

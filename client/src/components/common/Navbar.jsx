@@ -24,6 +24,7 @@ export const Navbar = ({
   onAddPayment,
   onOpenMoreSheet,
   onOpenNotifications,
+  unreadNotificationsCount = 0,
 }) => {
   const { user, logout, isOwner } = useAuth();
   const { lang, toggleLanguage, t } = useLanguage();
@@ -51,13 +52,19 @@ export const Navbar = ({
           <div className="flex items-center space-x-2 shrink-0">
             {/* Bell / Notification Button */}
             <button
-              onClick={onOpenNotifications || onOpenMoreSheet}
+              onClick={onOpenNotifications}
               className="relative p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-slate-700 dark:text-slate-300 active:scale-95 transition"
               aria-label="Notifications"
+              title="Notifications / அறிவிப்புகள்"
             >
               <Bell className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-              {/* Notification Badge Dot */}
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900" />
+              {unreadNotificationsCount > 0 ? (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white dark:ring-slate-900 animate-pulse">
+                  {unreadNotificationsCount}
+                </span>
+              ) : (
+                <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-white dark:ring-slate-900" />
+              )}
             </button>
 
             {/* Avatar Button -> Opens Slide-in More Sheet */}
@@ -137,6 +144,23 @@ export const Navbar = ({
         <div className="flex items-center space-x-1.5 sm:space-x-2.5">
           {/* Display Mode Switcher (Mobile / Tablet / Laptop / Auto) */}
           <DisplayModeSwitcher compact={false} />
+
+          {/* Desktop Notification Bell */}
+          <button
+            onClick={onOpenNotifications}
+            className="relative p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-slate-700 dark:text-slate-200 hover:border-sky-400 hover:text-sky-600 transition shadow-sm active:scale-95"
+            title="Notifications & Alerts / அறிவிப்புகள்"
+            aria-label="Notifications"
+          >
+            <Bell className="w-4 h-4 text-sky-500" />
+            {unreadNotificationsCount > 0 ? (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white dark:ring-slate-900 animate-pulse">
+                {unreadNotificationsCount}
+              </span>
+            ) : (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-white dark:ring-slate-900" />
+            )}
+          </button>
 
           {/* Language Toggle */}
           <button

@@ -15,10 +15,16 @@ import {
   ChevronRight,
   Keyboard,
   TrendingUp,
+  Bell,
 } from 'lucide-react';
 
-export const Sidebar = ({ activeTab, setActiveTab }) => {
-  const { t } = useLanguage();
+export const Sidebar = ({
+  activeTab,
+  setActiveTab,
+  onOpenNotifications,
+  unreadNotificationsCount = 0,
+}) => {
+  const { t, lang } = useLanguage();
   const { isOwner } = useAuth();
   const { isLaptop, isTablet, isMobile } = useDeviceMode();
 
@@ -92,6 +98,32 @@ export const Sidebar = ({ activeTab, setActiveTab }) => {
               </button>
             );
           })}
+
+          {/* Notifications Quick Item */}
+          <button
+            onClick={onOpenNotifications}
+            className={`w-full flex items-center ${
+              isCollapsed ? 'justify-center px-2' : 'space-x-3 px-3.5'
+            } py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all duration-200 text-left text-slate-600 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-sky-950/40 hover:text-sky-600 dark:hover:text-sky-300`}
+            title={lang === 'ta' ? 'அறிவிப்புகள்' : 'Notifications & Alerts'}
+          >
+            <div className="relative shrink-0">
+              <Bell className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+              )}
+            </div>
+            {!isCollapsed && (
+              <div className="flex items-center justify-between flex-1 min-w-0">
+                <span className="truncate">{lang === 'ta' ? 'அறிவிப்புகள்' : 'Notifications'}</span>
+                {unreadNotificationsCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white font-black text-[10px]">
+                    {unreadNotificationsCount}
+                  </span>
+                )}
+              </div>
+            )}
+          </button>
         </nav>
       </div>
 

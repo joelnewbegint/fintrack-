@@ -91,8 +91,53 @@ export const api = {
     const overdueLoans = activeLoans.filter((l) => (l.overdueDays || 0) > 0);
     const overdueAmount = overdueLoans.reduce((sum, l) => sum + (l.installmentAmount || 0) * (l.overdueDays || 1), 0);
 
+    const todayDueFormatted = activeLoans.map((l) => ({
+      loanId: l._id,
+      loanNo: l.loanNo,
+      customerName: l.customerName,
+      customerPhone: l.customerPhone,
+      customerArea: l.area,
+      installmentAmount: l.installmentAmount,
+      dueAmount: l.installmentAmount,
+      financeType: l.financeType || 'daily',
+      status: l.status,
+      isPaidToday: todayPayments.some((p) => p.loanId === l._id),
+      dueDate: new Date().toISOString(),
+    }));
+
     return {
       success: true,
+      cards: {
+        totalLent: totalActiveCapital,
+        totalCollected: payments.reduce((sum, p) => sum + (p.amount || 0), 0),
+        totalOutstanding: totalBalance,
+        profitEarned: Math.round(totalActiveCapital * 0.15),
+        totalLoans: loans.length,
+        activeLoans: activeLoans.length,
+        overdueLoans: overdueLoans.length,
+        completedLoans: loans.filter((l) => l.status === 'completed').length,
+      },
+      todayDueList: todayDueFormatted,
+      overdueLoans: overdueLoans.map((l) => ({
+        _id: l._id,
+        loanNo: l.loanNo,
+        customerId: {
+          name: l.customerName,
+          phone: l.customerPhone,
+          area: l.area,
+        },
+        remainingBalance: l.balanceAmount,
+        installmentAmount: l.installmentAmount,
+        overdueDays: l.overdueDays || 3,
+        financeType: l.financeType || 'daily',
+        status: 'overdue',
+      })),
+      completedTodayList: todayPayments,
+      todayStats: {
+        collectedToday,
+        dueCount: activeLoans.length,
+        todayPaymentsCount: todayPayments.length,
+      },
       stats: {
         activeLoansCount: activeLoans.length,
         totalActiveCapital,
@@ -104,17 +149,7 @@ export const api = {
         overdueAmount,
         totalCustomers: customers.length,
         recentCollections: payments.slice(0, 5),
-        todayDueList: activeLoans.map((l) => ({
-          loanId: l._id,
-          loanNo: l.loanNo,
-          customerName: l.customerName,
-          phone: l.customerPhone,
-          area: l.area,
-          installmentAmount: l.installmentAmount,
-          financeType: l.financeType,
-          status: l.status,
-          isPaidToday: todayPayments.some((p) => p.loanId === l._id),
-        })),
+        todayDueList: todayDueFormatted,
       },
     };
   },
