@@ -114,7 +114,7 @@ export const Navbar = ({
   // ----------------------------------------------------
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/60 dark:border-sky-800/40 transition-colors">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+      <div className={`mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 ${isTablet ? 'max-w-6xl' : 'w-full max-w-[1720px] 2xl:max-w-[1920px]'}`}>
         {/* Brand / Logo */}
         <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
           {onToggleMobileMenu && (

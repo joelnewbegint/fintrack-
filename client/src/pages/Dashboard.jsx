@@ -178,9 +178,9 @@ export const Dashboard = ({
 
   // Render the Today's Collection List Component (used in right panel on Laptop, or stacked on Tablet)
   const renderTodayCollectionList = () => (
-    <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg space-y-4">
+    <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg space-y-4 min-w-0">
       {/* Header with Segmented Switch: Pending vs Completed Collections */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-sky-100 dark:border-sky-900/40">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5 pb-3 border-b border-sky-100 dark:border-sky-900/40">
         <div>
           <div className="flex items-center space-x-1 p-1 rounded-2xl glass border border-sky-200/60 dark:border-sky-800/60">
             <button
@@ -206,7 +206,6 @@ export const Dashboard = ({
               <span>Completed ({completedTodayList.length})</span>
             </button>
           </div>
-          {/* Put the description on its own line under title (Bug A.4 fix) */}
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
             {panelTab === 'pending'
               ? 'Collections to be collected. Disappears automatically once paid.'
@@ -215,14 +214,14 @@ export const Dashboard = ({
         </div>
 
         {/* Quick Filter */}
-        <div className="relative">
+        <div className="relative w-full xl:w-48">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
             type="text"
-            placeholder={panelTab === 'pending' ? 'Filter pending dues...' : 'Filter completed receipts...'}
+            placeholder={panelTab === 'pending' ? 'Filter dues...' : 'Filter receipts...'}
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
-            className="pl-8 pr-3 py-1.5 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-sky-400"
+            className="pl-8 pr-3 py-1.5 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
           />
         </div>
       </div>
@@ -241,48 +240,37 @@ export const Dashboard = ({
               return (
                 <div
                   key={`${item.loanId}-${item.dueDate}`}
-                  className="p-3.5 rounded-2xl glass glass-hover border border-white/80 dark:border-sky-800/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in"
+                  className="p-3.5 rounded-2xl glass glass-hover border border-white/80 dark:border-sky-800/40 space-y-2.5 animate-fade-in min-w-0"
                 >
-                  <div
-                    className="cursor-pointer space-y-0.5 flex-1 min-w-0"
-                    onClick={() => onViewLoan && onViewLoan(item.loanId)}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <span className="font-black text-xs sm:text-sm text-slate-900 dark:text-white truncate">
-                        {parsed.primary}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full font-black text-[10px] uppercase border shrink-0 ${
-                          item.financeType === 'daily'
-                            ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/70 dark:text-amber-300'
-                            : item.financeType === 'weekly'
-                            ? 'bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-950/70 dark:text-sky-300'
-                            : 'bg-teal-100 text-teal-900 border-teal-300 dark:bg-teal-950/70 dark:text-teal-300'
-                        }`}
-                      >
-                        {item.financeType}
-                      </span>
-                    </div>
-                    {parsed.secondary && (
-                      <p className="text-[11px] text-slate-400 truncate leading-none">
-                        {parsed.secondary}
-                      </p>
-                    )}
-                    <div className="text-[11px] text-slate-500 font-mono flex items-center space-x-2 truncate">
-                      <span>{item.loanNo}</span>
-                      <span>•</span>
-                      <span>{item.customerPhone}</span>
-                      {item.customerArea && (
-                        <>
-                          <span>•</span>
-                          <span className="truncate">{item.customerArea}</span>
-                        </>
+                  <div className="flex items-start justify-between gap-2">
+                    <div
+                      className="cursor-pointer space-y-0.5 flex-1 min-w-0"
+                      onClick={() => onViewLoan && onViewLoan(item.loanId)}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span className="font-black text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                          {parsed.primary}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full font-black text-[10px] uppercase border shrink-0 ${
+                            item.financeType === 'daily'
+                              ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/70 dark:text-amber-300'
+                              : item.financeType === 'weekly'
+                              ? 'bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-950/70 dark:text-sky-300'
+                              : 'bg-teal-100 text-teal-900 border-teal-300 dark:bg-teal-950/70 dark:text-teal-300'
+                          }`}
+                        >
+                          {item.financeType}
+                        </span>
+                      </div>
+                      {parsed.secondary && (
+                        <p className="text-[11px] text-slate-400 truncate leading-none">
+                          {parsed.secondary}
+                        </p>
                       )}
                     </div>
-                  </div>
 
-                  <div className="flex items-center justify-between w-full sm:w-auto gap-3 shrink-0">
-                    <div className="text-left sm:text-right shrink-0">
+                    <div className="text-right shrink-0">
                       <p className="font-black tabular-nums text-sm sm:text-base text-slate-900 dark:text-white whitespace-nowrap">
                         {formatCurrency(item.dueAmount)}
                       </p>
@@ -296,20 +284,33 @@ export const Dashboard = ({
                         </span>
                       )}
                     </div>
+                  </div>
 
-                    {/* Actions: One-Tap Quick Pay & WhatsApp */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-sky-100/70 dark:border-sky-900/40 text-[11px] text-slate-500 font-mono">
+                    <div className="flex items-center space-x-1.5 truncate min-w-0">
+                      <span>{item.loanNo}</span>
+                      <span>•</span>
+                      <span>{item.customerPhone}</span>
+                      {item.customerArea && (
+                        <>
+                          <span>•</span>
+                          <span className="truncate">{item.customerArea}</span>
+                        </>
+                      )}
+                    </div>
+
                     <div className="flex items-center space-x-1.5 shrink-0">
                       <button
                         onClick={() => setWhatsappItem(item)}
-                        className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border border-sky-200 dark:border-sky-800 text-slate-600 hover:text-emerald-600 hover:border-emerald-400 transition active:scale-95 shadow-sm"
+                        className="p-1.5 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-xl glass border border-sky-200 dark:border-sky-800 text-slate-600 hover:text-emerald-600 hover:border-emerald-400 transition active:scale-95 shadow-sm"
                         title="Send WhatsApp Reminder"
                       >
-                        <Send className="w-4 h-4 text-emerald-500" />
+                        <Send className="w-3.5 h-3.5 text-emerald-500" />
                       </button>
 
                       <button
                         onClick={() => setSelectedPayItem(item)}
-                        className="btn-sky-primary min-h-[44px] py-2 px-3 text-xs font-black shadow-md flex items-center space-x-1 whitespace-nowrap"
+                        className="btn-sky-primary min-h-[36px] py-1.5 px-3 text-xs font-black shadow-md flex items-center space-x-1 whitespace-nowrap active:scale-95"
                       >
                         <CreditCard className="w-3.5 h-3.5" />
                         <span>{t('markPaid')}</span>
@@ -335,50 +336,43 @@ export const Dashboard = ({
               return (
                 <div
                   key={p._id}
-                  className="p-3.5 rounded-2xl glass glass-hover border border-emerald-200/80 dark:border-emerald-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in"
+                  className="p-3.5 rounded-2xl glass glass-hover border border-emerald-200/80 dark:border-emerald-900/60 space-y-2.5 animate-fade-in min-w-0"
                 >
-                  <div className="space-y-0.5 flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-black text-xs sm:text-sm text-slate-900 dark:text-white truncate">
-                        {parsed.primary}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full font-black text-[9px] uppercase border shrink-0 ${
-                          scheme === 'daily'
-                            ? 'bg-amber-100 text-amber-900 border-amber-300'
-                            : scheme === 'weekly'
-                            ? 'bg-sky-100 text-sky-900 border-sky-300'
-                            : 'bg-teal-100 text-teal-900 border-teal-300'
-                        }`}
-                      >
-                        {scheme}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase shrink-0 ${
-                          p.mode === 'cash'
-                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                            : 'bg-sky-100 text-sky-800 border border-sky-300'
-                        }`}
-                      >
-                        {p.mode?.toUpperCase()}
-                      </span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-0.5 flex-1 min-w-0">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-black text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                          {parsed.primary}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full font-black text-[9px] uppercase border shrink-0 ${
+                            scheme === 'daily'
+                              ? 'bg-amber-100 text-amber-900 border-amber-300'
+                              : scheme === 'weekly'
+                              ? 'bg-sky-100 text-sky-900 border-sky-300'
+                              : 'bg-teal-100 text-teal-900 border-teal-300'
+                          }`}
+                        >
+                          {scheme}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase shrink-0 ${
+                            p.mode === 'cash'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : 'bg-sky-100 text-sky-800 border border-sky-300'
+                          }`}
+                        >
+                          {p.mode?.toUpperCase()}
+                        </span>
+                      </div>
+                      {parsed.secondary && (
+                        <p className="text-[11px] text-slate-400 truncate leading-none">
+                          {parsed.secondary}
+                        </p>
+                      )}
                     </div>
-                    {parsed.secondary && (
-                      <p className="text-[11px] text-slate-400 truncate leading-none">
-                        {parsed.secondary}
-                      </p>
-                    )}
-                    <div className="text-[11px] text-slate-500 font-mono flex items-center space-x-2 truncate">
-                      <span className="font-bold text-emerald-600">{p.receiptNo}</span>
-                      <span>•</span>
-                      <span>{p.loanId?.loanNo}</span>
-                      <span>•</span>
-                      <span>{formatDate(p.date)}</span>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center justify-between w-full sm:w-auto gap-3 shrink-0">
-                    <div className="text-left sm:text-right shrink-0">
+                    <div className="text-right shrink-0">
                       <p className="font-black tabular-nums text-sm sm:text-base text-emerald-600 whitespace-nowrap">
                         {formatCurrency(p.amount)}
                       </p>
@@ -386,10 +380,20 @@ export const Dashboard = ({
                         By {p.collectedBy?.name || 'Owner'}
                       </p>
                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-emerald-100/70 dark:border-emerald-900/40 text-[11px] text-slate-500 font-mono">
+                    <div className="flex items-center space-x-1.5 truncate min-w-0">
+                      <span className="font-bold text-emerald-600">{p.receiptNo}</span>
+                      <span>•</span>
+                      <span>{p.loanId?.loanNo}</span>
+                      <span>•</span>
+                      <span>{formatDate(p.date)}</span>
+                    </div>
 
                     <button
                       onClick={() => setReceiptPayment(p)}
-                      className="px-3 py-2 rounded-xl glass hover:bg-sky-50 text-sky-600 font-bold text-xs border border-sky-200 shrink-0 min-h-[44px] flex items-center"
+                      className="px-3 py-1.5 rounded-xl glass hover:bg-sky-50 text-sky-600 font-bold text-xs border border-sky-200 shrink-0 min-h-[36px] flex items-center active:scale-95 transition"
                     >
                       Receipt
                     </button>
@@ -448,57 +452,65 @@ export const Dashboard = ({
       {dashboardView === 'completed' && (
         <div className="space-y-6 animate-fade-in">
           {/* Summary Cards for Completed Collections */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="glass rounded-3xl p-5 border border-emerald-200/80 dark:border-emerald-900/60 shadow-lg">
-              <p className="text-[11px] text-emerald-600 font-bold uppercase tracking-wider">
-                Total Collections Saved
-              </p>
-              <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 tabular-nums whitespace-nowrap">
-                {formatCurrency(
-                  completedTodayList.reduce((acc, p) => acc + (p.amount || 0), 0)
-                )}
-              </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+            <div className="glass rounded-3xl p-5 border border-emerald-200/80 dark:border-emerald-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full">
+              <div>
+                <p className="text-[11px] text-emerald-600 font-bold uppercase tracking-wider">
+                  Total Collections Saved
+                </p>
+                <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 tabular-nums whitespace-nowrap">
+                  {formatCurrency(
+                    completedTodayList.reduce((acc, p) => acc + (p.amount || 0), 0)
+                  )}
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-2">
                 {completedTodayList.length} total payments collected & archived
               </p>
             </div>
 
-            <div className="glass rounded-3xl p-5 border border-white/80 dark:border-sky-800/40 shadow-lg">
-              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                Cash in Hand
-              </p>
-              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1 tabular-nums whitespace-nowrap">
-                {formatCurrency(
-                  completedTodayList
-                    .filter((p) => p.mode === 'cash')
-                    .reduce((acc, p) => acc + (p.amount || 0), 0)
-                )}
-              </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Physical currency collected</p>
+            <div className="glass rounded-3xl p-5 border border-white/80 dark:border-sky-800/40 shadow-lg min-w-0 flex flex-col justify-between h-full">
+              <div>
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                  Cash in Hand
+                </p>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1 tabular-nums whitespace-nowrap">
+                  {formatCurrency(
+                    completedTodayList
+                      .filter((p) => p.mode === 'cash')
+                      .reduce((acc, p) => acc + (p.amount || 0), 0)
+                  )}
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-2">Physical currency collected</p>
             </div>
 
-            <div className="glass rounded-3xl p-5 border border-white/80 dark:border-sky-800/40 shadow-lg">
-              <p className="text-[11px] text-sky-500 font-bold uppercase tracking-wider">
-                GPay / UPI Received
-              </p>
-              <p className="text-2xl sm:text-3xl font-black text-sky-600 dark:text-sky-400 mt-1 tabular-nums whitespace-nowrap">
-                {formatCurrency(
-                  completedTodayList
-                    .filter((p) => p.mode === 'upi')
-                    .reduce((acc, p) => acc + (p.amount || 0), 0)
-                )}
-              </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Direct digital bank settlements</p>
+            <div className="glass rounded-3xl p-5 border border-white/80 dark:border-sky-800/40 shadow-lg min-w-0 flex flex-col justify-between h-full">
+              <div>
+                <p className="text-[11px] text-sky-500 font-bold uppercase tracking-wider">
+                  GPay / UPI Received
+                </p>
+                <p className="text-2xl sm:text-3xl font-black text-sky-600 dark:text-sky-400 mt-1 tabular-nums whitespace-nowrap">
+                  {formatCurrency(
+                    completedTodayList
+                      .filter((p) => p.mode === 'upi')
+                      .reduce((acc, p) => acc + (p.amount || 0), 0)
+                  )}
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-2">Direct digital bank settlements</p>
             </div>
 
-            <div className="glass rounded-3xl p-5 border border-white/80 dark:border-sky-800/40 shadow-lg">
-              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                Completed Receipts Count
-              </p>
-              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1 tabular-nums">
-                {completedTodayList.length}
-              </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Official customer vouchers</p>
+            <div className="glass rounded-3xl p-5 border border-white/80 dark:border-sky-800/40 shadow-lg min-w-0 flex flex-col justify-between h-full">
+              <div>
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                  Completed Receipts Count
+                </p>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1 tabular-nums">
+                  {completedTodayList.length}
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-2">Official customer vouchers</p>
             </div>
           </div>
 
@@ -646,54 +658,60 @@ export const Dashboard = ({
       {dashboardView === 'settled' && (
         <div className="space-y-6 animate-fade-in">
           {/* Top KPI Cards for Settled Accounts */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="glass rounded-3xl p-5 border border-teal-200/80 dark:border-teal-900/60 shadow-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-teal-600 font-bold uppercase tracking-wider">
-                  {lang === 'ta' ? 'முடிவுற்ற கடன் தொகை' : 'Total Settled Amount'}
-                </span>
-                <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 flex items-center justify-center text-teal-600">
-                  <ShieldCheck className="w-4 h-4" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch">
+            <div className="glass rounded-3xl p-5 border border-teal-200/80 dark:border-teal-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-teal-600 font-bold uppercase tracking-wider truncate">
+                    {lang === 'ta' ? 'முடிவுற்ற கடன் தொகை' : 'Total Settled Amount'}
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 flex items-center justify-center text-teal-600 shrink-0">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
                 </div>
+                <p className="text-2xl sm:text-3xl font-black text-teal-600 mt-2 tabular-nums whitespace-nowrap">
+                  {formatCurrency(cards.settledAmount || completedLoansList.reduce((acc, l) => acc + (l.totalCollected || l.totalPayable || 0), 0))}
+                </p>
               </div>
-              <p className="text-2xl sm:text-3xl font-black text-teal-600 mt-2 tabular-nums whitespace-nowrap">
-                {formatCurrency(cards.settledAmount || completedLoansList.reduce((acc, l) => acc + (l.totalCollected || l.totalPayable || 0), 0))}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-slate-400 mt-2">
                 {lang === 'ta' ? 'முடிவுற்ற கணக்குகளில் வசூலான மொத்த தொகை' : 'Total recovered across 100% settled accounts'}
               </p>
             </div>
 
-            <div className="glass rounded-3xl p-5 border border-emerald-200/80 dark:border-emerald-900/60 shadow-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-emerald-600 font-bold uppercase tracking-wider">
-                  {lang === 'ta' ? 'முடிந்த கடன் நிகர லாபம்' : 'Profit from Settled'}
-                </span>
-                <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600">
-                  <Award className="w-4 h-4 text-emerald-500" />
+            <div className="glass rounded-3xl p-5 border border-emerald-200/80 dark:border-emerald-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-emerald-600 font-bold uppercase tracking-wider truncate">
+                    {lang === 'ta' ? 'முடிந்த கடன் நிகர லாபம்' : 'Profit from Settled'}
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 shrink-0">
+                    <Award className="w-4 h-4 text-emerald-500" />
+                  </div>
                 </div>
+                <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-2 tabular-nums whitespace-nowrap">
+                  +{formatCurrency(cards.profitFromSettled || completedLoansList.reduce((acc, l) => acc + Math.max(0, (l.totalCollected || l.totalPayable || 0) - (l.principal || 0)), 0))}
+                </p>
               </div>
-              <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-2 tabular-nums whitespace-nowrap">
-                +{formatCurrency(cards.profitFromSettled || completedLoansList.reduce((acc, l) => acc + Math.max(0, (l.totalCollected || l.totalPayable || 0) - (l.principal || 0)), 0))}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-slate-400 mt-2">
                 {lang === 'ta' ? 'நடப்பு வட்டியிலிருந்து மாற்றப்பட்டு பெற்ற லாபம்' : 'Realized profit transferred from active interest'}
               </p>
             </div>
 
-            <div className="glass rounded-3xl p-5 border border-sky-200/80 dark:border-sky-900/60 shadow-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-sky-600 font-bold uppercase tracking-wider">
-                  {lang === 'ta' ? 'முடிவுற்ற கணக்குகள்' : 'Settled Accounts'}
-                </span>
-                <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center text-sky-600">
-                  <CheckCheck className="w-4 h-4" />
+            <div className="glass rounded-3xl p-5 border border-sky-200/80 dark:border-sky-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-sky-600 font-bold uppercase tracking-wider truncate">
+                    {lang === 'ta' ? 'முடிவுற்ற கணக்குகள்' : 'Settled Accounts'}
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center text-sky-600 shrink-0">
+                    <CheckCheck className="w-4 h-4" />
+                  </div>
                 </div>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-2 tabular-nums whitespace-nowrap">
+                  {completedLoansList.length}
+                </p>
               </div>
-              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-2 tabular-nums whitespace-nowrap">
-                {completedLoansList.length}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-slate-400 mt-2">
                 {lang === 'ta' ? 'முழுமையாக முடிந்த கடன் கணக்குகள்' : 'Loans closed with zero pending balance'}
               </p>
             </div>
@@ -1450,15 +1468,21 @@ export const Dashboard = ({
                 )}
               </div>
 
-              {/* 1. Key Metric Cards (Including Net Overall Collected) */}
+              {/* 1. Key Metric Cards (8 cards in 4x2 matrix in Laptop Mode) */}
               <div
                 className={`grid ${
-                  isTablet ? 'grid-cols-2 gap-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-                }`}
+                  isTablet
+                    ? 'grid-cols-2 gap-4'
+                    : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'
+                } items-stretch`}
               >
                 <StatCard
                   title={t('netCollected')}
-                  amount={cards.netCollected !== undefined ? cards.netCollected : Math.max(0, (cards.totalCollected || 0) - (cards.totalExpenses || 0))}
+                  amount={
+                    cards.netCollected !== undefined
+                      ? cards.netCollected
+                      : Math.max(0, (cards.totalCollected || 0) - (cards.totalExpenses || 0))
+                  }
                   subtitle={
                     cards.totalExpenses > 0
                       ? `Click for breakdown • -${formatCurrency(cards.totalExpenses)} exp`
@@ -1486,12 +1510,21 @@ export const Dashboard = ({
                   delay={0.1}
                 />
                 <StatCard
+                  title={t('totalExpenses')}
+                  amount={cards.totalExpenses || 0}
+                  subtitle="Business & office expenses"
+                  icon={TrendingUp}
+                  gradient="from-rose-400 to-pink-600"
+                  delay={0.15}
+                  onClick={() => onOpenExpenses && onOpenExpenses()}
+                />
+                <StatCard
                   title={t('totalOutstanding')}
                   amount={cards.totalOutstanding}
                   subtitle={`${cards.activeLoans || 0} active loans pending`}
                   icon={Clock}
                   gradient="from-amber-400 to-amber-500"
-                  delay={0.15}
+                  delay={0.2}
                 />
                 <StatCard
                   title={t('activeInterest')}
@@ -1499,7 +1532,7 @@ export const Dashboard = ({
                   subtitle={lang === 'ta' ? 'முடிவுற்றதும் குறையும்' : 'Auto-reduces as loans settle'}
                   icon={Coins}
                   gradient="from-indigo-400 to-indigo-600"
-                  delay={0.2}
+                  delay={0.25}
                 />
                 <StatCard
                   title={t('settledAmount')}
@@ -1507,7 +1540,7 @@ export const Dashboard = ({
                   subtitle={`${cards.completedLoans || 0} completed loans`}
                   icon={ShieldCheck}
                   gradient="from-teal-400 to-cyan-600"
-                  delay={0.25}
+                  delay={0.3}
                   onClick={() => setDashboardView('settled')}
                 />
                 <StatCard
@@ -1516,7 +1549,7 @@ export const Dashboard = ({
                   subtitle={lang === 'ta' ? 'முடிந்த கணக்குகளின் நிகர லாபம்' : 'Realized profit from settled'}
                   icon={Award}
                   gradient="from-emerald-500 to-green-600"
-                  delay={0.3}
+                  delay={0.35}
                   onClick={() => setDashboardView('settled')}
                 />
               </div>
@@ -1524,8 +1557,8 @@ export const Dashboard = ({
               {/* 2. Three Finance-Type Cards (Daily / Weekly / Monthly) */}
               <div
                 className={`grid ${
-                  isTablet ? 'grid-cols-2 gap-4' : 'grid-cols-3 gap-4'
-                }`}
+                  isTablet ? 'grid-cols-2 gap-4' : 'grid-cols-1 md:grid-cols-3 gap-4'
+                } items-stretch`}
               >
                 <FinanceTypeCard
                   type="daily"
@@ -1563,10 +1596,10 @@ export const Dashboard = ({
 
               {/* 3. Laptop Split Layout: 7 Cols Left (Charts) vs 5 Cols Right (Collection Panel) */}
               {isLaptop ? (
-                <div className="grid grid-cols-12 gap-6 items-start">
-                  <div className="col-span-7 space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  <div className="lg:col-span-7 space-y-6 min-w-0">
                     {/* Collection Trend (30 Days) */}
-                    <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg">
+                    <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg min-w-0">
                       <div className="flex items-center justify-between mb-4">
                         <div>
                           <h3 className="font-black text-sm text-slate-900 dark:text-white">
@@ -1607,9 +1640,9 @@ export const Dashboard = ({
                     </div>
 
                     {/* Charts Grid */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Donut Chart: Scheme Distribution */}
-                      <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg">
+                      <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg min-w-0">
                         <h3 className="font-black text-sm text-slate-900 dark:text-white mb-1">
                           {t('financeTypeDistribution')}
                         </h3>
@@ -1637,7 +1670,7 @@ export const Dashboard = ({
                       </div>
 
                       {/* Bar Chart: 6-Month Profit Recovery */}
-                      <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg">
+                      <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg min-w-0">
                         <h3 className="font-black text-sm text-slate-900 dark:text-white mb-1">
                           Monthly Financials (6M)
                         </h3>
@@ -1664,7 +1697,7 @@ export const Dashboard = ({
                   </div>
 
                   {/* Right Column: Today's Collection Panel (5 cols) */}
-                  <div className="col-span-5 sticky top-20">
+                  <div className="lg:col-span-5 sticky top-20 min-w-0">
                     {renderTodayCollectionList()}
                   </div>
                 </div>

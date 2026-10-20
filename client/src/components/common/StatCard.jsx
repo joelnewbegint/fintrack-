@@ -19,7 +19,7 @@ export const StatCard = ({
       transition={{ duration: 0.35, delay }}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
       onClick={onClick}
-      className={`glass glass-hover relative overflow-hidden rounded-2xl p-5 border border-white/70 dark:border-sky-800/40 transition-all ${
+      className={`glass glass-hover relative overflow-hidden rounded-2xl p-5 border border-white/70 dark:border-sky-800/40 transition-all flex flex-col justify-between h-full min-w-0 ${
         onClick ? 'cursor-pointer' : ''
       }`}
     >
@@ -28,16 +28,16 @@ export const StatCard = ({
         className={`absolute -right-6 -bottom-6 w-28 h-28 rounded-full opacity-20 blur-2xl bg-gradient-to-tr ${gradient}`}
       />
 
-      <div className="flex items-start justify-between">
-        <div className="space-y-1 z-10">
-          <p className="text-xs font-bold text-sky-800/70 dark:text-sky-300/80 tracking-wide uppercase">
+      <div className="flex items-start justify-between gap-3 w-full">
+        <div className="space-y-1 z-10 min-w-0 flex-1">
+          <p className="text-xs font-bold text-sky-800/70 dark:text-sky-300/80 tracking-wide uppercase truncate">
             {title}
           </p>
-          <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums truncate">
             <AnimatedCounter value={amount} isCurrency={true} />
           </h3>
           {subtitle && (
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
               {subtitle}
             </p>
           )}

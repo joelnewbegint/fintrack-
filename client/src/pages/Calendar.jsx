@@ -127,9 +127,9 @@ export const Calendar = () => {
       </div>
 
       {/* Calendar Grid & Selected Day Drawer */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Monthly Calendar Grid (2 Cols on desktop) */}
-        <div className="lg:col-span-2 glass-card rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800/80 shadow-md">
+        <div className="lg:col-span-2 glass-card rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800/80 shadow-md min-w-0">
           {/* Day of Week Headers */}
           <div className="grid grid-cols-7 gap-1 text-center font-bold text-[11px] text-slate-400 mb-2">
             <span>Sun</span>
@@ -202,7 +202,7 @@ export const Calendar = () => {
         </div>
 
         {/* Selected Day Dues Drawer */}
-        <div className="glass-card rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800/80 shadow-md space-y-4">
+        <div className="glass-card rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800/80 shadow-md space-y-4 min-w-0">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
               <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">

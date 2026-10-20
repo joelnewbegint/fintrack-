@@ -57,7 +57,7 @@ export const FinanceTypeCard = ({
     <motion.div
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
       onClick={onClick}
-      className={`glass glass-hover cursor-pointer rounded-2xl p-5 border border-white/70 dark:border-sky-800/40 transition-all ${cfg.border} ${cfg.shadow} relative overflow-hidden`}
+      className={`glass glass-hover cursor-pointer rounded-2xl p-5 border border-white/70 dark:border-sky-800/40 transition-all ${cfg.border} ${cfg.shadow} relative overflow-hidden flex flex-col justify-between h-full min-w-0`}
     >
       {/* Top Scheme Banner */}
       <div className="flex items-center justify-between mb-4">

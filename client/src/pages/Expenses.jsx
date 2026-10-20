@@ -248,75 +248,83 @@ export const Expenses = ({ onNavigateToDashboard }) => {
       </div>
 
       {/* 4 Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
         {/* Card 1: Total Overall Expenses */}
-        <div className="glass rounded-3xl p-5 border border-rose-200/80 dark:border-rose-900/60 shadow-lg">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider">
-              {lang === 'ta' ? 'மொத்த செலவுகள்' : 'Total Expenses'}
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-950 flex items-center justify-center text-rose-600">
-              <TrendingDown className="w-4 h-4" />
+        <div className="glass rounded-3xl p-5 border border-rose-200/80 dark:border-rose-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider truncate">
+                {lang === 'ta' ? 'மொத்த செலவுகள்' : 'Total Expenses'}
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-950 flex items-center justify-center text-rose-600 shrink-0">
+                <TrendingDown className="w-4 h-4" />
+              </div>
             </div>
+            <p className="text-2xl sm:text-3xl font-black text-rose-600 mt-2 tabular-nums whitespace-nowrap">
+              {formatCurrency(totalOverallExpenses)}
+            </p>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-rose-600 mt-2 tabular-nums whitespace-nowrap">
-            {formatCurrency(totalOverallExpenses)}
-          </p>
-          <p className="text-[11px] text-slate-400 mt-1">
+          <p className="text-[11px] text-slate-400 mt-2">
             {expenses.length} {lang === 'ta' ? 'செலவு பதிவுகள்' : 'expenses recorded overall'}
           </p>
         </div>
 
         {/* Card 2: Today's Expenses */}
-        <div className="glass rounded-3xl p-5 border border-amber-200/80 dark:border-amber-900/60 shadow-lg">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">
-              {lang === 'ta' ? 'இன்றைய செலவு' : "Today's Expenses"}
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950 flex items-center justify-center text-amber-600">
-              <Calendar className="w-4 h-4" />
+        <div className="glass rounded-3xl p-5 border border-amber-200/80 dark:border-amber-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider truncate">
+                {lang === 'ta' ? 'இன்றைய செலவு' : "Today's Expenses"}
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950 flex items-center justify-center text-amber-600 shrink-0">
+                <Calendar className="w-4 h-4" />
+              </div>
             </div>
+            <p className="text-2xl sm:text-3xl font-black text-amber-600 mt-2 tabular-nums whitespace-nowrap">
+              {formatCurrency(todayExpenses)}
+            </p>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-amber-600 mt-2 tabular-nums whitespace-nowrap">
-            {formatCurrency(todayExpenses)}
-          </p>
-          <p className="text-[11px] text-slate-400 mt-1">
+          <p className="text-[11px] text-slate-400 mt-2">
             {expenses.filter((e) => (e.date || '').slice(0, 10) === todayStr).length} {lang === 'ta' ? 'இன்று செலவானது' : 'spent today'}
           </p>
         </div>
 
         {/* Card 3: This Month's Expenses */}
-        <div className="glass rounded-3xl p-5 border border-sky-200/80 dark:border-sky-900/60 shadow-lg">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-sky-600 uppercase tracking-wider">
-              {lang === 'ta' ? 'நடப்பு மாத செலவு' : "This Month's Expenses"}
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center text-sky-600">
-              <Building className="w-4 h-4" />
+        <div className="glass rounded-3xl p-5 border border-sky-200/80 dark:border-sky-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-sky-600 uppercase tracking-wider truncate">
+                {lang === 'ta' ? 'நடப்பு மாத செலவு' : "This Month's Expenses"}
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center text-sky-600 shrink-0">
+                <Building className="w-4 h-4" />
+              </div>
             </div>
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-2 tabular-nums whitespace-nowrap">
+              {formatCurrency(thisMonthExpenses)}
+            </p>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-2 tabular-nums whitespace-nowrap">
-            {formatCurrency(thisMonthExpenses)}
-          </p>
-          <p className="text-[11px] text-slate-400 mt-1">
+          <p className="text-[11px] text-slate-400 mt-2">
             Current calendar month
           </p>
         </div>
 
         {/* Card 4: Net Remaining in Hand */}
-        <div className="glass rounded-3xl p-5 border border-emerald-300/80 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-lg">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">
-              {lang === 'ta' ? 'செலவு போக மீதி வசூல்' : 'Net Collections in Hand'}
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600">
-              <ShieldCheck className="w-4 h-4" />
+        <div className="glass rounded-3xl p-5 border border-emerald-300/80 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-lg min-w-0 flex flex-col justify-between h-full">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider truncate">
+                {lang === 'ta' ? 'செலவு போக மீதி வசூல்' : 'Net Collections in Hand'}
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 shrink-0">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
             </div>
+            <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-2 tabular-nums whitespace-nowrap">
+              {formatCurrency(netCollectedInHand)}
+            </p>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-2 tabular-nums whitespace-nowrap">
-            {formatCurrency(netCollectedInHand)}
-          </p>
-          <p className="text-[11px] text-emerald-700/80 dark:text-emerald-300 font-bold mt-1">
+          <p className="text-[11px] text-emerald-700/80 dark:text-emerald-300 font-bold mt-2 truncate">
             Gross {formatCurrency(totalGrossCollected)} - Exp {formatCurrency(totalOverallExpenses)}
           </p>
         </div>

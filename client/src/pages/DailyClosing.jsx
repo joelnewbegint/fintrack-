@@ -186,51 +186,57 @@ export const DailyClosing = () => {
       </div>
 
       {/* 1. Overall Summary Metric Cards (4 cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
         {/* Total Expected */}
-        <div className="glass rounded-3xl p-4 sm:p-5 border border-white/70 dark:border-sky-800/40 shadow-lg">
-          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-            {t('totalExpectedDues')}
-          </p>
-          <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1 tabular-nums">
-            {formatCurrency(summary.totalExpected)}
-          </p>
-          <p className="text-[11px] text-slate-500 mt-0.5">
+        <div className="glass rounded-3xl p-4 sm:p-5 border border-white/70 dark:border-sky-800/40 shadow-lg min-w-0 flex flex-col justify-between h-full">
+          <div>
+            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider truncate">
+              {t('totalExpectedDues')}
+            </p>
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1 tabular-nums whitespace-nowrap">
+              {formatCurrency(summary.totalExpected)}
+            </p>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-2 truncate">
             {expectedList.length} total installments scheduled
           </p>
         </div>
 
         {/* Collected Today */}
-        <div className="glass rounded-3xl p-4 sm:p-5 border border-emerald-200/80 dark:border-emerald-900/60 shadow-lg">
-          <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">
-            {t('collectedToday')}
-          </p>
-          <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums">
-            {formatCurrency(summary.totalCollected)}
-          </p>
-          <p className="text-[11px] text-slate-500 mt-0.5">
+        <div className="glass rounded-3xl p-4 sm:p-5 border border-emerald-200/80 dark:border-emerald-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full">
+          <div>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider truncate">
+              {t('collectedToday')}
+            </p>
+            <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums whitespace-nowrap">
+              {formatCurrency(summary.totalCollected)}
+            </p>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-2 truncate">
             {summary.totalReceiptsCount} receipts issued today
           </p>
         </div>
 
         {/* Pending Shortfall */}
-        <div className="glass rounded-3xl p-4 sm:p-5 border border-amber-200/80 dark:border-amber-900/60 shadow-lg">
-          <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">
-            {t('netDeficit')}
-          </p>
-          <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 mt-1 tabular-nums">
-            {formatCurrency(summary.pendingAmount)}
-          </p>
-          <p className="text-[11px] text-slate-500 mt-0.5">Uncollected shortfall today</p>
+        <div className="glass rounded-3xl p-4 sm:p-5 border border-amber-200/80 dark:border-amber-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full">
+          <div>
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider truncate">
+              {t('netDeficit')}
+            </p>
+            <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 mt-1 tabular-nums whitespace-nowrap">
+              {formatCurrency(summary.pendingAmount)}
+            </p>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-2 truncate">Uncollected shortfall today</p>
         </div>
 
         {/* Payment Breakdown (Cash & UPI) */}
-        <div className="glass rounded-3xl p-4 sm:p-5 border border-white/70 dark:border-sky-800/40 shadow-lg flex flex-col justify-between">
-          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Payment Breakdown</p>
-          <div className="space-y-1.5 my-1">
+        <div className="glass rounded-3xl p-4 sm:p-5 border border-white/70 dark:border-sky-800/40 shadow-lg min-w-0 flex flex-col justify-between h-full">
+          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider truncate">Payment Breakdown</p>
+          <div className="space-y-1.5 my-2">
             <div className="flex justify-between items-center text-xs">
               <span className="flex items-center space-x-1.5 font-semibold text-slate-600 dark:text-slate-300">
-                <Banknote className="w-4 h-4 text-emerald-500" />
+                <Banknote className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span>Cash in Hand:</span>
               </span>
               <span className="font-black text-emerald-600 tabular-nums">
@@ -239,7 +245,7 @@ export const DailyClosing = () => {
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="flex items-center space-x-1.5 font-semibold text-slate-600 dark:text-slate-300">
-                <QrCode className="w-4 h-4 text-sky-500" />
+                <QrCode className="w-4 h-4 text-sky-500 shrink-0" />
                 <span>GPay / UPI:</span>
               </span>
               <span className="font-black text-sky-600 tabular-nums">
@@ -323,8 +329,8 @@ export const DailyClosing = () => {
         {/* 3 Dedicated Scheme Split Cards */}
         <div
           className={`grid ${
-            isMobile ? 'grid-cols-1 gap-3' : isTablet ? 'grid-cols-2 gap-4' : 'grid-cols-3 gap-4'
-          }`}
+            isMobile ? 'grid-cols-1 gap-3' : isTablet ? 'grid-cols-2 gap-4' : 'grid-cols-1 md:grid-cols-3 gap-4'
+          } items-stretch`}
         >
           {['daily', 'weekly', 'monthly'].map((type) => {
             const data = byFinanceType[type] || {
@@ -350,7 +356,7 @@ export const DailyClosing = () => {
               <div
                 key={type}
                 onClick={() => setSelectedType(selectedType === type ? 'all' : type)}
-                className={`glass rounded-3xl p-5 border cursor-pointer transition-all duration-200 shadow-md flex flex-col justify-between ${
+                className={`glass rounded-3xl p-5 border cursor-pointer transition-all duration-200 shadow-md flex flex-col justify-between min-w-0 h-full ${
                   isSelected
                     ? 'ring-2 ring-sky-400 bg-sky-50/70 dark:bg-sky-950/60 border-sky-400 scale-[1.01]'
                     : 'border-white/80 dark:border-sky-800/40 hover:border-sky-300'

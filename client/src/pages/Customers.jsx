@@ -125,15 +125,15 @@ export const Customers = ({ onViewCustomer }) => {
       ) : (
         <div
           className={`grid ${
-            isMobile ? 'grid-cols-1 gap-3' : isTablet ? 'grid-cols-2 gap-4' : 'grid-cols-3 gap-4'
-          }`}
+            isMobile ? 'grid-cols-1 gap-3' : isTablet ? 'grid-cols-2 gap-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+          } items-stretch`}
         >
           {customers.map((c) => {
             const parsed = parseCustomerName(c.name);
             return (
               <div
                 key={c._id}
-                className="glass glass-hover rounded-3xl p-4 sm:p-5 border border-white/80 dark:border-sky-800/40 shadow-md flex flex-col justify-between space-y-3"
+                className="glass glass-hover rounded-3xl p-4 sm:p-5 border border-white/80 dark:border-sky-800/40 shadow-md flex flex-col justify-between space-y-3 min-w-0 h-full"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">

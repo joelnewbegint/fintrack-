@@ -162,7 +162,15 @@ export function App() {
         unreadNotificationsCount={notificationCount}
       />
 
-      <div className="flex-1 flex max-w-7xl w-full mx-auto relative z-10">
+      <div
+        className={`flex-1 flex w-full relative z-10 ${
+          isMobile && !isRealPhone
+            ? 'max-w-[440px] mx-auto'
+            : isTablet
+            ? 'max-w-6xl mx-auto px-2 sm:px-4'
+            : 'max-w-[1720px] 2xl:max-w-[1920px] mx-auto px-2 sm:px-4 lg:px-6'
+        }`}
+      >
         {/* Desktop / Tablet Sidebar */}
         <Sidebar
           activeTab={activeTab}
@@ -173,7 +181,7 @@ export function App() {
 
         {/* Main Content Area */}
         <main
-          className={`flex-1 p-3 sm:p-6 lg:p-8 max-w-full overflow-hidden ${
+          className={`flex-1 p-3 sm:p-5 lg:p-6 min-w-0 max-w-full overflow-x-hidden ${
             isMobile ? 'pb-28' : 'pb-10'
           }`}
         >
