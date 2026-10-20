@@ -33,7 +33,7 @@ export const Navbar = ({
   const { user, logout, isOwner } = useAuth();
   const { lang, toggleLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
-  const { isLaptop, isMobile } = useDeviceMode();
+  const { isLaptop, isTablet, isMobile } = useDeviceMode();
   const { isInstalled, promptInstall } = usePWA();
 
   // ----------------------------------------------------
