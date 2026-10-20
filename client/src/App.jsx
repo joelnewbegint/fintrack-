@@ -13,6 +13,7 @@ import InvestmentModal from './components/common/InvestmentModal';
 import CustomerModal from './components/common/CustomerModal';
 import NotificationModal from './components/common/NotificationModal';
 import WhatsAppReminderModal from './components/common/WhatsAppReminderModal';
+import PWAInstallModal from './components/common/PWAInstallModal';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Loans from './pages/Loans';
@@ -343,6 +344,9 @@ export function App() {
           onClose={() => setGlobalWhatsappItem(null)}
         />
       )}
+
+      {/* PWA Install Guide Modal */}
+      <PWAInstallModal />
     </div>
   );
 }

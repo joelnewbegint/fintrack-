@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { formatDate } from '../utils/currency';
 import WhatsAppConnect from '../components/common/WhatsAppConnect';
 import ComfortSettings from '../components/common/ComfortSettings';
+import { usePWA } from '../context/PWAContext';
 import {
   Settings as SettingsIcon,
   Shield,
@@ -20,12 +21,15 @@ import {
   Smartphone,
   Building,
   Sliders,
+  Zap,
+  RefreshCw,
 } from 'lucide-react';
 
 export const Settings = () => {
   const { t, lang, toggleLanguage } = useLanguage();
   const { isOwner, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { isInstalled, isInstallable, isIOS, promptInstall } = usePWA();
 
   const [activeSection, setActiveSection] = useState('whatsapp');
 
@@ -160,6 +164,121 @@ export const Settings = () => {
             <Shield className="w-4 h-4 text-indigo-400" />
             <span>Audit Trail & Backup (தணிக்கை & பேக்அப்)</span>
           </button>
+
+          <button
+            onClick={() => setActiveSection('pwa')}
+            className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
+              activeSection === 'pwa'
+                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
+                : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
+            }`}
+          >
+            <Smartphone className="w-4 h-4 text-amber-500" />
+            <span>PWA & App Install (செயலி நிறுவல்)</span>
+          </button>
+        </div>
+      )}
+
+      {/* PWA & App Installation Tab */}
+      {activeSection === 'pwa' && (
+        <div className="space-y-6">
+          <div className="glass-card rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800/80 shadow-md space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center space-x-4">
+                <img
+                  src="/icon-192.png"
+                  alt="VK Banker's"
+                  className="w-16 h-16 rounded-2xl shadow-md border border-white/80 dark:border-slate-700 object-cover shrink-0"
+                />
+                <div>
+                  <h3 className="font-extrabold text-lg text-slate-900 dark:text-white">
+                    VK BANKER'S PWA
+                  </h3>
+                  <p className="text-xs text-sky-600 dark:text-sky-400 font-bold">
+                    {lang === 'ta' ? 'முழுத்திரை முற்போக்கு வலைச் செயலி' : 'Progressive Web Application (PWA)'}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {isInstalled
+                      ? (lang === 'ta' ? 'இந்த சாதனத்தில் வெற்றிகரமாக நிறுவப்பட்டுள்ளது' : 'Currently installed & running as standalone app')
+                      : (lang === 'ta' ? 'உலாவியிலிருந்து நேரடியாக உங்கள் சாதனத்தில் நிறுவலாம்' : 'Ready to install on Android, iPhone, Windows & Mac')}
+                  </p>
+                </div>
+              </div>
+
+              {!isInstalled ? (
+                <button
+                  onClick={promptInstall}
+                  className="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-sky-600 text-white font-black text-xs shadow-lg shadow-sky-500/20 hover:shadow-xl hover:scale-[1.02] active:scale-95 transition flex items-center justify-center space-x-2 shrink-0"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>{lang === 'ta' ? 'செயலியை நிறுவுக (Install)' : "Install VK BANKER'S App"}</span>
+                </button>
+              ) : (
+                <div className="flex items-center space-x-2 px-4 py-2 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 text-xs font-bold shrink-0">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>{lang === 'ta' ? 'நிறுவப்பட்டது (Installed)' : 'App Installed'}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              <div className="p-4 rounded-2xl glass border border-slate-200/60 dark:border-slate-800/60 space-y-1.5">
+                <div className="flex items-center space-x-2 text-sky-500 font-bold">
+                  <Zap className="w-4 h-4" />
+                  <span>{lang === 'ta' ? 'வேகமான சுமை (Instant Load)' : 'App Shell Caching'}</span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {lang === 'ta'
+                    ? 'வலைதளத்தின் வடிவமைப்பு, ஐகான்கள் மற்றும் எழுத்துருக்கள் உலாவி நினைவகத்தில் சேமிக்கப்பட்டு விரைவாகத் தோன்றும்.'
+                    : 'The app shell, icons, and theme files are securely cached for lightning-fast loads on 2G/3G networks.'}
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl glass border border-slate-200/60 dark:border-slate-800/60 space-y-1.5">
+                <div className="flex items-center space-x-2 text-emerald-500 font-bold">
+                  <Shield className="w-4 h-4" />
+                  <span>{lang === 'ta' ? 'நிதிப் பாதுகாப்பு (Zero-Cache Ledger)' : 'Zero Financial Caching'}</span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {lang === 'ta'
+                    ? 'வாடிக்கையாளர் கடன் விவரங்கள், வசூல் மற்றும் பணம் செலுத்துதல் எப்போதும் நேரலையாக மட்டுமே பெறப்படும் (Shared cache-ல் சேமிக்கப்படாது).'
+                    : 'Customer loans, dues, and transaction records bypass all caches (Network-Only) to guarantee privacy and security.'}
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl glass border border-slate-200/60 dark:border-slate-800/60 space-y-1.5">
+                <div className="flex items-center space-x-2 text-amber-500 font-bold">
+                  <Smartphone className="w-4 h-4" />
+                  <span>{lang === 'ta' ? 'அனைத்து சாதன ஆதரவு' : 'Universal Support'}</span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {lang === 'ta'
+                    ? 'Android Chrome, iPhone/iPad Safari, Windows Edge/Chrome, மற்றும் Mac ஆகிய அனைத்து சாதனங்களிலும் நிறுவலாம்.'
+                    : 'Seamless standalone experience on Android, iOS Safari (Add to Home Screen), Windows PCs, and macOS.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs border-t border-slate-100 dark:border-slate-800">
+              <span className="text-slate-400 font-mono text-[11px]">
+                Service Worker: Active (Scope: /) • Theme: #0EA5E9 • Standalone
+              </span>
+              <button
+                onClick={() => {
+                  if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then((regs) => {
+                      for (let reg of regs) reg.update();
+                    });
+                  }
+                  window.location.reload();
+                }}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl glass hover:bg-sky-50 dark:hover:bg-sky-950/40 text-slate-600 dark:text-slate-300 font-bold transition"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-sky-500" />
+                <span>{lang === 'ta' ? 'செயலியைப் புதுப்பிக்கவும் (Check Updates)' : 'Check for App Updates'}</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

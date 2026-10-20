@@ -36,6 +36,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ComfortProvider } from './context/ComfortContext';
 import { DeviceModeProvider } from './context/DeviceModeContext';
+import { PWAProvider } from './context/PWAContext';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -44,7 +45,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <ThemeProvider>
           <LanguageProvider>
             <AuthProvider>
-              <App />
+              <PWAProvider>
+                <App />
+              </PWAProvider>
             </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>

@@ -1,24 +1,40 @@
 {
-  "name": "VK BANKER'S & FINANCE - Private Finance & Installment Ledger",
+  "id": "/",
+  "name": "VK BANKER'S - Finance Management",
   "short_name": "VK BANKER'S",
-  "description": "Smart Daily, Weekly, and Monthly installment finance tracker for VK Banker's & Finance",
+  "description": "VK BANKER'S Finance Management Application",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0EA5E9",
   "background_color": "#0f172a",
-  "theme_color": "#2563eb",
-  "orientation": "portrait-primary",
+  "lang": "ta",
+  "categories": ["finance", "business", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

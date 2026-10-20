@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useDeviceMode } from '../../context/DeviceModeContext';
+import { usePWA } from '../../context/PWAContext';
 import DisplayModeSwitcher from './DisplayModeSwitcher';
 import {
   Sun,
@@ -16,6 +17,7 @@ import {
   Search,
   Bell,
   User,
+  Download,
 } from 'lucide-react';
 
 export const Navbar = ({
@@ -30,6 +32,7 @@ export const Navbar = ({
   const { lang, toggleLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const { isLaptop, isMobile } = useDeviceMode();
+  const { isInstalled, promptInstall } = usePWA();
 
   // ----------------------------------------------------
   // MOBILE HEADER (Max 56px, glass, safe-area-inset-top)
@@ -48,8 +51,19 @@ export const Navbar = ({
             </span>
           </div>
 
-          {/* Right: Bell / Notification Icon + Avatar Button */}
+          {/* Right: Install (if applicable) + Bell + Avatar Button */}
           <div className="flex items-center space-x-2 shrink-0">
+            {!isInstalled && (
+              <button
+                onClick={promptInstall}
+                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border border-amber-300/70 dark:border-amber-700/60 text-amber-600 dark:text-amber-400 active:scale-95 transition"
+                aria-label="Install App"
+                title={lang === 'ta' ? 'செயலியை நிறுவுக' : 'Install VK BANKER\'S App'}
+              >
+                <Download className="w-4 h-4 text-amber-500" />
+              </button>
+            )}
+
             {/* Bell / Notification Button */}
             <button
               onClick={onOpenNotifications}
@@ -161,6 +175,20 @@ export const Navbar = ({
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-white dark:ring-slate-900" />
             )}
           </button>
+
+          {/* Desktop Install App Button */}
+          {!isInstalled && (
+            <button
+              onClick={promptInstall}
+              className="flex items-center space-x-1.5 px-3 py-1.5 min-h-[40px] rounded-xl glass border border-amber-300/70 dark:border-amber-600/50 bg-gradient-to-r from-amber-500/10 to-sky-500/10 text-slate-800 dark:text-slate-100 text-xs font-bold hover:border-amber-400 hover:shadow-md transition active:scale-95 shadow-sm"
+              title={lang === 'ta' ? "VK BANKER'S செயலியை உங்கள் சாதனத்தில் நிறுவுக" : "Install VK BANKER'S App on your device"}
+            >
+              <Download className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span className="hidden sm:inline font-bold text-amber-600 dark:text-amber-400">
+                {lang === 'ta' ? 'நிறுவுக' : 'Install'}
+              </span>
+            </button>
+          )}
 
           {/* Language Toggle */}
           <button

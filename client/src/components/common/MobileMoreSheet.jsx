@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useDeviceMode } from '../../context/DeviceModeContext';
+import { usePWA } from '../../context/PWAContext';
 import DisplayModeSwitcher from './DisplayModeSwitcher';
 import {
   X,
@@ -22,6 +23,7 @@ import {
   Sparkles,
   Bell,
   Wallet,
+  Download,
 } from 'lucide-react';
 
 export const MobileMoreSheet = ({
@@ -35,6 +37,7 @@ export const MobileMoreSheet = ({
   const { lang, toggleLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const { isRealPhone } = useDeviceMode();
+  const { isInstalled, promptInstall } = usePWA();
 
   if (!isOpen) return null;
 
@@ -265,6 +268,29 @@ export const MobileMoreSheet = ({
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400" />
           </button>
+
+          {!isInstalled && (
+            <button
+              onClick={() => {
+                onClose();
+                promptInstall();
+              }}
+              className="w-full min-h-[48px] p-3 rounded-2xl glass hover:bg-amber-50/50 dark:hover:bg-amber-950/20 border border-amber-300/70 dark:border-amber-600/40 bg-gradient-to-r from-amber-500/10 via-sky-500/5 to-transparent flex items-center justify-between text-left active:scale-98 transition shadow-sm"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-sky-600 flex items-center justify-center text-white shadow-sm">
+                  <Download className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">
+                    {lang === 'ta' ? 'செயலியை நிறுவுக (Install App)' : 'Install VK BANKER\'S App'}
+                  </p>
+                  <p className="text-[10px] text-slate-400">Android, iPhone, iPad, PC & Mac</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-amber-500" />
+            </button>
+          )}
         </div>
 
         {/* System Actions: Refresh & Logout */}
