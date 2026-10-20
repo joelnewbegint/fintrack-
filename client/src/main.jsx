@@ -31,6 +31,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -40,18 +41,20 @@ import { PWAProvider } from './context/PWAContext';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <ComfortProvider>
-      <DeviceModeProvider>
-        <ThemeProvider>
-          <LanguageProvider>
-            <AuthProvider>
-              <PWAProvider>
-                <App />
-              </PWAProvider>
-            </AuthProvider>
-          </LanguageProvider>
-        </ThemeProvider>
-      </DeviceModeProvider>
-    </ComfortProvider>
+    <ErrorBoundary>
+      <ComfortProvider>
+        <DeviceModeProvider>
+          <ThemeProvider>
+            <LanguageProvider>
+              <AuthProvider>
+                <PWAProvider>
+                  <App />
+                </PWAProvider>
+              </AuthProvider>
+            </LanguageProvider>
+          </ThemeProvider>
+        </DeviceModeProvider>
+      </ComfortProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );

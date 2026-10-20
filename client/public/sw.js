@@ -1,20 +1,18 @@
 /**
  * Safe Progressive Web App Service Worker for VK BANKER'S
- * Version: 1.0.0
+ * Version: 1.0.2
  * 
  * Strict Privacy & Security Rules:
  * 1. NEVER cache /api/* endpoints or authenticated financial data.
  * 2. NEVER cache customer records, loans, repayments, or auth tokens.
- * 3. Pre-cache only public static shell assets and offline fallback.
- * 4. Network-first for HTML navigations to ensure latest ledger updates.
- * 5. Safe cache-cleanup on version updates.
+ * 3. Never cache stale HTML entry chunks that break Vite deployments.
+ * 4. Network-first for all navigations; fallback to /offline.html only when offline.
+ * 5. Automatic cache purge on version updates.
  */
 
-const CACHE_NAME = 'vk-bankers-pwa-v1.0.0';
+const CACHE_NAME = 'vk-bankers-pwa-v1.0.2';
 
 const STATIC_SHELL_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.webmanifest',
   '/favicon.ico',
   '/favicon.png',
@@ -25,7 +23,7 @@ const STATIC_SHELL_ASSETS = [
   '/offline.html',
 ];
 
-// Install: Cache public static shell
+// Install: Cache public static icons & offline fallback
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -35,13 +33,14 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate: Clean up old versions
+// Activate: Clean up all old caches immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((name) => {
           if (name !== CACHE_NAME) {
+            console.log('Purging old service worker cache:', name);
             return caches.delete(name);
           }
         })
@@ -66,33 +65,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. HTML Navigation requests (pages): Network-first with offline fallback
+  // 3. HTML Navigation requests (pages): Always Network-first to ensure latest deploy
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
-        .then((response) => {
-          // If valid response, update shell cache
-          if (response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
         .catch(async () => {
-          // Completely offline: serve cached index.html or offline fallback
-          const cachedResponse = await caches.match(request);
-          if (cachedResponse) return cachedResponse;
-          const cachedIndex = await caches.match('/');
-          if (cachedIndex) return cachedIndex;
-          return caches.match('/offline.html');
+          // Completely offline: serve cached offline fallback
+          const offlineFallback = await caches.match('/offline.html');
+          if (offlineFallback) return offlineFallback;
+          return new Response('Network unavailable. Please reconnect to internet.', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain' }
+          });
         })
     );
     return;
   }
 
-  // 4. Static assets (Vite hashed bundles in /assets/, fonts, icons): Stale-While-Revalidate
+  // 4. Static assets (Vite hashed bundles in /assets/, fonts, icons)
   if (
     url.pathname.startsWith('/assets/') ||
     url.pathname.endsWith('.js') ||
@@ -105,8 +95,21 @@ self.addEventListener('fetch', (event) => {
   ) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
-        const fetchPromise = fetch(request)
+        // If cached, return cached immediately
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        // Fetch from network
+        return fetch(request)
           .then((networkResponse) => {
+            // Guard against HTML rewrites for deleted JS chunks
+            const contentType = networkResponse.headers.get('content-type') || '';
+            if (url.pathname.endsWith('.js') && contentType.includes('text/html')) {
+              // Deleted chunk returned index.html fallback - do not cache
+              return networkResponse;
+            }
+
             if (networkResponse.status === 200) {
               const responseClone = networkResponse.clone();
               caches.open(CACHE_NAME).then((cache) => {
@@ -115,11 +118,7 @@ self.addEventListener('fetch', (event) => {
             }
             return networkResponse;
           })
-          .catch(() => {
-            // Ignore fetch errors if already cached
-          });
-
-        return cachedResponse || fetchPromise;
+          .catch(() => cachedResponse);
       })
     );
     return;
