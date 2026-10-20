@@ -347,6 +347,18 @@ html[data-device="mobile"] .flex > div {
 
 /* Print Stylesheet for Receipt Vouchers & Loan Application Forms */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 6mm 8mm;
+  }
+  html, body {
+    background: white !important;
+    color: black !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
   body * {
     visibility: hidden;
   }
@@ -354,16 +366,33 @@ html[data-device="mobile"] .flex > div {
   #printable-loan-form, #printable-loan-form * {
     visibility: visible;
   }
-  #printable-receipt,
-  #printable-loan-form {
+  #printable-receipt {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
     margin: 0;
-    padding: 20px;
+    padding: 15px;
     background: white !important;
     color: black !important;
+  }
+  #printable-loan-form {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-height: 280mm !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    margin: 0;
+    padding: 0 !important;
+    background: white !important;
+    color: black !important;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .no-print {
     display: none !important;
