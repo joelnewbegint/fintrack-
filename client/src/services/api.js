@@ -79,9 +79,32 @@ export const api = {
     const payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments);
     const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
 
-    const activeLoans = loans.filter((l) => l.status === 'active');
-    const totalActiveCapital = activeLoans.reduce((sum, l) => sum + (l.principalAmount || 0), 0);
-    const totalBalance = activeLoans.reduce((sum, l) => sum + (l.balanceAmount || 0), 0);
+    const activeLoans = loans.filter((l) => l.status === 'active' || l.status === 'overdue');
+    const completedLoans = loans.filter((l) => l.status === 'completed' || l.status === 'closed');
+    const totalActiveCapital = activeLoans.reduce((sum, l) => sum + (l.principalAmount || l.principal || 0), 0);
+    const totalBalance = activeLoans.reduce((sum, l) => sum + (l.balanceAmount || l.remainingBalance || 0), 0);
+
+    // Active interest = (totalRepayable - principal) of all active loans.
+    // When a loan settles/completes, it leaves active loans, which automatically decreases activeInterest
+    // and transfers into profitFromSettled!
+    const activeInterest = activeLoans.reduce((sum, l) => {
+      const rep = Number(l.totalRepayable || l.totalPayable || (l.principalAmount || l.principal || 0));
+      const pr = Number(l.principalAmount || l.principal || 0);
+      return sum + Math.max(0, rep - pr);
+    }, 0);
+
+    // Total Settled Amount = sum of total repayments/settled amount across all completed loans
+    const settledAmount = completedLoans.reduce((sum, l) => {
+      const paid = Number(l.totalPaid || l.totalCollected || l.totalRepayable || l.totalPayable || 0);
+      return sum + paid;
+    }, 0);
+
+    // Profit from Settled = realized profit from completed loans (totalPaid - principal)
+    const profitFromSettled = completedLoans.reduce((sum, l) => {
+      const paid = Number(l.totalPaid || l.totalCollected || l.totalRepayable || l.totalPayable || 0);
+      const pr = Number(l.principalAmount || l.principal || 0);
+      return sum + Math.max(0, paid - pr);
+    }, 0);
 
     const todayStr = new Date().toISOString().slice(0, 10);
     const todayPayments = payments.filter((p) => (p.paymentDate || '').startsWith(todayStr));
@@ -111,11 +134,14 @@ export const api = {
         totalLent: totalActiveCapital,
         totalCollected: payments.reduce((sum, p) => sum + (p.amount || 0), 0),
         totalOutstanding: totalBalance,
-        profitEarned: Math.round(totalActiveCapital * 0.15),
+        activeInterest,
+        settledAmount,
+        profitFromSettled,
+        profitEarned: profitFromSettled,
         totalLoans: loans.length,
         activeLoans: activeLoans.length,
         overdueLoans: overdueLoans.length,
-        completedLoans: loans.filter((l) => l.status === 'completed').length,
+        completedLoans: completedLoans.length,
       },
       todayDueList: todayDueFormatted,
       overdueLoans: overdueLoans.map((l) => ({
@@ -133,6 +159,26 @@ export const api = {
         status: 'overdue',
       })),
       completedTodayList: todayPayments,
+      completedLoansList: completedLoans.map((l) => ({
+        _id: l._id,
+        loanNo: l.loanNo,
+        customerName: l.customerName,
+        customerPhone: l.customerPhone,
+        area: l.area,
+        customerId: {
+          name: l.customerName,
+          phone: l.customerPhone,
+          area: l.area,
+        },
+        principal: l.principalAmount || l.principal || 0,
+        totalPayable: l.totalRepayable || l.totalPayable || 0,
+        totalCollected: l.totalPaid || l.totalCollected || l.totalRepayable || 0,
+        remainingBalance: 0,
+        financeType: l.financeType || 'daily',
+        status: 'completed',
+        profit: Math.max(0, (l.totalPaid || l.totalRepayable || 0) - (l.principalAmount || l.principal || 0)),
+        settledDate: l.settledDate || l.endDate || new Date().toISOString(),
+      })),
       todayStats: {
         collectedToday,
         dueCount: activeLoans.length,
@@ -364,8 +410,10 @@ export const api = {
       const newPaidInstallments = (targetLoan.paidInstallments || 0) + 1;
       targetLoan.totalPaid = newTotalPaid;
       targetLoan.balanceAmount = newBalance;
-      targetLoan.paidInstallments = newPaidInstallments;
-      if (newBalance <= 0) targetLoan.status = 'closed';
+      if (newBalance <= 0) {
+        targetLoan.status = 'completed';
+        targetLoan.settledDate = new Date().toISOString();
+      }
       updatedLoan = targetLoan;
       setStored(STORAGE_KEYS.LOANS, loans);
     }

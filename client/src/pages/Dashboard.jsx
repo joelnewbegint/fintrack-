@@ -50,6 +50,8 @@ import {
   Check,
   Printer,
   PieChart as PieChartIcon,
+  Coins,
+  ShieldCheck,
 } from 'lucide-react';
 
 export const Dashboard = ({
@@ -638,59 +640,135 @@ export const Dashboard = ({
 
       {/* Dedicated View 2: Settled Loans (100% Repaid Accounts) */}
       {dashboardView === 'settled' && (
-        <div className="glass rounded-3xl p-5 border border-white/80 dark:border-sky-800/40 shadow-lg space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between pb-3 border-b border-sky-100 dark:border-sky-900/40">
-            <div>
-              <h3 className="font-black text-sm sm:text-base text-slate-900 dark:text-white flex items-center space-x-2">
-                <Award className="w-5 h-5 text-amber-500" />
-                <span>Fully Settled Accounts / முடிவுற்ற கடன் கணக்குகள்</span>
-              </h3>
-              <p className="text-[11px] text-slate-500">
-                Borrowers who have completely paid all scheduled principal and interest
+        <div className="space-y-6 animate-fade-in">
+          {/* Top KPI Cards for Settled Accounts */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="glass rounded-3xl p-5 border border-teal-200/80 dark:border-teal-900/60 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-teal-600 font-bold uppercase tracking-wider">
+                  {lang === 'ta' ? 'முடிவுற்ற கடன் தொகை' : 'Total Settled Amount'}
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 flex items-center justify-center text-teal-600">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl sm:text-3xl font-black text-teal-600 mt-2 tabular-nums whitespace-nowrap">
+                {formatCurrency(cards.settledAmount || completedLoansList.reduce((acc, l) => acc + (l.totalCollected || l.totalPayable || 0), 0))}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                {lang === 'ta' ? 'முடிவுற்ற கணக்குகளில் வசூலான மொத்த தொகை' : 'Total recovered across 100% settled accounts'}
               </p>
             </div>
-            <span className="text-xs font-bold bg-amber-100 text-amber-800 px-3 py-1 rounded-xl">
-              {completedLoansList.length} Settled
-            </span>
+
+            <div className="glass rounded-3xl p-5 border border-emerald-200/80 dark:border-emerald-900/60 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-emerald-600 font-bold uppercase tracking-wider">
+                  {lang === 'ta' ? 'முடிந்த கடன் நிகர லாபம்' : 'Profit from Settled'}
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600">
+                  <Award className="w-4 h-4 text-emerald-500" />
+                </div>
+              </div>
+              <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-2 tabular-nums whitespace-nowrap">
+                +{formatCurrency(cards.profitFromSettled || completedLoansList.reduce((acc, l) => acc + Math.max(0, (l.totalCollected || l.totalPayable || 0) - (l.principal || 0)), 0))}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                {lang === 'ta' ? 'நடப்பு வட்டியிலிருந்து மாற்றப்பட்டு பெற்ற லாபம்' : 'Realized profit transferred from active interest'}
+              </p>
+            </div>
+
+            <div className="glass rounded-3xl p-5 border border-sky-200/80 dark:border-sky-900/60 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-sky-600 font-bold uppercase tracking-wider">
+                  {lang === 'ta' ? 'முடிவுற்ற கணக்குகள்' : 'Settled Accounts'}
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center text-sky-600">
+                  <CheckCheck className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-2 tabular-nums whitespace-nowrap">
+                {completedLoansList.length}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                {lang === 'ta' ? 'முழுமையாக முடிந்த கடன் கணக்குகள்' : 'Loans closed with zero pending balance'}
+              </p>
+            </div>
           </div>
 
-          {completedLoansList.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-400">No settled loans yet.</div>
-          ) : (
-            <div className="space-y-3">
-              {completedLoansList.map((loan) => (
-                <div
-                  key={loan._id}
-                  onClick={() => onViewLoan && onViewLoan(loan._id)}
-                  className="p-4 rounded-2xl glass glass-hover border border-sky-200/60 dark:border-sky-800/40 cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
-                >
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-black text-sm text-slate-900 dark:text-white">
-                        {loan.customerId?.name}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full font-black text-[10px] uppercase bg-sky-100 text-sky-800">
-                        {loan.financeType}
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-slate-500 font-mono">
-                      {loan.loanNo} • {loan.customerId?.phone} • {loan.customerId?.area}
-                    </p>
-                  </div>
-
-                  <div className="text-left sm:text-right">
-                    <p className="font-black tabular-nums text-sm text-slate-900 dark:text-white whitespace-nowrap">
-                      Principal: {formatCurrency(loan.principal)} • Total Repaid: {formatCurrency(loan.totalCollected)}
-                    </p>
-                    <p className="text-[11px] text-emerald-600 font-bold">
-                      Settled on {formatDate(loan.updatedAt || loan.endDate)}
-                    </p>
-                  </div>
-                </div>
-              ))}
+          {/* Settled Loans List */}
+          <div className="glass rounded-3xl p-5 border border-white/80 dark:border-sky-800/40 shadow-lg space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-sky-100 dark:border-sky-900/40">
+              <div>
+                <h3 className="font-black text-sm sm:text-base text-slate-900 dark:text-white flex items-center space-x-2">
+                  <Award className="w-5 h-5 text-amber-500" />
+                  <span>Fully Settled Accounts / முடிவுற்ற கடன் கணக்குகள்</span>
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  {lang === 'ta'
+                    ? 'முழுமையாக தவணைகள் செலுத்தப்பட்டு முடிக்கப்பட்ட கடன் கணக்குகள் (வட்டி லாபமாக வரவு வைக்கப்பட்டது)'
+                    : 'Borrowers who have completely paid scheduled principal and interest (Profit realized)'}
+                </p>
+              </div>
+              <span className="text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-3 py-1 rounded-xl border border-amber-300">
+                {completedLoansList.length} Settled
+              </span>
             </div>
-          )}
+
+            {completedLoansList.length === 0 ? (
+              <div className="py-12 text-center text-xs text-slate-400">
+                <CheckCircle2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="font-bold text-slate-700 dark:text-slate-200">No settled loans yet</p>
+                <p className="text-[11px]">When a loan balance reaches ₹0, it automatically archives here with profit separated.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {completedLoansList.map((loan) => {
+                  const pr = Number(loan.principal || loan.principalAmount || 0);
+                  const collected = Number(loan.totalCollected || loan.totalPayable || loan.totalPaid || 0);
+                  const profit = Math.max(0, collected - pr);
+                  const parsed = parseCustomerName(loan.customerId?.name || loan.customerName);
+
+                  return (
+                    <div
+                      key={loan._id}
+                      onClick={() => onViewLoan && onViewLoan(loan._id)}
+                      className="p-4 rounded-2xl glass glass-hover border border-sky-200/60 dark:border-sky-800/40 cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-black text-sm text-slate-900 dark:text-white">
+                            {parsed.primary}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full font-black text-[10px] uppercase bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 border border-sky-300">
+                            {loan.financeType}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full font-black text-[10px] uppercase bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 flex items-center space-x-1">
+                            <span>+{formatCurrency(profit)} {lang === 'ta' ? 'லாபம்' : 'Profit'}</span>
+                          </span>
+                        </div>
+                        {parsed.secondary && (
+                          <p className="text-[11px] text-slate-400">{parsed.secondary}</p>
+                        )}
+                        <p className="text-xs text-slate-500 font-mono">
+                          {loan.loanNo} • {loan.customerId?.phone || loan.customerPhone} • {loan.customerId?.area || loan.area}
+                        </p>
+                      </div>
+
+                      <div className="text-left sm:text-right shrink-0">
+                        <p className="font-black tabular-nums text-sm text-slate-900 dark:text-white whitespace-nowrap">
+                          Principal: {formatCurrency(pr)} • Settled: {formatCurrency(collected)}
+                        </p>
+                        <p className="text-[11px] text-emerald-600 font-bold flex items-center sm:justify-end space-x-1 mt-0.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 inline text-emerald-500" />
+                          <span>Settled on {formatDate(loan.settledDate || loan.updatedAt || loan.endDate)}</span>
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -722,9 +800,9 @@ export const Dashboard = ({
                 </span>
               </div>
 
-              {/* 2. Horizontal Swipe Carousel of 4 Total Cards (Snap scrolling) */}
+              {/* 2. Horizontal Swipe Carousel of 6 Total Cards (Snap scrolling) */}
               <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 scrollbar-none -mx-3 px-3">
-                {/* Total Lent */}
+                {/* 1. Total Lent */}
                 <div className="w-[82%] shrink-0 snap-center glass rounded-3xl p-4 border border-white/80 dark:border-sky-800/40 shadow-md">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
@@ -742,7 +820,7 @@ export const Dashboard = ({
                   </p>
                 </div>
 
-                {/* Total Collected */}
+                {/* 2. Total Collected */}
                 <div className="w-[82%] shrink-0 snap-center glass rounded-3xl p-4 border border-emerald-200/80 dark:border-emerald-900/60 shadow-md">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wide">
@@ -756,11 +834,11 @@ export const Dashboard = ({
                     {formatCurrency(cards.totalCollected || 0)}
                   </p>
                   <p className="text-[10px] text-slate-400 mt-0.5">
-                    Repaid across active accounts
+                    Repaid across accounts
                   </p>
                 </div>
 
-                {/* Outstanding Balance */}
+                {/* 3. Outstanding Balance */}
                 <div className="w-[82%] shrink-0 snap-center glass rounded-3xl p-4 border border-amber-200/80 dark:border-amber-900/60 shadow-md">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wide">
@@ -778,21 +856,57 @@ export const Dashboard = ({
                   </p>
                 </div>
 
-                {/* Profit Earned */}
-                <div className="w-[82%] shrink-0 snap-center glass rounded-3xl p-4 border border-teal-200/80 dark:border-teal-900/60 shadow-md">
+                {/* 4. Active Interest (Auto-reduces as loans settle) */}
+                <div className="w-[82%] shrink-0 snap-center glass rounded-3xl p-4 border border-indigo-200/80 dark:border-indigo-900/60 shadow-md">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-teal-600 uppercase tracking-wide">
-                      {lang === 'ta' ? 'வட்டி லாபம்' : 'Profit Earned'}
+                    <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wide">
+                      {lang === 'ta' ? 'நடப்பு வட்டி (Interest)' : 'Active Interest'}
                     </span>
-                    <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 flex items-center justify-center text-teal-600">
-                      <TrendingUp className="w-4 h-4" />
+                    <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-indigo-600">
+                      <Coins className="w-4 h-4" />
                     </div>
                   </div>
-                  <p className="text-xl font-black text-teal-600 tabular-nums mt-1 whitespace-nowrap">
-                    {formatCurrency(cards.profitEarned || 0)}
+                  <p className="text-xl font-black text-indigo-600 tabular-nums mt-1 whitespace-nowrap">
+                    {formatCurrency(cards.activeInterest || 0)}
+                  </p>
+                  <p className="text-[10px] text-indigo-500/80 dark:text-indigo-400 mt-0.5">
+                    {lang === 'ta' ? 'முடிவுற்றதும் குறையும்' : 'Auto-reduces as loans settle'}
+                  </p>
+                </div>
+
+                {/* 5. Total Settled Amount (Overall recovered from completed loans) */}
+                <div className="w-[82%] shrink-0 snap-center glass rounded-3xl p-4 border border-cyan-200/80 dark:border-cyan-900/60 shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-cyan-600 uppercase tracking-wide">
+                      {lang === 'ta' ? 'முடிவுற்ற கடன் தொகை' : 'Settled Amount'}
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-cyan-100 dark:bg-cyan-950 flex items-center justify-center text-cyan-600">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <p className="text-xl font-black text-cyan-600 tabular-nums mt-1 whitespace-nowrap">
+                    {formatCurrency(cards.settledAmount || 0)}
                   </p>
                   <p className="text-[10px] text-slate-400 mt-0.5">
-                    Net interest recovered
+                    {cards.completedLoans || 0} completed loans overall
+                  </p>
+                </div>
+
+                {/* 6. Profit from Settled (Pure realized profit) */}
+                <div className="w-[82%] shrink-0 snap-center glass rounded-3xl p-4 border border-emerald-300/80 dark:border-emerald-800/60 shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wide">
+                      {lang === 'ta' ? 'முடிந்த கடன் லாபம்' : 'Profit from Settled'}
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600">
+                      <Award className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <p className="text-xl font-black text-emerald-600 tabular-nums mt-1 whitespace-nowrap">
+                    +{formatCurrency(cards.profitFromSettled ?? cards.profitEarned ?? 0)}
+                  </p>
+                  <p className="text-[10px] text-emerald-500 mt-0.5">
+                    {lang === 'ta' ? 'முடிந்த கணக்குகளின் நிகர லாபம்' : 'Realized profit from settled'}
                   </p>
                 </div>
               </div>
@@ -1303,16 +1417,16 @@ export const Dashboard = ({
                 )}
               </div>
 
-              {/* 1. Four Animated Key Metric Cards */}
+              {/* 1. Six Animated Key Metric Cards */}
               <div
                 className={`grid ${
-                  isTablet ? 'grid-cols-2 gap-4' : 'grid-cols-4 gap-4'
+                  isTablet ? 'grid-cols-2 gap-4' : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4'
                 }`}
               >
                 <StatCard
                   title={t('totalLent')}
                   amount={cards.totalLent}
-                  subtitle={`${cards.totalLoans || 0} total loans issued`}
+                  subtitle={`${cards.totalLoans || 0} loans issued`}
                   icon={Banknote}
                   gradient="from-sky-400 to-sky-600"
                   delay={0}
@@ -1320,26 +1434,44 @@ export const Dashboard = ({
                 <StatCard
                   title={t('totalCollected')}
                   amount={cards.totalCollected}
-                  subtitle={`${cards.completedLoans || 0} fully settled loans`}
+                  subtitle="Repaid across accounts"
                   icon={CheckCircle2}
                   gradient="from-emerald-400 to-teal-500"
-                  delay={0.1}
+                  delay={0.05}
                 />
                 <StatCard
                   title={t('totalOutstanding')}
                   amount={cards.totalOutstanding}
-                  subtitle={`${cards.activeLoans || 0} currently active loans`}
+                  subtitle={`${cards.activeLoans || 0} active loans pending`}
                   icon={Clock}
                   gradient="from-amber-400 to-amber-500"
-                  delay={0.2}
+                  delay={0.1}
                 />
                 <StatCard
-                  title={t('profitEarned')}
-                  amount={cards.profitEarned}
-                  subtitle="Net interest recovered"
-                  icon={TrendingUp}
-                  gradient="from-sky-500 to-indigo-600"
-                  delay={0.3}
+                  title={t('activeInterest')}
+                  amount={cards.activeInterest}
+                  subtitle={lang === 'ta' ? 'முடிவுற்றதும் குறையும்' : 'Auto-reduces as loans settle'}
+                  icon={Coins}
+                  gradient="from-indigo-400 to-indigo-600"
+                  delay={0.15}
+                />
+                <StatCard
+                  title={t('settledAmount')}
+                  amount={cards.settledAmount}
+                  subtitle={`${cards.completedLoans || 0} completed loans`}
+                  icon={ShieldCheck}
+                  gradient="from-teal-400 to-cyan-600"
+                  delay={0.2}
+                  onClick={() => setDashboardView('settled')}
+                />
+                <StatCard
+                  title={t('profitFromSettled')}
+                  amount={cards.profitFromSettled ?? cards.profitEarned}
+                  subtitle={lang === 'ta' ? 'முடிந்த கணக்குகளின் நிகர லாபம்' : 'Realized profit from settled'}
+                  icon={Award}
+                  gradient="from-emerald-500 to-green-600"
+                  delay={0.25}
+                  onClick={() => setDashboardView('settled')}
                 />
               </div>
 

@@ -9,7 +9,7 @@ export const getDashboardStats = async (req, res, next) => {
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
-    // 1. Overall Loan Aggregate
+    // 1. Overall Loan Aggregate (Separating Active Loans vs Settled Loans)
     const loanAggregate = await Loan.aggregate([
       {
         $group: {
@@ -34,6 +34,38 @@ export const getDashboardStats = async (req, res, next) => {
               $cond: [{ $eq: ['$status', 'completed'] }, 1, 0],
             },
           },
+          // Active loans principal and totalPayable
+          activePrincipal: {
+            $sum: {
+              $cond: [{ $in: ['$status', ['active', 'overdue']] }, '$principal', 0],
+            },
+          },
+          activeTotalPayable: {
+            $sum: {
+              $cond: [{ $in: ['$status', ['active', 'overdue']] }, '$totalPayable', 0],
+            },
+          },
+          activeCollected: {
+            $sum: {
+              $cond: [{ $in: ['$status', ['active', 'overdue']] }, '$totalCollected', 0],
+            },
+          },
+          // Settled loans principal and totalCollected/totalPayable
+          settledPrincipal: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'completed'] }, '$principal', 0],
+            },
+          },
+          settledTotalPayable: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'completed'] }, '$totalPayable', 0],
+            },
+          },
+          settledAmount: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'completed'] }, '$totalCollected', 0],
+            },
+          },
         },
       },
     ]);
@@ -47,13 +79,29 @@ export const getDashboardStats = async (req, res, next) => {
       activeLoans: 0,
       overdueLoans: 0,
       completedLoans: 0,
+      activePrincipal: 0,
+      activeTotalPayable: 0,
+      activeCollected: 0,
+      settledPrincipal: 0,
+      settledTotalPayable: 0,
+      settledAmount: 0,
     };
 
-    // Calculate total profit/interest earned:
-    // Profit = Total collected - Proportion of principal repaid, or (Total Payable - Total Principal) * (Total Collected / Total Payable)
-    const expectedInterest = Math.max(0, totalStats.totalPayable - totalStats.totalPrincipal);
-    const profitRatio = totalStats.totalPayable > 0 ? totalStats.totalCollected / totalStats.totalPayable : 0;
-    const profitEarned = Math.round(expectedInterest * profitRatio);
+    // 1. Settled Amount: Total overall amount from 100% completed accounts
+    const settledAmount = totalStats.settledAmount || totalStats.settledTotalPayable || 0;
+
+    // 2. Profit from Settled: Pure profit/interest realized exclusively from completed loans
+    const profitFromSettled = Math.max(
+      0,
+      (totalStats.settledTotalPayable || totalStats.settledAmount) - totalStats.settledPrincipal
+    );
+
+    // 3. Active Interest: Expected interest currently sitting in active/running loans.
+    // When a loan completes, it automatically leaves active loans, which reduces activeInterest and transfers into profitFromSettled!
+    const activeInterest = Math.max(0, totalStats.activeTotalPayable - totalStats.activePrincipal);
+
+    // Keep profitEarned mapped to profitFromSettled for consistency
+    const profitEarned = profitFromSettled;
 
     // 2. Finance Type Breakdown (Daily, Weekly, Monthly)
     const typeBreakdown = await Loan.aggregate([
@@ -271,6 +319,9 @@ export const getDashboardStats = async (req, res, next) => {
         totalLent: totalStats.totalPrincipal,
         totalCollected: totalStats.totalCollected,
         totalOutstanding: totalStats.totalRemaining,
+        activeInterest,
+        settledAmount,
+        profitFromSettled,
         profitEarned,
         totalLoans: totalStats.totalLoans,
         activeLoans: totalStats.activeLoans,
