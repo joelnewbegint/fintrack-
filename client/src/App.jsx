@@ -14,6 +14,7 @@ import CustomerModal from './components/common/CustomerModal';
 import NotificationModal from './components/common/NotificationModal';
 import WhatsAppReminderModal from './components/common/WhatsAppReminderModal';
 import PWAInstallModal from './components/common/PWAInstallModal';
+import LoanApplicationFormModal from './components/common/LoanApplicationFormModal';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Loans from './pages/Loans';
@@ -47,6 +48,7 @@ export function App() {
   const [notificationCount, setNotificationCount] = useState(0);
   const [globalWhatsappItem, setGlobalWhatsappItem] = useState(null);
   const [globalPayItem, setGlobalPayItem] = useState(null);
+  const [showLoanFormModal, setShowLoanFormModal] = useState(false);
 
   const [customers, setCustomers] = useState([]);
   const [activeLoans, setActiveLoans] = useState([]);
@@ -156,6 +158,7 @@ export function App() {
         onAddPayment={() => setShowGlobalPayModal(true)}
         onOpenMoreSheet={() => setShowMoreSheet(true)}
         onOpenNotifications={() => setShowNotifications(true)}
+        onOpenLoanForm={() => setShowLoanFormModal(true)}
         unreadNotificationsCount={notificationCount}
       />
 
@@ -256,6 +259,7 @@ export function App() {
         onClose={() => setShowMoreSheet(false)}
         onSelectTab={handleTabChange}
         onOpenNotifications={() => setShowNotifications(true)}
+        onOpenLoanForm={() => setShowLoanFormModal(true)}
         unreadNotificationsCount={notificationCount}
       />
 
@@ -347,6 +351,12 @@ export function App() {
 
       {/* PWA Install Guide Modal */}
       <PWAInstallModal />
+
+      {/* Official Loan Application Form (Print & Download) */}
+      <LoanApplicationFormModal
+        isOpen={showLoanFormModal}
+        onClose={() => setShowLoanFormModal(false)}
+      />
     </div>
   );
 }

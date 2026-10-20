@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from '../utils/currency';
 import { parseCustomerName } from '../utils/customerName';
 import ReceiptModal from '../components/common/ReceiptModal';
 import PaymentModal from '../components/common/PaymentModal';
+import WhatsAppPaymentHistoryModal from '../components/common/WhatsAppPaymentHistoryModal';
 import {
   Receipt,
   Search,
@@ -18,6 +19,7 @@ import {
   QrCode,
   Download,
   PlusCircle,
+  Share2,
 } from 'lucide-react';
 
 export const Payments = () => {
@@ -32,6 +34,7 @@ export const Payments = () => {
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
+  const [whatsappHistoryItem, setWhatsappHistoryItem] = useState(null);
 
   const fetchPayments = async () => {
     try {
@@ -226,6 +229,18 @@ export const Payments = () => {
                           <span>Receipt</span>
                         </button>
 
+                        <button
+                          onClick={() => setWhatsappHistoryItem({
+                            customer: p.customerId,
+                            loan: p.loanId,
+                            payments: [p]
+                          })}
+                          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 active:scale-95 transition"
+                          title="Send via WhatsApp"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </button>
+
                         {isOwner && (
                           <button
                             onClick={() => handleUndoPayment(p)}
@@ -329,6 +344,18 @@ export const Payments = () => {
                             <span>Receipt</span>
                           </button>
 
+                          <button
+                            onClick={() => setWhatsappHistoryItem({
+                              customer: p.customerId,
+                              loan: p.loanId,
+                              payments: [p]
+                            })}
+                            className="p-1.5 rounded-xl glass hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 transition active:scale-95"
+                            title="Send Receipt via WhatsApp"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                          </button>
+
                           {isOwner && (
                             <button
                               onClick={() => handleUndoPayment(p)}
@@ -366,6 +393,16 @@ export const Payments = () => {
             setShowPaymentModal(false);
             fetchPayments();
           }}
+        />
+      )}
+
+      {/* WhatsApp Payment Statement Modal */}
+      {whatsappHistoryItem && (
+        <WhatsAppPaymentHistoryModal
+          customer={whatsappHistoryItem.customer}
+          loan={whatsappHistoryItem.loan}
+          payments={whatsappHistoryItem.payments}
+          onClose={() => setWhatsappHistoryItem(null)}
         />
       )}
     </div>

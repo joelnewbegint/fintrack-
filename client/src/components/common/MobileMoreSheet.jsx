@@ -24,6 +24,7 @@ import {
   Bell,
   Wallet,
   Download,
+  FileText,
 } from 'lucide-react';
 
 export const MobileMoreSheet = ({
@@ -31,6 +32,7 @@ export const MobileMoreSheet = ({
   onClose,
   onSelectTab,
   onOpenNotifications,
+  onOpenLoanForm,
   unreadNotificationsCount = 0,
 }) => {
   const { user, logout, isOwner } = useAuth();
@@ -246,6 +248,27 @@ export const MobileMoreSheet = ({
                   {lang === 'ta' ? 'தவணை நாட்காட்டி' : 'Repayment Calendar'}
                 </p>
                 <p className="text-[10px] text-slate-400">Due calendar & schedule view</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          </button>
+
+          <button
+            onClick={() => {
+              onClose();
+              if (onOpenLoanForm) onOpenLoanForm();
+            }}
+            className="w-full min-h-[48px] p-3 rounded-2xl glass hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/60 flex items-center justify-between text-left active:scale-98 transition shadow-sm"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center text-sky-600 dark:text-sky-400">
+                <FileText className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                  {lang === 'ta' ? 'கடன் விண்ணப்பப் படிவம் (Loan Form)' : 'Download Loan Application Form'}
+                </p>
+                <p className="text-[10px] text-slate-400">Official printable form with photo box</p>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400" />

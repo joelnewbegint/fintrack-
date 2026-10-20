@@ -36,7 +36,7 @@ export const Settings = () => {
   const [settings, setSettings] = useState({
     businessName: "VK BANKER'S & FINANCE",
     businessNameTamil: 'வி.கே. பேங்கர்ஸ் & பைனான்ஸ்',
-    ownerName: 'K. Subramanian',
+    ownerName: 'Vasantha Kumar K',
     phone: '+91 98421 12345',
     address: '45, Cross Cut Road, Gandhipuram, Coimbatore - 641012',
     defaultPenaltyPercent: 2,

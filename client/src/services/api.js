@@ -24,11 +24,37 @@ const getStored = (key, fallback) => {
       localStorage.setItem(key, JSON.stringify(fallback));
       return fallback;
     }
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    // Auto-purge if dump data exists
+    if (Array.isArray(parsed) && parsed.some((item) => item?._id === 'cust_001' || item?._id === 'loan_001' || item?._id === 'inv_001' || item?._id === 'exp_001')) {
+      localStorage.setItem(key, JSON.stringify(fallback));
+      return fallback;
+    }
+    return parsed;
   } catch {
     return fallback;
   }
 };
+
+// Purge any old dump data on initialization
+if (typeof window !== 'undefined') {
+  try {
+    const custRaw = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
+    if (custRaw && (custRaw.includes('cust_001') || custRaw.includes('Murugesan') || custRaw.includes('Kaliappan'))) {
+      localStorage.removeItem(STORAGE_KEYS.CUSTOMERS);
+      localStorage.removeItem(STORAGE_KEYS.LOANS);
+      localStorage.removeItem(STORAGE_KEYS.PAYMENTS);
+      localStorage.removeItem(STORAGE_KEYS.INVESTMENTS);
+      localStorage.removeItem(STORAGE_KEYS.EXPENSES);
+    }
+    const settRaw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    if (settRaw && settRaw.includes('Subramanian')) {
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(initialSettings));
+    }
+  } catch (e) {
+    // ignore
+  }
+}
 
 const setStored = (key, data) => {
   try {

@@ -214,7 +214,7 @@ export const Login = () => {
               <div className="flex items-center justify-between mb-1">
                 <span className="inline-flex items-center space-x-1 text-xs font-black text-emerald-700 dark:text-emerald-300">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>1. Owner</span>
+                  <span>1. Owner (Vasantha Kumar K)</span>
                 </span>
                 <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded font-bold">
                   Admin
@@ -235,7 +235,7 @@ export const Login = () => {
               <div className="flex items-center justify-between mb-1">
                 <span className="inline-flex items-center space-x-1 text-xs font-black text-sky-700 dark:text-sky-300">
                   <UserCheck className="w-3.5 h-3.5 text-sky-500" />
-                  <span>2. Agent</span>
+                  <span>2. Agent (Magimaidoss M)</span>
                 </span>
                 <span className="text-[9px] font-mono text-sky-600 dark:text-sky-400 bg-sky-100/80 dark:bg-sky-900/40 px-1.5 py-0.5 rounded font-bold">
                   Dues

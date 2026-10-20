@@ -32,7 +32,7 @@ export const seedData = async (exitOnComplete = true) => {
     const settings = await Settings.create({
       businessName: "VK BANKER'S & FINANCE",
       businessNameTamil: 'வி.கே. பேங்கர்ஸ் & பைனான்ஸ்',
-      ownerName: 'K. Subramanian',
+      ownerName: 'Vasantha Kumar K',
       phone: '+91 98421 12345',
       address: '45, Cross Cut Road, Gandhipuram, Coimbatore - 641012, Tamil Nadu',
       defaultPenaltyPercent: 2,
@@ -48,7 +48,7 @@ export const seedData = async (exitOnComplete = true) => {
     const agentHash = await bcrypt.hash('agent123', salt);
 
     const owner = await User.create({
-      name: 'K. Subramanian (Owner)',
+      name: 'Vasantha Kumar K (Owner)',
       email: 'owner@fintrack.com',
       phone: '9842112345',
       passwordHash: ownerHash,
@@ -58,7 +58,7 @@ export const seedData = async (exitOnComplete = true) => {
     });
 
     const agent = await User.create({
-      name: 'M. Senthil Kumar (Collection Agent)',
+      name: 'Magimaidoss M (Collection Agent)',
       email: 'agent@fintrack.com',
       phone: '9789054321',
       passwordHash: agentHash,

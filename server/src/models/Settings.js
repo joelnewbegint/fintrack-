@@ -14,7 +14,7 @@ const settingsSchema = new mongoose.Schema(
     },
     ownerName: {
       type: String,
-      default: 'K. Subramanian',
+      default: 'Vasantha Kumar K',
       trim: true,
     },
     phone: {

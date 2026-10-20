@@ -5,6 +5,7 @@ import { useDeviceMode } from '../context/DeviceModeContext';
 import { formatCurrency, formatDate } from '../utils/currency';
 import LoanModal from '../components/common/LoanModal';
 import ReceiptModal from '../components/common/ReceiptModal';
+import WhatsAppPaymentHistoryModal from '../components/common/WhatsAppPaymentHistoryModal';
 import {
   ArrowLeft,
   Phone,
@@ -17,6 +18,7 @@ import {
   CheckCircle,
   FileText,
   Printer,
+  Share2,
 } from 'lucide-react';
 
 export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
@@ -26,6 +28,7 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
   const [loading, setLoading] = useState(true);
   const [showAddLoan, setShowAddLoan] = useState(false);
   const [receiptPayment, setReceiptPayment] = useState(null);
+  const [showPaymentHistoryModal, setShowPaymentHistoryModal] = useState(false);
 
   const fetchCustomerData = async () => {
     try {
@@ -231,9 +234,21 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
 
       {/* Customer's Payments History */}
       <div className="glass-card rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800/80 shadow-md space-y-4">
-        <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-          All Payment Receipts / செலுத்திய ரசீதுகள் ({payments.length})
-        </h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-100 dark:border-slate-800">
+          <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+            All Payment Receipts / செலுத்திய ரசீதுகள் ({payments.length})
+          </h3>
+          {payments.length > 0 && (
+            <button
+              onClick={() => setShowPaymentHistoryModal(true)}
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95 text-white font-bold text-xs shadow-sm active:scale-95 transition self-start sm:self-auto"
+              title="Send customer payment ledger history via WhatsApp"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Send Payment History (வாட்ஸ்அப் அறிக்கை)</span>
+            </button>
+          )}
+        </div>
 
         {payments.length === 0 ? (
           <p className="py-6 text-center text-xs text-slate-400">No payment receipts yet.</p>
@@ -331,6 +346,16 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
         <ReceiptModal
           payment={receiptPayment}
           onClose={() => setReceiptPayment(null)}
+        />
+      )}
+
+      {/* WhatsApp Payment History Statement Modal */}
+      {showPaymentHistoryModal && (
+        <WhatsAppPaymentHistoryModal
+          customer={customer}
+          loans={loans}
+          payments={payments}
+          onClose={() => setShowPaymentHistoryModal(false)}
         />
       )}
     </div>

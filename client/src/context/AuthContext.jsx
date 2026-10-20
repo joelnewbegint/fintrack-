@@ -127,7 +127,7 @@ export const AuthProvider = ({ children }) => {
     if (isOwnerMatch) {
       const ownerUser = {
         id: 'auth_owner_001',
-        name: 'K. Subramanian (Owner)',
+        name: 'Vasantha Kumar K (Owner)',
         email: 'owner@fintrack.com',
         phone: '9842112345',
         role: 'owner',
@@ -145,7 +145,7 @@ export const AuthProvider = ({ children }) => {
     if (isAgentMatch) {
       const agentUser = {
         id: 'auth_agent_001',
-        name: 'M. Senthil Kumar (Collection Agent)',
+        name: 'Magimaidoss M (Collection Agent)',
         email: 'agent@fintrack.com',
         phone: '9789054321',
         role: 'agent',

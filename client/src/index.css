@@ -345,15 +345,17 @@ html[data-device="mobile"] .flex > div {
   padding-top: env(safe-area-inset-top, 0rem);
 }
 
-/* Print Stylesheet for Receipt Vouchers */
+/* Print Stylesheet for Receipt Vouchers & Loan Application Forms */
 @media print {
   body * {
     visibility: hidden;
   }
-  #printable-receipt, #printable-receipt * {
+  #printable-receipt, #printable-receipt *,
+  #printable-loan-form, #printable-loan-form * {
     visibility: visible;
   }
-  #printable-receipt {
+  #printable-receipt,
+  #printable-loan-form {
     position: absolute;
     left: 0;
     top: 0;

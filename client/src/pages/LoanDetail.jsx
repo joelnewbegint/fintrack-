@@ -7,6 +7,7 @@ import { useDeviceMode } from '../context/DeviceModeContext';
 import PaymentModal from '../components/common/PaymentModal';
 import ReceiptModal from '../components/common/ReceiptModal';
 import WhatsAppReminderModal from '../components/common/WhatsAppReminderModal';
+import WhatsAppPaymentHistoryModal from '../components/common/WhatsAppPaymentHistoryModal';
 import {
   ArrowLeft,
   CreditCard,
@@ -18,6 +19,7 @@ import {
   AlertTriangle,
   History,
   FileText,
+  Share2,
 } from 'lucide-react';
 
 export const LoanDetail = ({ loanId, onBack }) => {
@@ -30,6 +32,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const [payModalItem, setPayModalItem] = useState(null);
   const [receiptPayment, setReceiptPayment] = useState(null);
   const [whatsappItem, setWhatsappItem] = useState(null);
+  const [showPaymentHistoryModal, setShowPaymentHistoryModal] = useState(false);
 
   const fetchLoanData = async () => {
     try {
@@ -122,6 +125,15 @@ export const LoanDetail = ({ loanId, onBack }) => {
           >
             <Send className="w-4 h-4" />
             <span>WhatsApp Reminder</span>
+          </button>
+
+          <button
+            onClick={() => setShowPaymentHistoryModal(true)}
+            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition"
+            title="Send full payment history statement to customer via WhatsApp"
+          >
+            <Share2 className="w-4 h-4" />
+            <span>Payment History (வாட்ஸ்அப்)</span>
           </button>
         </div>
       </div>
@@ -449,10 +461,21 @@ export const LoanDetail = ({ loanId, onBack }) => {
         />
       )}
 
+      {/* WhatsApp Pre-filled Reminder Modal */}
       {whatsappItem && (
         <WhatsAppReminderModal
           item={whatsappItem}
           onClose={() => setWhatsappItem(null)}
+        />
+      )}
+
+      {/* WhatsApp Payment History Statement Modal */}
+      {showPaymentHistoryModal && (
+        <WhatsAppPaymentHistoryModal
+          customer={customer}
+          loan={loan}
+          payments={payments}
+          onClose={() => setShowPaymentHistoryModal(false)}
         />
       )}
     </div>

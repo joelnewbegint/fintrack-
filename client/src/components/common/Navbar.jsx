@@ -18,6 +18,7 @@ import {
   Bell,
   User,
   Download,
+  FileText,
 } from 'lucide-react';
 
 export const Navbar = ({
@@ -26,6 +27,7 @@ export const Navbar = ({
   onAddPayment,
   onOpenMoreSheet,
   onOpenNotifications,
+  onOpenLoanForm,
   unreadNotificationsCount = 0,
 }) => {
   const { user, logout, isOwner } = useAuth();
@@ -53,6 +55,16 @@ export const Navbar = ({
 
           {/* Right: Install (if applicable) + Bell + Avatar Button */}
           <div className="flex items-center space-x-2 shrink-0">
+            {/* Loan Application Form Button */}
+            <button
+              onClick={onOpenLoanForm}
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border border-sky-300/70 dark:border-sky-700/60 text-sky-600 dark:text-sky-400 active:scale-95 transition"
+              aria-label="Loan Form"
+              title={lang === 'ta' ? 'கடன் விண்ணப்பப் படிவம்' : 'Download Loan Application Form'}
+            >
+              <FileText className="w-4 h-4 text-sky-500" />
+            </button>
+
             {!isInstalled && (
               <button
                 onClick={promptInstall}
@@ -174,6 +186,18 @@ export const Navbar = ({
             ) : (
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-white dark:ring-slate-900" />
             )}
+          </button>
+
+          {/* Loan Application Form Button */}
+          <button
+            onClick={onOpenLoanForm}
+            className="flex items-center space-x-1.5 px-3 py-1.5 min-h-[40px] rounded-xl glass border border-sky-300/70 dark:border-sky-600/50 bg-gradient-to-r from-sky-500/10 to-indigo-500/10 text-slate-800 dark:text-slate-100 text-xs font-bold hover:border-sky-400 hover:shadow-md transition active:scale-95 shadow-sm"
+            title={lang === 'ta' ? 'கடன் விண்ணப்பப் படிவத்தை அச்சிட / பதிவிறக்க' : 'Print or Download Loan Application Form'}
+          >
+            <FileText className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+            <span className="hidden sm:inline font-bold text-sky-700 dark:text-sky-300">
+              {lang === 'ta' ? 'கடன் படிவம்' : 'Loan Form'}
+            </span>
           </button>
 
           {/* Desktop Install App Button */}

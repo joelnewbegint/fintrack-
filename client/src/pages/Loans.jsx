@@ -9,6 +9,7 @@ import LoanModal from '../components/common/LoanModal';
 import PaymentModal from '../components/common/PaymentModal';
 import ReceiptModal from '../components/common/ReceiptModal';
 import WhatsAppReminderModal from '../components/common/WhatsAppReminderModal';
+import LoanApplicationFormModal from '../components/common/LoanApplicationFormModal';
 import {
   Plus,
   Search,
@@ -20,6 +21,7 @@ import {
   Clock,
   ArrowUpRight,
   Send,
+  FileText,
 } from 'lucide-react';
 
 export const Loans = ({ initialType = 'all', onViewLoan }) => {
@@ -38,6 +40,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
   const [payLoanItem, setPayLoanItem] = useState(null);
   const [receiptPayment, setReceiptPayment] = useState(null);
   const [whatsappItem, setWhatsappItem] = useState(null);
+  const [showFormModal, setShowFormModal] = useState(false);
 
   const fetchLoans = async () => {
     try {
@@ -91,15 +94,26 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
           </p>
         </div>
 
-        {isOwner && (
+        <div className="flex items-center space-x-2 shrink-0 self-start sm:self-auto">
           <button
-            onClick={() => setShowAddModal(true)}
-            className="btn-sky-primary min-h-[44px] py-2.5 px-4 text-xs font-black shadow-lg shadow-sky-500/25 flex items-center justify-center space-x-2 shrink-0 self-start sm:self-auto"
+            onClick={() => setShowFormModal(true)}
+            className="min-h-[44px] py-2 px-3.5 text-xs font-bold rounded-2xl glass border border-sky-300/80 dark:border-sky-700/60 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 transition"
+            title="Download or Print Blank/Filled Loan Application Form"
           >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>{t('newLoan')} (N)</span>
+            <FileText className="w-4 h-4 text-sky-500" />
+            <span>{lang === 'ta' ? 'படிவம் பதிவிறக்கம்' : 'Application Form'}</span>
           </button>
-        )}
+
+          {isOwner && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="btn-sky-primary min-h-[44px] py-2.5 px-4 text-xs font-black shadow-lg shadow-sky-500/25 flex items-center justify-center space-x-2"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>{t('newLoan')} (N)</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -483,6 +497,12 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
           onClose={() => setWhatsappItem(null)}
         />
       )}
+
+      {/* Official Loan Application Form (Print & Download) */}
+      <LoanApplicationFormModal
+        isOpen={showFormModal}
+        onClose={() => setShowFormModal(false)}
+      />
     </div>
   );
 };
