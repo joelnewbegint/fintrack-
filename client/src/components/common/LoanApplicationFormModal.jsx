@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   X,
@@ -97,10 +98,24 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }
     }
   }, [prefillData, isOpen]);
 
-  if (!isOpen) return null;
+  // Clean up printing class after print dialog closes
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      document.body.classList.remove('printing-loan-form');
+    };
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => {
+      window.removeEventListener('afterprint', handleAfterPrint);
+      document.body.classList.remove('printing-loan-form');
+    };
+  }, []);
 
   const handlePrint = () => {
+    document.body.classList.add('printing-loan-form');
     window.print();
+    setTimeout(() => {
+      document.body.classList.remove('printing-loan-form');
+    }, 1500);
   };
 
   const setKalamSample = () => {
@@ -113,9 +128,15 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }
     setIsBlankMode(true);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-white animate-fade-in">
-      <div className="relative bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-4 sm:p-5 shadow-2xl border border-slate-200 dark:border-slate-800 my-auto print:border-none print:shadow-none print:max-w-none print:m-0 print:p-0 print:rounded-none">
+  // Only exit render after all hooks have run
+  if (!isOpen) return null;
+
+  const modalContent = (
+    <div
+      id="printable-loan-modal-wrapper"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-sm overflow-y-auto print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:block print:overflow-visible print:z-auto animate-fade-in print:animate-none"
+    >
+      <div className="relative bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-4 sm:p-5 shadow-2xl border border-slate-200 dark:border-slate-800 my-auto print:static print:m-0 print:p-0 print:border-none print:shadow-none print:max-w-none print:w-full print:bg-white print:rounded-none">
         
         {/* Screen-Only Action Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-200 dark:border-slate-800 print:hidden">
@@ -429,6 +450,8 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default LoanApplicationFormModal;
