@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Sparkles,
   Bell,
+  Wallet,
 } from 'lucide-react';
 
 export const MobileMoreSheet = ({
@@ -192,6 +193,24 @@ export const MobileMoreSheet = ({
               <ChevronRight className="w-4 h-4 text-slate-400" />
             </button>
           )}
+
+          <button
+            onClick={() => handleNav('expenses')}
+            className="w-full min-h-[48px] p-3 rounded-2xl glass hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 flex items-center justify-between text-left active:scale-98 transition"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-950 flex items-center justify-center text-rose-600">
+                <Wallet className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                  {lang === 'ta' ? 'அலுவலக & இதர செலவுகள்' : 'Expenses & Outflow'}
+                </p>
+                <p className="text-[10px] text-slate-400">Tea, fuel, rent & office expenses</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          </button>
 
           <button
             onClick={() => handleNav('dailyClosing')}

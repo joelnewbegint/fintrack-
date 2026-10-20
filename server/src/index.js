@@ -30,6 +30,7 @@ import reportRoutes from './routes/reportRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import whatsappRoutes from './routes/whatsappRoutes.js';
 import investmentRoutes from './routes/investmentRoutes.js';
+import expenseRoutes from './routes/expenseRoutes.js';
 
 // WhatsApp Service import
 import { initWhatsApp, getWhatsAppStatus } from './services/whatsapp.service.js';
@@ -107,6 +108,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/investments', investmentRoutes);
+app.use('/api/expenses', expenseRoutes);
 
 // Fallback for unknown routes
 app.use('*', (req, res) => {

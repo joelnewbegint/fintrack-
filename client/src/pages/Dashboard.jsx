@@ -25,6 +25,7 @@ import FinanceTypeCard from '../components/common/FinanceTypeCard';
 import PaymentModal from '../components/common/PaymentModal';
 import ReceiptModal from '../components/common/ReceiptModal';
 import WhatsAppReminderModal from '../components/common/WhatsAppReminderModal';
+import CollectionBreakdownModal from '../components/common/CollectionBreakdownModal';
 import {
   Banknote,
   CheckCircle2,
@@ -52,6 +53,7 @@ import {
   PieChart as PieChartIcon,
   Coins,
   ShieldCheck,
+  Wallet,
 } from 'lucide-react';
 
 export const Dashboard = ({
@@ -60,6 +62,7 @@ export const Dashboard = ({
   onOpenPayment,
   onOpenNewLoan,
   onOpenInvestment,
+  onOpenExpenses,
 }) => {
   const { t, lang } = useLanguage();
   const { user, isOwner } = useAuth();
@@ -67,6 +70,7 @@ export const Dashboard = ({
 
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showBreakdownModal, setShowBreakdownModal] = useState(false);
   const [selectedPayItem, setSelectedPayItem] = useState(null);
   const [receiptPayment, setReceiptPayment] = useState(null);
   const [whatsappItem, setWhatsappItem] = useState(null);
@@ -800,8 +804,37 @@ export const Dashboard = ({
                 </span>
               </div>
 
-              {/* 2. Horizontal Swipe Carousel of 6 Total Cards (Snap scrolling) */}
+              {/* 2. Horizontal Swipe Carousel of Key Metric Cards (Snap scrolling) */}
               <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 scrollbar-none -mx-3 px-3">
+                {/* Net Overall Collected (After Expenses) with Tap for Breakdown */}
+                <div
+                  onClick={() => setShowBreakdownModal(true)}
+                  className="w-[84%] shrink-0 snap-center glass rounded-3xl p-4 border border-emerald-300/80 dark:border-emerald-800/60 shadow-lg bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-sky-500/10 cursor-pointer active:scale-98 transition relative overflow-hidden"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+                      {lang === 'ta' ? 'நிகர வசூல் இருப்பு' : 'Net Collections in Hand'}
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-400 to-teal-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/25">
+                      <Wallet className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <p className="text-xl sm:text-2xl font-black text-emerald-600 tabular-nums mt-1 whitespace-nowrap">
+                    {formatCurrency(cards.netCollected !== undefined ? cards.netCollected : Math.max(0, (cards.totalCollected || 0) - (cards.totalExpenses || 0)))}
+                  </p>
+                  <div className="flex items-center justify-between mt-1 text-[10px]">
+                    <span className="text-slate-500 dark:text-slate-400 font-bold flex items-center space-x-1">
+                      <span>Click for breakdown</span>
+                      <ArrowRight className="w-3 h-3 text-emerald-500" />
+                    </span>
+                    {cards.totalExpenses > 0 && (
+                      <span className="text-rose-500 font-bold">
+                        (-{formatCurrency(cards.totalExpenses)} exp)
+                      </span>
+                    )}
+                  </div>
+                </div>
+
                 {/* 1. Total Lent */}
                 <div className="w-[82%] shrink-0 snap-center glass rounded-3xl p-4 border border-white/80 dark:border-sky-800/40 shadow-md">
                   <div className="flex items-center justify-between">
@@ -1417,27 +1450,40 @@ export const Dashboard = ({
                 )}
               </div>
 
-              {/* 1. Six Animated Key Metric Cards */}
+              {/* 1. Key Metric Cards (Including Net Overall Collected) */}
               <div
                 className={`grid ${
-                  isTablet ? 'grid-cols-2 gap-4' : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4'
+                  isTablet ? 'grid-cols-2 gap-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
                 }`}
               >
+                <StatCard
+                  title={t('netCollected')}
+                  amount={cards.netCollected !== undefined ? cards.netCollected : Math.max(0, (cards.totalCollected || 0) - (cards.totalExpenses || 0))}
+                  subtitle={
+                    cards.totalExpenses > 0
+                      ? `Click for breakdown • -${formatCurrency(cards.totalExpenses)} exp`
+                      : 'Click for daily & scheme breakdown'
+                  }
+                  icon={Wallet}
+                  gradient="from-emerald-400 to-teal-600"
+                  delay={0}
+                  onClick={() => setShowBreakdownModal(true)}
+                />
                 <StatCard
                   title={t('totalLent')}
                   amount={cards.totalLent}
                   subtitle={`${cards.totalLoans || 0} loans issued`}
                   icon={Banknote}
                   gradient="from-sky-400 to-sky-600"
-                  delay={0}
+                  delay={0.05}
                 />
                 <StatCard
                   title={t('totalCollected')}
                   amount={cards.totalCollected}
-                  subtitle="Repaid across accounts"
+                  subtitle="Gross repaid across accounts"
                   icon={CheckCircle2}
                   gradient="from-emerald-400 to-teal-500"
-                  delay={0.05}
+                  delay={0.1}
                 />
                 <StatCard
                   title={t('totalOutstanding')}
@@ -1445,7 +1491,7 @@ export const Dashboard = ({
                   subtitle={`${cards.activeLoans || 0} active loans pending`}
                   icon={Clock}
                   gradient="from-amber-400 to-amber-500"
-                  delay={0.1}
+                  delay={0.15}
                 />
                 <StatCard
                   title={t('activeInterest')}
@@ -1453,7 +1499,7 @@ export const Dashboard = ({
                   subtitle={lang === 'ta' ? 'முடிவுற்றதும் குறையும்' : 'Auto-reduces as loans settle'}
                   icon={Coins}
                   gradient="from-indigo-400 to-indigo-600"
-                  delay={0.15}
+                  delay={0.2}
                 />
                 <StatCard
                   title={t('settledAmount')}
@@ -1461,7 +1507,7 @@ export const Dashboard = ({
                   subtitle={`${cards.completedLoans || 0} completed loans`}
                   icon={ShieldCheck}
                   gradient="from-teal-400 to-cyan-600"
-                  delay={0.2}
+                  delay={0.25}
                   onClick={() => setDashboardView('settled')}
                 />
                 <StatCard
@@ -1470,7 +1516,7 @@ export const Dashboard = ({
                   subtitle={lang === 'ta' ? 'முடிந்த கணக்குகளின் நிகர லாபம்' : 'Realized profit from settled'}
                   icon={Award}
                   gradient="from-emerald-500 to-green-600"
-                  delay={0.25}
+                  delay={0.3}
                   onClick={() => setDashboardView('settled')}
                 />
               </div>
@@ -1728,6 +1774,16 @@ export const Dashboard = ({
           onClose={() => setWhatsappItem(null)}
         />
       )}
+
+      {/* Overall Collection Breakdown Modal (Daily & Scheme Details) */}
+      <CollectionBreakdownModal
+        isOpen={showBreakdownModal}
+        onClose={() => setShowBreakdownModal(false)}
+        cards={cards}
+        financeTypes={financeTypes}
+        dailyCollectionBreakdown={stats?.dailyCollectionBreakdown || []}
+        onOpenExpenses={onOpenExpenses}
+      />
     </div>
   );
 };

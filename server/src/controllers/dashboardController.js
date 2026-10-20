@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Loan from '../models/Loan.js';
 import Payment from '../models/Payment.js';
 import Customer from '../models/Customer.js';
+import Expense from '../models/Expense.js';
 
 export const getDashboardStats = async (req, res, next) => {
   try {
@@ -313,11 +314,100 @@ export const getDashboardStats = async (req, res, next) => {
       });
     }
 
+    // 9. Aggregate Total and Today Expenses
+    const [expenseTotalAgg, todayExpenseAgg, dailyExpensesAgg] = await Promise.all([
+      Expense.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]),
+      Expense.aggregate([
+        { $match: { date: { $gte: startOfToday, $lte: endOfToday } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
+      Expense.aggregate([
+        {
+          $match: { date: { $gte: thirtyDaysAgo } },
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+            total: { $sum: '$amount' },
+          },
+        },
+      ]),
+    ]);
+
+    const totalExpenses = expenseTotalAgg[0]?.total || 0;
+    const todayExpenses = todayExpenseAgg[0]?.total || 0;
+    const netCollected = Math.max(0, totalStats.totalCollected - totalExpenses);
+
+    const expenseDailyMap = {};
+    dailyExpensesAgg.forEach((e) => {
+      expenseDailyMap[e._id] = e.total;
+    });
+
+    // 10. Daily Collection Breakdown (Grouped by Day and joining loan finance types & expenses)
+    const dailyPaymentsDetailed = await Payment.aggregate([
+      {
+        $match: { date: { $gte: thirtyDaysAgo } },
+      },
+      {
+        $lookup: {
+          from: 'loans',
+          localField: 'loanId',
+          foreignField: '_id',
+          as: 'loan',
+        },
+      },
+      {
+        $unwind: { path: '$loan', preserveNullAndEmptyArrays: true },
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+          totalCollected: { $sum: '$amount' },
+          receiptsCount: { $sum: 1 },
+          cashAmount: {
+            $sum: { $cond: [{ $eq: ['$mode', 'cash'] }, '$amount', 0] },
+          },
+          upiAmount: {
+            $sum: { $cond: [{ $eq: ['$mode', 'upi'] }, '$amount', 0] },
+          },
+          dailyScheme: {
+            $sum: { $cond: [{ $eq: ['$loan.financeType', 'daily'] }, '$amount', 0] },
+          },
+          weeklyScheme: {
+            $sum: { $cond: [{ $eq: ['$loan.financeType', 'weekly'] }, '$amount', 0] },
+          },
+          monthlyScheme: {
+            $sum: { $cond: [{ $eq: ['$loan.financeType', 'monthly'] }, '$amount', 0] },
+          },
+        },
+      },
+      { $sort: { _id: -1 } },
+    ]);
+
+    const dailyCollectionBreakdown = dailyPaymentsDetailed.map((row) => {
+      const expenses = expenseDailyMap[row._id] || 0;
+      return {
+        date: row._id,
+        totalCollected: row.totalCollected,
+        receiptsCount: row.receiptsCount,
+        cashAmount: row.cashAmount,
+        upiAmount: row.upiAmount,
+        dailyScheme: row.dailyScheme,
+        weeklyScheme: row.weeklyScheme,
+        monthlyScheme: row.monthlyScheme,
+        expenses,
+        netCollected: Math.max(0, row.totalCollected - expenses),
+      };
+    });
+
     res.status(200).json({
       success: true,
       cards: {
         totalLent: totalStats.totalPrincipal,
         totalCollected: totalStats.totalCollected,
+        totalExpenses,
+        netCollected,
+        todayExpenses,
         totalOutstanding: totalStats.totalRemaining,
         activeInterest,
         settledAmount,
@@ -341,6 +431,7 @@ export const getDashboardStats = async (req, res, next) => {
       collectionTrend,
       financeTypeSplit,
       monthlyChartData,
+      dailyCollectionBreakdown,
     });
   } catch (error) {
     next(error);

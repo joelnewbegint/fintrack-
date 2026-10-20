@@ -4,6 +4,7 @@ import {
   initialPayments,
   initialSettings,
   initialInvestments,
+  initialExpenses,
 } from './mockData';
 
 // Local Storage helpers for offline / static mode (Firebase Hosting, Vercel, etc.)
@@ -13,6 +14,7 @@ const STORAGE_KEYS = {
   PAYMENTS: 'fintrack_local_payments',
   SETTINGS: 'fintrack_local_settings',
   INVESTMENTS: 'fintrack_local_investments',
+  EXPENSES: 'fintrack_local_expenses',
 };
 
 const getStored = (key, fallback) => {
@@ -128,11 +130,81 @@ export const api = {
       dueDate: new Date().toISOString(),
     }));
 
+    const expenses = getStored(STORAGE_KEYS.EXPENSES, initialExpenses);
+    const totalExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+    const todayExpenses = expenses
+      .filter((e) => (e.date || '').startsWith(todayStr))
+      .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+    const totalGrossCollected = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const netCollected = Math.max(0, totalGrossCollected - totalExpenses);
+
+    // Build Daily Collections Breakdown (joining payments & daily expenses)
+    const dailyMap = {};
+    payments.forEach((p) => {
+      const d = (p.paymentDate || p.date || todayStr).slice(0, 10);
+      if (!dailyMap[d]) {
+        dailyMap[d] = {
+          date: d,
+          totalCollected: 0,
+          receiptsCount: 0,
+          cashAmount: 0,
+          upiAmount: 0,
+          dailyScheme: 0,
+          weeklyScheme: 0,
+          monthlyScheme: 0,
+          expenses: 0,
+          netCollected: 0,
+        };
+      }
+      const amt = Number(p.amount) || 0;
+      dailyMap[d].totalCollected += amt;
+      dailyMap[d].receiptsCount += 1;
+      const mode = (p.paymentMode || p.mode || 'cash').toLowerCase();
+      if (mode === 'cash') dailyMap[d].cashAmount += amt;
+      else dailyMap[d].upiAmount += amt;
+
+      const targetLoan = loans.find((l) => l._id === (p.loanId?._id || p.loanId));
+      const scheme = (targetLoan?.financeType || 'daily').toLowerCase();
+      if (scheme === 'daily') dailyMap[d].dailyScheme += amt;
+      else if (scheme === 'weekly') dailyMap[d].weeklyScheme += amt;
+      else if (scheme === 'monthly') dailyMap[d].monthlyScheme += amt;
+    });
+
+    expenses.forEach((e) => {
+      const d = (e.date || todayStr).slice(0, 10);
+      if (!dailyMap[d]) {
+        dailyMap[d] = {
+          date: d,
+          totalCollected: 0,
+          receiptsCount: 0,
+          cashAmount: 0,
+          upiAmount: 0,
+          dailyScheme: 0,
+          weeklyScheme: 0,
+          monthlyScheme: 0,
+          expenses: 0,
+          netCollected: 0,
+        };
+      }
+      dailyMap[d].expenses += Number(e.amount) || 0;
+    });
+
+    const dailyCollectionBreakdown = Object.values(dailyMap)
+      .map((row) => ({
+        ...row,
+        netCollected: Math.max(0, row.totalCollected - row.expenses),
+      }))
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
     return {
       success: true,
       cards: {
         totalLent: totalActiveCapital,
-        totalCollected: payments.reduce((sum, p) => sum + (p.amount || 0), 0),
+        totalCollected: totalGrossCollected,
+        totalExpenses,
+        netCollected,
+        todayExpenses,
         totalOutstanding: totalBalance,
         activeInterest,
         settledAmount,
@@ -179,6 +251,7 @@ export const api = {
         profit: Math.max(0, (l.totalPaid || l.totalRepayable || 0) - (l.principalAmount || l.principal || 0)),
         settledDate: l.settledDate || l.endDate || new Date().toISOString(),
       })),
+      dailyCollectionBreakdown,
       todayStats: {
         collectedToday,
         dueCount: activeLoans.length,
@@ -612,6 +685,97 @@ export const api = {
     const filtered = investments.filter((i) => i._id !== id);
     setStored(STORAGE_KEYS.INVESTMENTS, filtered);
     return { success: true };
+  },
+
+  // Expenses Management
+  getExpenses: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const result = await safeFetchJson(`/api/expenses?${query}`, { headers: getHeaders() });
+    if (result.ok) return result.data;
+
+    let expenses = getStored(STORAGE_KEYS.EXPENSES, initialExpenses);
+    if (params.category && params.category !== 'all') {
+      expenses = expenses.filter((e) => e.category === params.category);
+    }
+    if (params.search) {
+      const q = params.search.toLowerCase();
+      expenses = expenses.filter(
+        (e) =>
+          (e.title && e.title.toLowerCase().includes(q)) ||
+          (e.paidTo && e.paidTo.toLowerCase().includes(q)) ||
+          (e.notes && e.notes.toLowerCase().includes(q)) ||
+          (e.receiptNo && e.receiptNo.toLowerCase().includes(q))
+      );
+    }
+    if (params.startDate) {
+      expenses = expenses.filter((e) => (e.date || '').slice(0, 10) >= params.startDate);
+    }
+    if (params.endDate) {
+      expenses = expenses.filter((e) => (e.date || '').slice(0, 10) <= params.endDate);
+    }
+    return { success: true, count: expenses.length, totalCount: expenses.length, expenses };
+  },
+
+  createExpense: async (data) => {
+    const result = await safeFetchJson('/api/expenses', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (result.ok) return result.data;
+
+    const expenses = getStored(STORAGE_KEYS.EXPENSES, initialExpenses);
+    const receiptNo = `EXP-2026-${String(expenses.length + 1).padStart(4, '0')}`;
+    const newExp = {
+      ...data,
+      _id: 'exp_' + Date.now(),
+      receiptNo,
+      date: data.date || new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    expenses.unshift(newExp);
+    setStored(STORAGE_KEYS.EXPENSES, expenses);
+    return { success: true, expense: newExp };
+  },
+
+  deleteExpense: async (id) => {
+    const result = await safeFetchJson(`/api/expenses/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (result.ok) return result.data;
+
+    const expenses = getStored(STORAGE_KEYS.EXPENSES, initialExpenses);
+    const filtered = expenses.filter((e) => e._id !== id);
+    setStored(STORAGE_KEYS.EXPENSES, filtered);
+    return { success: true, expenseId: id };
+  },
+
+  getExpenseSummary: async () => {
+    const result = await safeFetchJson('/api/expenses/summary', { headers: getHeaders() });
+    if (result.ok) return result.data;
+
+    const expenses = getStored(STORAGE_KEYS.EXPENSES, initialExpenses);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const monthStr = todayStr.slice(0, 7);
+
+    const totalExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+    const todayExpenses = expenses
+      .filter((e) => (e.date || '').startsWith(todayStr))
+      .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+    const monthlyExpenses = expenses
+      .filter((e) => (e.date || '').startsWith(monthStr))
+      .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+    return {
+      success: true,
+      summary: {
+        totalExpenses,
+        totalExpensesCount: expenses.length,
+        todayExpenses,
+        monthlyExpenses,
+      },
+    };
   },
 };
 

@@ -21,6 +21,7 @@ import Customers from './pages/Customers';
 import CustomerDetail from './pages/CustomerDetail';
 import Payments from './pages/Payments';
 import Investments from './pages/Investments';
+import Expenses from './pages/Expenses';
 import DailyClosing from './pages/DailyClosing';
 import Calendar from './pages/Calendar';
 import Settings from './pages/Settings';
@@ -198,6 +199,7 @@ export function App() {
                   onOpenPayment={() => setShowGlobalPayModal(true)}
                   onOpenNewLoan={() => setShowGlobalLoanModal(true)}
                   onOpenInvestment={() => setShowGlobalInvestmentModal(true)}
+                  onOpenExpenses={() => setActiveTab('expenses')}
                 />
               )}
 
@@ -216,6 +218,10 @@ export function App() {
 
               {activeTab === 'investments' && (
                 <Investments onOpenNewInvestment={() => setShowGlobalInvestmentModal(true)} />
+              )}
+
+              {activeTab === 'expenses' && (
+                <Expenses onNavigateToDashboard={() => setActiveTab('dashboard')} />
               )}
 
               {activeTab === 'dailyClosing' && <DailyClosing />}

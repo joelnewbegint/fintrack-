@@ -16,6 +16,7 @@ import {
   Keyboard,
   TrendingUp,
   Bell,
+  Wallet,
 } from 'lucide-react';
 
 export const Sidebar = ({
@@ -43,6 +44,7 @@ export const Sidebar = ({
     { id: 'customers', label: t('customers'), icon: Users },
     { id: 'loans', label: t('loans'), icon: Banknote },
     { id: 'payments', label: t('payments'), icon: Receipt },
+    { id: 'expenses', label: t('expenses'), icon: Wallet },
     ...(isOwner ? [{ id: 'investments', label: t('investments'), icon: TrendingUp }] : []),
     { id: 'dailyClosing', label: t('dailyClosing'), icon: FileSpreadsheet },
     { id: 'calendar', label: t('calendar'), icon: CalendarDays },
