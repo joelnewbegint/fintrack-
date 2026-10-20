@@ -78,18 +78,18 @@ export const LoanDetail = ({ loanId, onBack }) => {
       : 0;
 
   return (
-    <div className="space-y-6 pb-20 md:pb-8">
+    <div className="space-y-6">
       {/* Top Bar with Back Button */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <button
           onClick={onBack}
-          className="flex items-center space-x-2 py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 transition active:scale-95"
+          className="flex items-center space-x-2 h-11 px-4 rounded-xl border border-sky-200/80 dark:border-sky-800/60 glass text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Loans</span>
         </button>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           {loan.remainingBalance > 0 && (
             <button
               onClick={() =>
@@ -101,7 +101,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   dueAmount: loan.installmentAmount,
                 })
               }
-              className="flex items-center space-x-1.5 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs shadow-lg shadow-blue-500/25 active:scale-95"
+              className="btn-sky-primary flex items-center space-x-1.5 h-11 px-4 rounded-xl text-xs font-black shadow-lg shadow-sky-500/25 active:scale-95 transition"
             >
               <CreditCard className="w-4 h-4" />
               <span>Record Payment</span>
@@ -118,7 +118,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                 dueDate: new Date(),
               })
             }
-            className="flex items-center space-x-1.5 py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95"
+            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition"
           >
             <Send className="w-4 h-4" />
             <span>WhatsApp Reminder</span>

@@ -26,7 +26,7 @@ import api from './services/api';
 
 export function App() {
   const { user, loading, isOwner } = useAuth();
-  const { isMobile, isTablet, isLaptop } = useDeviceMode();
+  const { isMobile, isTablet, isLaptop, isRealPhone } = useDeviceMode();
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedLoanId, setSelectedLoanId] = useState(null);
@@ -116,8 +116,10 @@ export function App() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col font-sans relative ${
-        isMobile ? 'max-w-[430px] mx-auto overflow-x-hidden' : ''
+      className={`min-h-screen flex flex-col font-sans relative overflow-x-hidden ${
+        isMobile && !isRealPhone
+          ? 'max-w-[440px] mx-auto border-x border-sky-200/40 dark:border-sky-900/40 shadow-2xl'
+          : 'w-full'
       }`}
     >
       {/* Floating Sky-Blue Blurred Background Orbs */}

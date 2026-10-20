@@ -79,14 +79,14 @@ export const Investments = ({ onOpenNewInvestment }) => {
   });
 
   return (
-    <div className="space-y-6 pb-20 md:pb-8">
+    <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             {lang === 'ta' ? 'மூலதன முதலீடுகள்' : 'Capital Investments'} / முதலீடு மேலாண்மை
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {lang === 'ta'
               ? 'சொந்த மூலதனம், பங்குதாரர் முதலீடு மற்றும் வெளிக்கடன் சுழற்சி கணக்குகள்'
               : 'Promoter equity, partner capital, and borrowed wholesale credit lines ledger'}
@@ -98,10 +98,10 @@ export const Investments = ({ onOpenNewInvestment }) => {
             if (onOpenNewInvestment) onOpenNewInvestment();
             else setShowAddModal(true);
           }}
-          className="btn-sky-primary min-h-[44px] py-2.5 px-4 text-xs font-black shadow-lg shadow-sky-500/25 flex items-center space-x-2"
+          className="btn-sky-primary h-11 px-4 text-xs font-black shadow-lg shadow-sky-500/25 flex items-center space-x-2 rounded-xl whitespace-nowrap self-start sm:self-auto active:scale-95 transition"
         >
           <Plus className="w-4 h-4 stroke-[3]" />
-          <span>+ New Investment (I)</span>
+          <span>+ New Investment</span>
         </button>
       </div>
 
@@ -145,23 +145,23 @@ export const Investments = ({ onOpenNewInvestment }) => {
       </div>
 
       {/* Search and Filters */}
-      <div className="glass rounded-2xl p-4 border border-white/70 dark:border-sky-800/40 shadow-md flex flex-col md:flex-row items-center justify-between gap-3">
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-sky-500" />
+      <div className="glass rounded-2xl p-3 sm:p-4 border border-white/70 dark:border-sky-800/40 shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        <div className="relative flex-1 md:max-w-md">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" />
           <input
             type="text"
             placeholder="Search investor, notes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs focus:ring-2 focus:ring-sky-400 outline-none"
+            className="w-full h-11 pl-10 pr-4 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs focus:ring-2 focus:ring-sky-400 outline-none text-slate-800 dark:text-slate-100"
           />
         </div>
 
-        <div className="flex items-center space-x-2 w-full md:w-auto">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none"
+            className="h-11 px-3 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none flex-1 sm:flex-initial"
           >
             <option value="all">All Capital Types / அனைத்து வகை</option>
             <option value="self">Self (சொந்த மூலதனம்)</option>
@@ -172,7 +172,7 @@ export const Investments = ({ onOpenNewInvestment }) => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none"
+            className="h-11 px-3 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none flex-1 sm:flex-initial"
           >
             <option value="all">All Status / அனைத்து நிலை</option>
             <option value="active">Active (செயலில் உள்ளது)</option>

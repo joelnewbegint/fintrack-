@@ -210,13 +210,13 @@ export const Dashboard = ({
 
         {/* Quick Filter */}
         <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400 pointer-events-none" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
             type="text"
             placeholder={panelTab === 'pending' ? 'Filter pending dues...' : 'Filter completed receipts...'}
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
-            className="pl-9 pr-3 py-1.5 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs w-full sm:w-44 focus:outline-none focus:ring-2 focus:ring-sky-400"
+            className="pl-8 pr-3 py-1.5 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-sky-400"
           />
         </div>
       </div>
@@ -499,13 +499,13 @@ export const Dashboard = ({
           {/* Scheme Filter Tabs & Search Bar */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 absolute left-3 top-3 text-sky-500 pointer-events-none" />
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search borrower, receipt #, loan #..."
                 value={completedSearch}
                 onChange={(e) => setCompletedSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-2xl glass border border-sky-200/80 dark:border-sky-800/60 text-xs focus:outline-none focus:ring-2 focus:ring-sky-400"
+                className="w-full h-11 pl-10 pr-3 rounded-xl glass border border-sky-200/80 dark:border-sky-800/60 text-xs focus:outline-none focus:ring-2 focus:ring-sky-400"
               />
             </div>
 
@@ -701,7 +701,7 @@ export const Dashboard = ({
             /* ========================================================
                MOBILE DASHBOARD (Top to Bottom: Section F, E, A)
             ======================================================== */
-            <div className="space-y-4 pb-20">
+            <div className="space-y-4">
               {/* 1. Greeting + Date */}
               <div className="flex items-center justify-between">
                 <div>

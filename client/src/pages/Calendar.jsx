@@ -93,31 +93,33 @@ export const Calendar = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20 md:pb-8">
+    <div className="space-y-6">
       {/* Header with Month Navigators */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             {t('calendar')} / தவணை நாட்காட்டி
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Monthly schedule of collections due per day
           </p>
         </div>
 
-        <div className="flex items-center space-x-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center space-x-2 glass px-3 h-11 rounded-xl border border-sky-200/80 dark:border-sky-800/60 shadow-sm self-start sm:self-auto">
           <button
             onClick={prevMonth}
-            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-sky-100/50 dark:hover:bg-sky-950/50 transition active:scale-95"
+            aria-label="Previous month"
           >
             <ChevronLeft className="w-4 h-4 text-slate-600 dark:text-slate-300" />
           </button>
-          <span className="font-extrabold text-xs text-slate-900 dark:text-white min-w-[120px] text-center">
+          <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white min-w-[130px] text-center">
             {monthNames[month]} {year}
           </span>
           <button
             onClick={nextMonth}
-            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-sky-100/50 dark:hover:bg-sky-950/50 transition active:scale-95"
+            aria-label="Next month"
           >
             <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-300" />
           </button>
@@ -210,7 +212,7 @@ export const Calendar = () => {
                 {selectedDayItems.length} installments scheduled
               </p>
             </div>
-            <span className="text-xs font-bold px-2 py-1 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600">
+            <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60 tabular-nums">
               {formatCurrency(selectedDayItems.reduce((acc, i) => acc + i.amount, 0))}
             </span>
           </div>

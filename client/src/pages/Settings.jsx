@@ -99,26 +99,26 @@ export const Settings = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20 md:pb-8">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
           {t('settings')} / அமைப்புகள் & நிர்வாகம்
         </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
           Configure business details, late penalty rules, backups, and audit history
         </p>
       </div>
 
       {/* Section Tabs */}
       {isOwner && (
-        <div className="flex flex-wrap gap-2 pb-2">
+        <div className="flex flex-wrap gap-2 pb-1">
           <button
             onClick={() => setActiveSection('appearance')}
-            className={`flex items-center space-x-2 py-2.5 px-4 rounded-2xl text-xs font-bold transition shadow-sm ${
+            className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
               activeSection === 'appearance'
-                ? 'bg-sky-500 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
-                : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40'
+                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
+                : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
             }`}
           >
             <Sliders className="w-4 h-4 text-sky-400" />
@@ -127,37 +127,37 @@ export const Settings = () => {
 
           <button
             onClick={() => setActiveSection('whatsapp')}
-            className={`flex items-center space-x-2 py-2.5 px-4 rounded-2xl text-xs font-bold transition shadow-sm ${
+            className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
               activeSection === 'whatsapp'
-                ? 'bg-emerald-600 text-white shadow-emerald-500/25 ring-2 ring-emerald-500/40'
-                : 'glass text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
+                : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
             }`}
           >
-            <Smartphone className="w-4 h-4 text-emerald-400" />
+            <Smartphone className="w-4 h-4 text-emerald-500" />
             <span>WhatsApp Connect (வாட்ஸ்அப்)</span>
           </button>
 
           <button
             onClick={() => setActiveSection('business')}
-            className={`flex items-center space-x-2 py-2.5 px-4 rounded-2xl text-xs font-bold transition shadow-sm ${
+            className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
               activeSection === 'business'
-                ? 'bg-blue-600 text-white shadow-blue-500/25 ring-2 ring-blue-500/40'
-                : 'glass text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
+                : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
             }`}
           >
-            <Building className="w-4 h-4 text-blue-400" />
+            <Building className="w-4 h-4 text-sky-500" />
             <span>Business Profile (நிறுவன விவரங்கள்)</span>
           </button>
 
           <button
             onClick={() => setActiveSection('audit')}
-            className={`flex items-center space-x-2 py-2.5 px-4 rounded-2xl text-xs font-bold transition shadow-sm ${
+            className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
               activeSection === 'audit'
-                ? 'bg-purple-600 text-white shadow-purple-500/25 ring-2 ring-purple-500/40'
-                : 'glass text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
+                : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
             }`}
           >
-            <Shield className="w-4 h-4 text-purple-400" />
+            <Shield className="w-4 h-4 text-indigo-400" />
             <span>Audit Trail & Backup (தணிக்கை & பேக்அப்)</span>
           </button>
         </div>

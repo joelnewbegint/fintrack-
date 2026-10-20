@@ -149,34 +149,34 @@ export const DailyClosing = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20 md:pb-8">
+    <div className="space-y-6">
       {/* Header and Date Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             {t('dailyClosingReport')} / தினசரி கணக்கு முடிவு
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {lang === 'ta'
               ? 'தினசரி தண்டல், வாரத்தவணை மற்றும் மாதத்தவணை தனித்தனி வசூல் வரவு செலவு அறிக்கை'
               : 'End-of-day cashier balance sheet: Separate breakdown for Daily, Weekly, and Monthly schemes'}
           </p>
         </div>
 
-        <div className="flex items-center space-x-2.5">
-          <div className="flex items-center space-x-2 glass px-3 py-2 rounded-2xl border border-sky-200/80 dark:border-sky-800/60 shadow-sm text-xs">
-            <Calendar className="w-4 h-4 text-sky-500" />
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div className="flex items-center space-x-2 glass px-3.5 h-11 rounded-xl border border-sky-200/80 dark:border-sky-800/60 shadow-sm text-xs">
+            <Calendar className="w-4 h-4 text-sky-500 flex-shrink-0" />
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-transparent font-black outline-none text-slate-800 dark:text-slate-200"
+              className="bg-transparent font-black outline-none text-slate-800 dark:text-slate-200 text-xs sm:text-sm cursor-pointer"
             />
           </div>
 
           <button
             onClick={handlePrint}
-            className="btn-sky-primary flex items-center space-x-1.5 py-2.5 px-4 text-xs font-black shadow-md shadow-sky-500/20 active:scale-95"
+            className="btn-sky-primary flex items-center space-x-1.5 h-11 px-4 text-xs font-black shadow-md shadow-sky-500/20 active:scale-95 rounded-xl whitespace-nowrap"
             title="Print Cashier Statement Sheet"
           >
             <Printer className="w-4 h-4" />

@@ -44,8 +44,8 @@ export const MobileMoreSheet = ({ isOpen, onClose, onSelectTab }) => {
       {/* Backdrop tap to close */}
       <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
 
-      {/* Slide-up sheet (max-w-[430px] stays inside phone frame) */}
-      <div className="relative glass-panel rounded-t-3xl p-5 border-t border-white/80 dark:border-sky-700/60 shadow-2xl max-w-[430px] w-full mx-auto max-h-[90vh] overflow-y-auto space-y-4 pb-safe">
+      {/* Slide-up sheet (responsive on all phone sizes) */}
+      <div className="relative glass-panel rounded-t-3xl p-5 border-t border-white/80 dark:border-sky-700/60 shadow-2xl max-w-lg w-full mx-auto max-h-[90vh] overflow-y-auto space-y-4 pb-safe">
         {/* Drag handle */}
         <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-sky-800/80 mx-auto" />
 

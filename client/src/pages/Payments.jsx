@@ -90,31 +90,31 @@ export const Payments = () => {
     .reduce((acc, p) => acc + (p.amount || 0), 0);
 
   return (
-    <div className="space-y-6 pb-20 md:pb-8">
+    <div className="space-y-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             {t('payments')} / வசூல் ரசீதுகள்
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Official cash and UPI repayment audit trail with instant receipt printing
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center space-x-2 text-xs flex-wrap gap-y-1">
-            <div className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold whitespace-nowrap tabular-nums">
+            <div className="h-10 px-3 flex items-center rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold whitespace-nowrap tabular-nums">
               Cash: {formatCurrency(cashAmount)}
             </div>
-            <div className="px-3 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 font-bold whitespace-nowrap tabular-nums">
+            <div className="h-10 px-3 flex items-center rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 font-bold whitespace-nowrap tabular-nums">
               UPI: {formatCurrency(upiAmount)}
             </div>
           </div>
 
           <button
             onClick={() => setShowPaymentModal(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-500/20 active:scale-95 transition whitespace-nowrap"
+            className="h-10 flex items-center space-x-1.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-500/20 active:scale-95 transition whitespace-nowrap shrink-0"
           >
             <PlusCircle className="w-4 h-4" />
             <span>{lang === 'ta' ? '+ வசூல் பதிவு' : '+ Add Payment'}</span>
@@ -123,24 +123,24 @@ export const Payments = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="glass rounded-2xl p-4 border border-white/70 dark:border-sky-800/40 shadow-md flex flex-col sm:flex-row gap-3">
+      <div className="glass rounded-2xl p-3 sm:p-4 border border-white/70 dark:border-sky-800/40 shadow-md flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-3 text-sky-500" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" />
           <input
             type="text"
             placeholder="Search by receipt no, customer name, loan no..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs outline-none focus:ring-2 focus:ring-sky-400"
+            className="w-full h-11 pl-10 pr-4 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs outline-none focus:ring-2 focus:ring-sky-400 transition"
           />
         </div>
 
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-1.5 shrink-0">
           {['all', 'cash', 'upi'].map((m) => (
             <button
               key={m}
               onClick={() => setModeFilter(m)}
-              className={`py-2 px-3.5 rounded-xl text-xs font-bold uppercase transition ${
+              className={`h-11 px-4 rounded-xl text-xs font-bold uppercase transition flex items-center justify-center ${
                 modeFilter === m
                   ? 'bg-sky-500 text-white shadow-md shadow-sky-500/25 ring-1 ring-sky-300'
                   : 'glass text-slate-600 dark:text-slate-400 hover:bg-sky-50'

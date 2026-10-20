@@ -58,7 +58,7 @@ export const FloatingPaymentButton = ({
             aria-hidden="true"
           />
 
-          <div className="relative glass-panel rounded-t-3xl p-5 border-t border-white/80 dark:border-sky-700/60 shadow-2xl max-w-[430px] w-full mx-auto space-y-3 pb-safe">
+          <div className="relative glass-panel rounded-t-3xl p-5 border-t border-white/80 dark:border-sky-700/60 shadow-2xl max-w-lg w-full mx-auto space-y-3 pb-safe">
             {/* Drag Handle */}
             <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-sky-800/80 mx-auto mb-2" />
 
@@ -182,7 +182,7 @@ export const FloatingPaymentButton = ({
       )}
 
       {/* Floating Action Button (Round 56px, single '+' icon, 16px above nav bar) */}
-      <div className="fixed bottom-20 left-0 right-0 max-w-[430px] mx-auto pointer-events-none z-40">
+      <div className="fixed bottom-20 left-0 right-0 max-w-lg mx-auto pointer-events-none z-40">
         <button
           onClick={() => setShowSheet(true)}
           className="pointer-events-auto absolute right-4 bottom-0 w-14 h-14 rounded-full bg-gradient-to-tr from-sky-400 via-sky-500 to-sky-600 text-white shadow-xl shadow-sky-500/40 border-2 border-white/80 flex items-center justify-center active:scale-95 hover:scale-105 transition-all"

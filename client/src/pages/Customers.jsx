@@ -67,14 +67,14 @@ export const Customers = ({ onViewCustomer }) => {
   };
 
   return (
-    <div className="space-y-6 pb-20 md:pb-8">
+    <div className="space-y-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             {t('customers')} / வாடிக்கையாளர் பட்டியல்
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {customers.length} registered borrowers across Tamil Nadu collection circles
           </p>
         </div>
@@ -82,7 +82,7 @@ export const Customers = ({ onViewCustomer }) => {
         {isOwner && (
           <button
             onClick={() => setShowAddModal(true)}
-            className="btn-sky-primary min-h-[44px] py-2.5 px-4 text-xs font-black shadow-lg shadow-sky-500/25 flex items-center space-x-2"
+            className="btn-sky-primary min-h-[44px] py-2.5 px-4 text-xs font-black shadow-lg shadow-sky-500/25 flex items-center justify-center space-x-2 shrink-0 self-start sm:self-auto"
           >
             <UserPlus className="w-4 h-4 stroke-[3]" />
             <span>{t('addCustomer')}</span>
@@ -90,23 +90,23 @@ export const Customers = ({ onViewCustomer }) => {
         )}
       </div>
 
-      {/* Search and Area Filter */}
-      <div className="glass rounded-2xl p-4 border border-white/70 dark:border-sky-800/40 shadow-md flex flex-col sm:flex-row gap-3">
+      {/* Search and Area Filter Bar */}
+      <div className="glass rounded-2xl p-3 sm:p-4 border border-white/70 dark:border-sky-800/40 shadow-md flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-3 text-sky-500" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" />
           <input
             type="text"
             placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs outline-none focus:ring-2 focus:ring-sky-400"
+            className="w-full h-11 pl-10 pr-4 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs outline-none focus:ring-2 focus:ring-sky-400 transition"
           />
         </div>
 
         <select
           value={selectedArea}
           onChange={(e) => setSelectedArea(e.target.value)}
-          className="p-2.5 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-sky-400"
+          className="h-11 px-3 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-sky-400 shrink-0 cursor-pointer"
         >
           <option value="all">All Areas / அனைத்து பகுதிகள்</option>
           {areas.map((area) => (

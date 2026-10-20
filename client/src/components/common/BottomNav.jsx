@@ -68,7 +68,7 @@ export const BottomNav = ({ activeTab, setActiveTab, onOpenMoreSheet }) => {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto z-40 pointer-events-none">
+    <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto z-40 pointer-events-none">
       <nav className="pointer-events-auto h-16 w-full glass-panel border-t border-white/70 dark:border-sky-800/40 px-2 flex items-center justify-around shadow-2xl pb-safe">
         {tabs.map((tab) => {
           const Icon = tab.icon;

@@ -77,14 +77,14 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
   }, [typeFilter, statusFilter, search]);
 
   return (
-    <div className="space-y-6 pb-20 md:pb-8">
+    <div className="space-y-6">
       {/* Top Header & New Loan Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             {t('loans')} / கடன் கணக்குகள்
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {lang === 'ta'
               ? 'தினசரி, வார மற்றும் மாதத் தவணைக் கடன்களின் முழு விவரம்'
               : 'Complete portfolio ledger for daily thandal, weekly, and monthly installment loans'}
@@ -94,7 +94,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
         {isOwner && (
           <button
             onClick={() => setShowAddModal(true)}
-            className="btn-sky-primary min-h-[44px] py-2.5 px-4 text-xs font-black shadow-lg shadow-sky-500/25 flex items-center space-x-2"
+            className="btn-sky-primary min-h-[44px] py-2.5 px-4 text-xs font-black shadow-lg shadow-sky-500/25 flex items-center justify-center space-x-2 shrink-0 self-start sm:self-auto"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>{t('newLoan')} (N)</span>
@@ -103,26 +103,26 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="glass rounded-2xl p-4 border border-white/70 dark:border-sky-800/40 shadow-md flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="glass rounded-2xl p-3 sm:p-4 border border-white/70 dark:border-sky-800/40 shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search */}
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-sky-500 pointer-events-none" />
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" />
           <input
             type="text"
             placeholder="Search loan #, customer, phone... (/ to focus)"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs focus:outline-none focus:ring-2 focus:ring-sky-400"
+            className="w-full h-11 pl-10 pr-4 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs outline-none focus:ring-2 focus:ring-sky-400 transition"
           />
         </div>
 
         {/* Filters */}
-        <div className="flex items-center space-x-2 w-full md:w-auto">
+        <div className="flex items-center gap-2 w-full md:w-auto">
           {/* Scheme Filter */}
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-400"
+            className="h-11 flex-1 sm:flex-initial px-3 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer"
           >
             <option value="all">All Schemes / அனைத்து திட்டம்</option>
             <option value="daily">Daily Thandal (தினசரி)</option>
@@ -134,7 +134,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-400"
+            className="h-11 flex-1 sm:flex-initial px-3 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer"
           >
             <option value="all">All Status / அனைத்து நிலை</option>
             <option value="active">Active (நடப்பில் உள்ளது)</option>
