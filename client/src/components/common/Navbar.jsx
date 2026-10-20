@@ -247,10 +247,10 @@ export const Navbar = ({
               )}
               <div className="flex flex-col text-left">
                 <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[100px]">
-                  {user.name.split(' ')[0]}
+                  {(user?.name || user?.email || 'User').split(' ')[0]}
                 </span>
                 <span className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold capitalize">
-                  {user.role}
+                  {user?.role || 'User'}
                 </span>
               </div>
             </div>

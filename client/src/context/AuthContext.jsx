@@ -20,11 +20,25 @@ const safeParseJson = async (res) => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('fintrack_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('fintrack_user');
+      if (!saved || saved === 'undefined' || saved === 'null') return null;
+      return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Corrupted fintrack_user in localStorage, clearing:', e);
+      localStorage.removeItem('fintrack_user');
+      return null;
+    }
   });
   const [token, setToken] = useState(() => {
-    return localStorage.getItem('fintrack_token') || null;
+    try {
+      const saved = localStorage.getItem('fintrack_token');
+      if (!saved || saved === 'undefined' || saved === 'null') return null;
+      return saved;
+    } catch {
+      localStorage.removeItem('fintrack_token');
+      return null;
+    }
   });
   const [loading, setLoading] = useState(true);
 
@@ -37,7 +51,9 @@ export const AuthProvider = ({ children }) => {
         // If this is an authorized offline session, keep it active
         if (token.startsWith('fintrack_auth_') && savedUser) {
           try {
-            setUser(JSON.parse(savedUser));
+            if (savedUser !== 'undefined' && savedUser !== 'null') {
+              setUser(JSON.parse(savedUser));
+            }
           } catch {
             logout();
           }
@@ -59,13 +75,21 @@ export const AuthProvider = ({ children }) => {
             logout();
           } else if (savedUser) {
             // Static host or backend unreachable, retain current session
-            setUser(JSON.parse(savedUser));
+            try {
+              if (savedUser !== 'undefined' && savedUser !== 'null') {
+                setUser(JSON.parse(savedUser));
+              }
+            } catch {
+              logout();
+            }
           }
         } catch (err) {
           console.warn('Session verification notice:', err.message);
           if (savedUser) {
             try {
-              setUser(JSON.parse(savedUser));
+              if (savedUser !== 'undefined' && savedUser !== 'null') {
+                setUser(JSON.parse(savedUser));
+              }
             } catch {
               logout();
             }
