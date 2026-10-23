@@ -11,7 +11,7 @@ export const connectDB = async () => {
     // Attempt standard connection (Atlas or local mongod)
     console.log(`Connecting to MongoDB at: ${uri.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@')}...`);
     const conn = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 3000,
+      serverSelectionTimeoutMS: 10000,
     });
     console.log(`✅ MongoDB Connected successfully: ${conn.connection.host}`);
     return conn;
