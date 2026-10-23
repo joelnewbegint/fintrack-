@@ -349,16 +349,21 @@ html[data-device="mobile"] .flex > div {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 6mm 8mm;
+    margin: 0;
   }
   html, body {
-    background: white !important;
-    color: black !important;
-    width: 100% !important;
-    height: auto !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 210mm !important;
+    min-width: 210mm !important;
+    max-width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: visible !important;
+    overflow: hidden !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   /* When printing loan form: completely remove #root from document flow */
@@ -367,16 +372,20 @@ html[data-device="mobile"] .flex > div {
     display: none !important;
   }
 
-  /* Ensure the loan form wrapper and content take full width starting at (0,0) of the page */
+  /* Ensure the loan form wrapper and content take full A4 sheet */
   #printable-loan-modal-wrapper {
     display: block !important;
     position: static !important;
-    width: 100% !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: white !important;
+    background: #ffffff !important;
     visibility: visible !important;
-    overflow: visible !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
   }
 
   #printable-loan-modal-wrapper * {
@@ -386,19 +395,23 @@ html[data-device="mobile"] .flex > div {
   #printable-loan-form {
     display: block !important;
     position: static !important;
-    width: 100% !important;
-    max-height: 282mm !important;
-    overflow: hidden !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
     box-sizing: border-box !important;
+    padding: 4mm 6mm !important;
     margin: 0 !important;
-    padding: 0 !important;
-    background: white !important;
-    color: black !important;
+    background: #ffffff !important;
+    color: #0d1b3e !important;
     page-break-inside: avoid !important;
     page-break-after: avoid !important;
+    page-break-before: avoid !important;
     break-inside: avoid !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    overflow: hidden !important;
+    font-family: 'Poppins', 'Noto Sans Tamil', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   }
 
   /* Receipt Voucher Print Rules */
