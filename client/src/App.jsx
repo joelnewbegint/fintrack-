@@ -13,6 +13,7 @@ import InvestmentModal from './components/common/InvestmentModal';
 import CustomerModal from './components/common/CustomerModal';
 import NotificationModal from './components/common/NotificationModal';
 import WhatsAppReminderModal from './components/common/WhatsAppReminderModal';
+import WhatsAppHubModal from './components/common/WhatsAppHubModal';
 import PWAInstallModal from './components/common/PWAInstallModal';
 import LoanApplicationFormModal from './components/common/LoanApplicationFormModal';
 import Login from './pages/Login';
@@ -47,6 +48,8 @@ export function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [globalWhatsappItem, setGlobalWhatsappItem] = useState(null);
+  const [showWhatsAppHub, setShowWhatsAppHub] = useState(false);
+  const [whatsappHubProps, setWhatsappHubProps] = useState({});
   const [globalPayItem, setGlobalPayItem] = useState(null);
   const [showLoanFormModal, setShowLoanFormModal] = useState(false);
 
@@ -159,6 +162,10 @@ export function App() {
         onOpenMoreSheet={() => setShowMoreSheet(true)}
         onOpenNotifications={() => setShowNotifications(true)}
         onOpenLoanForm={() => setShowLoanFormModal(true)}
+        onOpenWhatsAppHub={(props) => {
+          setWhatsappHubProps(props || {});
+          setShowWhatsAppHub(true);
+        }}
         unreadNotificationsCount={notificationCount}
       />
 
@@ -176,6 +183,10 @@ export function App() {
           activeTab={activeTab}
           setActiveTab={handleTabChange}
           onOpenNotifications={() => setShowNotifications(true)}
+          onOpenWhatsAppHub={(props) => {
+            setWhatsappHubProps(props || {});
+            setShowWhatsAppHub(true);
+          }}
           unreadNotificationsCount={notificationCount}
         />
 
@@ -268,6 +279,10 @@ export function App() {
         onSelectTab={handleTabChange}
         onOpenNotifications={() => setShowNotifications(true)}
         onOpenLoanForm={() => setShowLoanFormModal(true)}
+        onOpenWhatsAppHub={(props) => {
+          setWhatsappHubProps(props || {});
+          setShowWhatsAppHub(true);
+        }}
         unreadNotificationsCount={notificationCount}
       />
 
@@ -356,6 +371,16 @@ export function App() {
           onClose={() => setGlobalWhatsappItem(null)}
         />
       )}
+
+      {/* Global WhatsApp Web & Manual Automation Hub */}
+      <WhatsAppHubModal
+        isOpen={showWhatsAppHub}
+        onClose={() => {
+          setShowWhatsAppHub(false);
+          setWhatsappHubProps({});
+        }}
+        {...whatsappHubProps}
+      />
 
       {/* PWA Install Guide Modal */}
       <PWAInstallModal />

@@ -17,7 +17,9 @@ import {
   Trash2,
   CreditCard,
   User,
+  Smartphone,
 } from 'lucide-react';
+import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 
 export const Customers = ({ onViewCustomer }) => {
   const { t, lang } = useLanguage();
@@ -32,6 +34,7 @@ export const Customers = ({ onViewCustomer }) => {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
+  const [whatsappCustomer, setWhatsappCustomer] = useState(null);
 
   const fetchCustomers = async () => {
     try {
@@ -227,6 +230,14 @@ export const Customers = ({ onViewCustomer }) => {
                   )}
 
                   <button
+                    onClick={() => setWhatsappCustomer(c)}
+                    className="p-1.5 min-h-[34px] min-w-[34px] flex items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition shadow-sm active:scale-95"
+                    title={lang === 'ta' ? 'வாட்ஸ்அப் செய்தி அனுப்ப' : 'Send WhatsApp Message'}
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
                     onClick={() => onViewCustomer && onViewCustomer(c._id)}
                     className="btn-sky-secondary py-1.5 px-3 text-xs font-bold shadow-sm flex items-center space-x-1"
                   >
@@ -254,6 +265,15 @@ export const Customers = ({ onViewCustomer }) => {
             setShowAddModal(false);
             setEditingCustomer(null);
           }}
+        />
+      )}
+
+      {/* WhatsApp Direct Hub Modal */}
+      {whatsappCustomer && (
+        <WhatsAppHubModal
+          isOpen={!!whatsappCustomer}
+          onClose={() => setWhatsappCustomer(null)}
+          initialCustomer={whatsappCustomer}
         />
       )}
     </div>

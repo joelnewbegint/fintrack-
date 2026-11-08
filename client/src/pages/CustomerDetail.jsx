@@ -6,6 +6,7 @@ import { formatCurrency, formatDate } from '../utils/currency';
 import LoanModal from '../components/common/LoanModal';
 import ReceiptModal from '../components/common/ReceiptModal';
 import WhatsAppPaymentHistoryModal from '../components/common/WhatsAppPaymentHistoryModal';
+import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 import {
   ArrowLeft,
   Phone,
@@ -19,6 +20,7 @@ import {
   FileText,
   Printer,
   Share2,
+  Smartphone,
 } from 'lucide-react';
 
 export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
@@ -29,6 +31,7 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
   const [showAddLoan, setShowAddLoan] = useState(false);
   const [receiptPayment, setReceiptPayment] = useState(null);
   const [showPaymentHistoryModal, setShowPaymentHistoryModal] = useState(false);
+  const [showWhatsAppHub, setShowWhatsAppHub] = useState(false);
 
   const fetchCustomerData = async () => {
     try {
@@ -84,13 +87,24 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
           <span>Back to Customers</span>
         </button>
 
-        <button
-          onClick={() => setShowAddLoan(true)}
-          className="btn-sky-primary flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-black shadow-lg shadow-sky-500/25 active:scale-95 transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Issue New Loan</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowWhatsAppHub(true)}
+            className="flex items-center space-x-2 h-11 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-emerald-500/25 active:scale-95 transition"
+            title={lang === 'ta' ? 'வாட்ஸ்அப் செய்தி மையம்' : 'WhatsApp Hub'}
+          >
+            <Smartphone className="w-4 h-4" />
+            <span className="hidden sm:inline">WhatsApp</span>
+          </button>
+
+          <button
+            onClick={() => setShowAddLoan(true)}
+            className="btn-sky-primary flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-black shadow-lg shadow-sky-500/25 active:scale-95 transition"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Issue New Loan</span>
+          </button>
+        </div>
       </div>
 
       {/* Customer Profile Banner Card */}
@@ -356,6 +370,15 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
           loans={loans}
           payments={payments}
           onClose={() => setShowPaymentHistoryModal(false)}
+        />
+      )}
+
+      {/* WhatsApp Direct Hub Modal */}
+      {showWhatsAppHub && (
+        <WhatsAppHubModal
+          isOpen={showWhatsAppHub}
+          onClose={() => setShowWhatsAppHub(false)}
+          initialCustomer={customer}
         />
       )}
     </div>

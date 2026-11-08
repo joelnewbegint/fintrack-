@@ -25,6 +25,7 @@ import {
   Wallet,
   Download,
   FileText,
+  Smartphone,
 } from 'lucide-react';
 
 export const MobileMoreSheet = ({
@@ -33,6 +34,7 @@ export const MobileMoreSheet = ({
   onSelectTab,
   onOpenNotifications,
   onOpenLoanForm,
+  onOpenWhatsAppHub,
   unreadNotificationsCount = 0,
 }) => {
   const { user, logout, isOwner } = useAuth();
@@ -147,6 +149,33 @@ export const MobileMoreSheet = ({
           <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
             Finance Operations
           </p>
+
+          {/* WhatsApp Web & Messenger Hub */}
+          <button
+            onClick={() => {
+              onClose();
+              if (onOpenWhatsAppHub) onOpenWhatsAppHub();
+            }}
+            className="w-full min-h-[48px] p-3 rounded-2xl glass hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/40 flex items-center justify-between text-left active:scale-98 transition shadow-sm"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">
+                    {lang === 'ta' ? 'வாட்ஸ்அப் மேலாண்மை' : 'WhatsApp Web & Quick Send'}
+                  </p>
+                  <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px]">
+                    Live
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400">WhatsApp Web login & auto-number dispatch</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          </button>
 
           <button
             onClick={() => {

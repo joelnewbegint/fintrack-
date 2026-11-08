@@ -17,12 +17,14 @@ import {
   TrendingUp,
   Bell,
   Wallet,
+  Smartphone,
 } from 'lucide-react';
 
 export const Sidebar = ({
   activeTab,
   setActiveTab,
   onOpenNotifications,
+  onOpenWhatsAppHub,
   unreadNotificationsCount = 0,
 }) => {
   const { t, lang } = useLanguage();
@@ -123,6 +125,25 @@ export const Sidebar = ({
                     {unreadNotificationsCount}
                   </span>
                 )}
+              </div>
+            )}
+          </button>
+
+          {/* WhatsApp Hub Quick Item */}
+          <button
+            onClick={onOpenWhatsAppHub}
+            className={`w-full flex items-center ${
+              isCollapsed ? 'justify-center px-2' : 'space-x-3 px-3.5'
+            } py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all duration-200 text-left text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40`}
+            title={lang === 'ta' ? 'வாட்ஸ்அப் லாகின் & செய்தி' : 'WhatsApp Web & Quick Send'}
+          >
+            <Smartphone className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            {!isCollapsed && (
+              <div className="flex items-center justify-between flex-1 min-w-0">
+                <span className="truncate">{lang === 'ta' ? 'வாட்ஸ்அப்' : 'WhatsApp Web'}</span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px]">
+                  Send
+                </span>
               </div>
             )}
           </button>

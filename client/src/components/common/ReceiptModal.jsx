@@ -2,6 +2,7 @@ import React from 'react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { formatCurrency, formatDate } from '../../utils/currency';
+import { openWhatsApp, generateReceiptMessage } from '../../utils/whatsapp';
 import { Printer, Download, Share2, X, CheckCircle, ShieldCheck } from 'lucide-react';
 
 export const ReceiptModal = ({ payment, onClose }) => {
@@ -97,10 +98,17 @@ export const ReceiptModal = ({ payment, onClose }) => {
   };
 
   const handleShareWhatsApp = () => {
-    const phone = customer.phone?.replace(/[^0-9]/g, '');
-    const message = `வணக்கம் ${customer.name || ''},\nவி.கே. பேங்கர்ஸ் & பைனான்ஸ் நிறுவனத்தில் உங்கள் கடன் கணக்கு (${loan.loanNo || ''}) தவணைத் தொகை ${formatCurrency(payment.amount)} (${payment.mode?.toUpperCase()}) வெற்றிகரமாக பெறப்பட்டது.\nரசீது எண்: ${payment.receiptNo}\nதேதி: ${formatDate(payment.date)}\nமீதி இருப்பு: ${formatCurrency(loan.remainingBalance || 0)}.\nநன்றி!`;
-    const url = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    const message = generateReceiptMessage({
+      customerName: customer.name || 'Customer',
+      loanNo: loan.loanNo || 'VK-LOAN',
+      receiptNo: payment.receiptNo || 'RCT-001',
+      amount: payment.amount || 0,
+      mode: payment.mode || 'CASH',
+      date: payment.date || new Date(),
+      remainingBalance: loan.remainingBalance || 0,
+      lang: 'ta',
+    });
+    openWhatsApp({ phone: customer.phone, message });
   };
 
   return (

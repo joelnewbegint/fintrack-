@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../../services/api';
 import { formatCurrency, formatDate } from '../../utils/currency';
+import { openWhatsApp, openWhatsAppWeb, formatPhoneDisplay } from '../../utils/whatsapp';
 import {
   X,
   Send,
@@ -129,8 +130,7 @@ export const WhatsAppPaymentHistoryModal = ({ customer, loan = null, payments = 
   };
 
   const handleOpenWhatsApp = () => {
-    const url = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    openWhatsApp({ phone: customer?.phone || loan?.customerPhone, message });
   };
 
   const handleSendViaBot = async () => {

@@ -19,6 +19,7 @@ import {
   User,
   Download,
   FileText,
+  Smartphone,
 } from 'lucide-react';
 
 export const Navbar = ({
@@ -28,6 +29,7 @@ export const Navbar = ({
   onOpenMoreSheet,
   onOpenNotifications,
   onOpenLoanForm,
+  onOpenWhatsAppHub,
   unreadNotificationsCount = 0,
 }) => {
   const { user, logout, isOwner } = useAuth();
@@ -55,6 +57,16 @@ export const Navbar = ({
 
           {/* Right: Install (if applicable) + Bell + Avatar Button */}
           <div className="flex items-center space-x-2 shrink-0">
+            {/* WhatsApp Hub Button */}
+            <button
+              onClick={onOpenWhatsAppHub}
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border border-emerald-300/80 dark:border-emerald-700/60 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 active:scale-95 transition shadow-sm"
+              aria-label="WhatsApp"
+              title={lang === 'ta' ? 'வாட்ஸ்அப் லாகின் & நேரடி செய்தி' : 'WhatsApp Web & Quick Send'}
+            >
+              <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            </button>
+
             {/* Loan Application Form Button */}
             <button
               onClick={onOpenLoanForm}
@@ -186,6 +198,18 @@ export const Navbar = ({
             ) : (
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-white dark:ring-slate-900" />
             )}
+          </button>
+
+          {/* WhatsApp Web & Messenger Button */}
+          <button
+            onClick={onOpenWhatsAppHub}
+            className="flex items-center space-x-1.5 px-3 py-1.5 min-h-[40px] rounded-xl glass border border-emerald-300/80 dark:border-emerald-600/60 bg-gradient-to-r from-emerald-500/15 to-green-500/15 text-slate-800 dark:text-slate-100 text-xs font-bold hover:border-emerald-500 hover:shadow-md transition active:scale-95 shadow-sm"
+            title={lang === 'ta' ? 'வாட்ஸ்அப் லாகின் & செய்தி அனுப்ப' : 'WhatsApp Web Login & Quick Send'}
+          >
+            <Smartphone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="hidden sm:inline font-bold text-emerald-700 dark:text-emerald-300">
+              WhatsApp
+            </span>
           </button>
 
           {/* Loan Application Form Button */}

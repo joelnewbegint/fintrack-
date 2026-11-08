@@ -15,7 +15,11 @@ import {
   ShieldCheck,
   ArrowRight,
   ExternalLink,
+  QrCode,
+  Sparkles,
 } from 'lucide-react';
+import { openWhatsAppWeb } from '../../utils/whatsapp';
+import WhatsAppHubModal from './WhatsAppHubModal';
 
 export const WhatsAppConnect = () => {
   const { lang } = useLanguage();
@@ -32,6 +36,7 @@ export const WhatsAppConnect = () => {
   const [testMessage, setTestMessage] = useState('வணக்கம்! FinTrack WhatsApp இணைப்பு வெற்றிகரமாக முடிந்தது.');
   const [testSending, setTestSending] = useState(false);
   const [testSuccess, setTestSuccess] = useState(null);
+  const [showHubModal, setShowHubModal] = useState(false);
 
   // Initialize Socket.io connection for real-time code and status updates
   useEffect(() => {
@@ -224,6 +229,64 @@ export const WhatsAppConnect = () => {
               <span>Not Linked / இணைக்கப்படவில்லை</span>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Prominent WhatsApp Web Login & 1-Click Automation Hub */}
+      <div className="p-5 rounded-3xl bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-transparent border-2 border-emerald-500/30 dark:border-emerald-500/20 space-y-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0">
+              <QrCode className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-black text-sm text-slate-900 dark:text-white flex items-center space-x-2">
+                <span>WhatsApp Web Login (வாட்ஸ்அப் வலைத்தளம்)</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-extrabold uppercase">
+                  Universal 1-Click
+                </span>
+              </h4>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                சர்வர் அல்லது பாட் தேவைப்படாமல் உலாவி மூலம் நேரடியாக வாட்ஸ்அப்பில் வாடிக்கையாளர் எண் தானாக பெற்று செய்தி அனுப்பலாம்.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={openWhatsAppWeb}
+              className="px-4 py-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold hover:bg-emerald-50 active:scale-95 transition flex items-center space-x-1.5 shadow-sm"
+              title="Open WhatsApp Web in new tab"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Login to WhatsApp Web</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowHubModal(true)}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-lg shadow-emerald-500/25 active:scale-95 transition flex items-center space-x-1.5"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Open WhatsApp Hub</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-2xl bg-white/70 dark:bg-slate-950/60 border border-emerald-200/60 dark:border-emerald-800/40 text-[11px] text-slate-600 dark:text-slate-400 grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="flex items-center space-x-1.5">
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span>வாடிக்கையாளர் போன் எண் தானாக பெறுதல்</span>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span>தவணை, ரசீது, நிலுவை தயார் செய்திகள்</span>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span>மொபைல் & கணினி இரண்டிலும் இயங்கும்</span>
+          </div>
         </div>
       </div>
 
@@ -450,6 +513,13 @@ export const WhatsAppConnect = () => {
             </div>
           </div>
         </div>
+      )}
+      {/* WhatsApp Manual Hub Modal */}
+      {showHubModal && (
+        <WhatsAppHubModal
+          isOpen={showHubModal}
+          onClose={() => setShowHubModal(false)}
+        />
       )}
     </div>
   );

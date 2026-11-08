@@ -8,6 +8,7 @@ import PaymentModal from '../components/common/PaymentModal';
 import ReceiptModal from '../components/common/ReceiptModal';
 import WhatsAppReminderModal from '../components/common/WhatsAppReminderModal';
 import WhatsAppPaymentHistoryModal from '../components/common/WhatsAppPaymentHistoryModal';
+import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 import LoanApplicationFormModal from '../components/common/LoanApplicationFormModal';
 import {
   ArrowLeft,
@@ -21,6 +22,7 @@ import {
   History,
   FileText,
   Share2,
+  Smartphone,
 } from 'lucide-react';
 
 export const LoanDetail = ({ loanId, onBack }) => {
@@ -33,6 +35,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const [payModalItem, setPayModalItem] = useState(null);
   const [receiptPayment, setReceiptPayment] = useState(null);
   const [whatsappItem, setWhatsappItem] = useState(null);
+  const [showWhatsAppHub, setShowWhatsAppHub] = useState(false);
   const [showPaymentHistoryModal, setShowPaymentHistoryModal] = useState(false);
   const [showLoanFormModal, setShowLoanFormModal] = useState(false);
 
@@ -114,19 +117,12 @@ export const LoanDetail = ({ loanId, onBack }) => {
           )}
 
           <button
-            onClick={() =>
-              setWhatsappItem({
-                customerName: customer.name,
-                customerPhone: customer.phone,
-                dueAmount: loan.installmentAmount,
-                loanNo: loan.loanNo,
-                dueDate: new Date(),
-              })
-            }
-            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition"
+            onClick={() => setShowWhatsAppHub(true)}
+            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition"
+            title={lang === 'ta' ? 'வாட்ஸ்அப் செய்தி அனுப்ப' : 'Send WhatsApp Message'}
           >
-            <Send className="w-4 h-4" />
-            <span>WhatsApp Reminder</span>
+            <Smartphone className="w-4 h-4" />
+            <span>WhatsApp Hub</span>
           </button>
 
           <button
@@ -487,6 +483,15 @@ export const LoanDetail = ({ loanId, onBack }) => {
           loan={loan}
           payments={payments}
           onClose={() => setShowPaymentHistoryModal(false)}
+        />
+      )}
+
+      {/* WhatsApp Direct Hub Modal */}
+      {showWhatsAppHub && (
+        <WhatsAppHubModal
+          isOpen={showWhatsAppHub}
+          onClose={() => setShowWhatsAppHub(false)}
+          initialLoan={loan}
         />
       )}
 

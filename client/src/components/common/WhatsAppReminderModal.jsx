@@ -1,11 +1,13 @@
+import React, { useState } from 'react';
 import api from '../../services/api';
 import { formatCurrency, formatDate } from '../../utils/currency';
-import { X, Send, Copy, Check, MessageSquare, Bot, ExternalLink } from 'lucide-react';
+import { openWhatsApp, openWhatsAppWeb, formatPhoneDisplay } from '../../utils/whatsapp';
+import { X, Send, Copy, Check, MessageSquare, Bot, ExternalLink, QrCode } from 'lucide-react';
 
 export const WhatsAppReminderModal = ({ item, onClose }) => {
   if (!item) return null;
 
-  const phone = item.customerPhone?.replace(/[^0-9]/g, '') || '';
+  const phone = item.customerPhone || '';
   const customerName = item.customerName || 'Customer';
   const amount = formatCurrency(item.dueAmount || item.installmentAmount || 0);
   const dueDate = formatDate(item.dueDate || new Date());
@@ -33,8 +35,7 @@ export const WhatsAppReminderModal = ({ item, onClose }) => {
   };
 
   const handleSendWhatsApp = () => {
-    const url = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    openWhatsApp({ phone, message });
   };
 
   const handleSendViaBot = async () => {
@@ -50,7 +51,7 @@ export const WhatsAppReminderModal = ({ item, onClose }) => {
       setBotSentSuccess(true);
       setTimeout(() => setBotSentSuccess(false), 4000);
     } catch (err) {
-      alert(err.message || 'Could not send via Bot. You can still use "Open WhatsApp"');
+      alert(err.message || 'Could not send via Bot. You can still use "Open in WhatsApp"');
     } finally {
       setBotSending(false);
     }
@@ -77,7 +78,9 @@ export const WhatsAppReminderModal = ({ item, onClose }) => {
           <div className="flex justify-between items-center p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs">
             <div>
               <p className="font-bold text-slate-900 dark:text-white">{customerName}</p>
-              <p className="text-slate-500 font-mono">📱 +91 {phone}</p>
+              <p className="text-emerald-700 dark:text-emerald-300 font-mono font-bold">
+                📱 {formatPhoneDisplay(phone) || phone}
+              </p>
             </div>
             <div className="text-right">
               <p className="font-bold text-blue-600 dark:text-blue-400">{amount}</p>
@@ -132,16 +135,14 @@ export const WhatsAppReminderModal = ({ item, onClose }) => {
 
         {/* Buttons */}
         <div className="mt-5 space-y-2">
-          <div className="flex space-x-2">
-            <button
-              onClick={handleSendViaBot}
-              disabled={botSending}
-              className="flex-1 flex items-center justify-center space-x-2 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 font-bold text-xs text-white transition shadow-lg shadow-emerald-500/25 active:scale-95"
-            >
-              <Bot className="w-4 h-4" />
-              <span>{botSending ? 'Sending via WhatsApp...' : 'Send via FinTrack WhatsApp'}</span>
-            </button>
-          </div>
+          {/* Primary 1-Click WhatsApp Button */}
+          <button
+            onClick={handleSendWhatsApp}
+            className="w-full flex items-center justify-center space-x-2 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 font-black text-xs text-white transition shadow-lg shadow-emerald-500/25 active:scale-95"
+          >
+            <Send className="w-4 h-4" />
+            <span>Send via WhatsApp / வாட்ஸ்அப்பில் அனுப்புக</span>
+          </button>
 
           <div className="flex space-x-2">
             <button
@@ -153,11 +154,12 @@ export const WhatsAppReminderModal = ({ item, onClose }) => {
             </button>
 
             <button
-              onClick={handleSendWhatsApp}
+              onClick={openWhatsAppWeb}
               className="flex-1 flex items-center justify-center space-x-1.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition active:scale-95"
+              title="Open WhatsApp Web in new tab"
             >
               <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Open in wa.me</span>
+              <span>WhatsApp Web (Login)</span>
             </button>
           </div>
         </div>
