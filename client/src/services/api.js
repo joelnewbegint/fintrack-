@@ -138,8 +138,32 @@ export const cleanseDumpData = () => {
   }
 };
 
-// Immediately invoke cleanser on startup
+/**
+ * Universal Real Dataset Initializer:
+ * Seeds the full real operational workbook records (35 customers, 36 loans, 542 payments)
+ * across all mobile phones, laptops, and tablets automatically on first load.
+ */
+export const initRealDataset = () => {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const isMigrated = localStorage.getItem('fintrack_real_dataset_v1');
+    if (isMigrated !== 'true') {
+      localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(initialCustomers));
+      localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(initialLoans));
+      localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(initialPayments));
+      localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify(initialInvestments));
+      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(initialExpenses));
+      localStorage.setItem('fintrack_real_dataset_v1', 'true');
+      console.log('✅ Synchronized real workbook dataset across device storage!');
+    }
+  } catch (err) {
+    console.warn('Real dataset init notice:', err);
+  }
+};
+
+// Immediately invoke cleanser and real dataset sync
 cleanseDumpData();
+initRealDataset();
 
 const getStored = (key, fallback) => {
   try {
@@ -150,7 +174,17 @@ const getStored = (key, fallback) => {
       }
       return fallback;
     }
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    if (
+      Array.isArray(parsed) &&
+      parsed.length === 0 &&
+      Array.isArray(fallback) &&
+      fallback.length > 0
+    ) {
+      localStorage.setItem(key, JSON.stringify(fallback));
+      return fallback;
+    }
+    return parsed;
   } catch {
     return fallback;
   }
@@ -1209,6 +1243,7 @@ export const api = {
   },
 
   cleanseDumpData,
+  initRealDataset,
 };
 
 export default api;

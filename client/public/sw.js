@@ -1,6 +1,6 @@
 /**
  * Safe Progressive Web App Service Worker for VK BANKER'S
- * Version: 1.0.9
+ * Version: 1.1.0
  * 
  * Strict Privacy & Security Rules:
  * 1. NEVER cache /api/* endpoints or authenticated financial data.
@@ -10,7 +10,7 @@
  * 5. Automatic cache purge on version updates.
  */
 
-const CACHE_NAME = 'vk-bankers-pwa-v1.0.9';
+const CACHE_NAME = 'vk-bankers-pwa-v1.1.0';
 
 const STATIC_SHELL_ASSETS = [
   '/manifest.webmanifest',
