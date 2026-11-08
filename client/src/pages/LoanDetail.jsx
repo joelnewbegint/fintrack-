@@ -8,6 +8,7 @@ import PaymentModal from '../components/common/PaymentModal';
 import ReceiptModal from '../components/common/ReceiptModal';
 import WhatsAppReminderModal from '../components/common/WhatsAppReminderModal';
 import WhatsAppPaymentHistoryModal from '../components/common/WhatsAppPaymentHistoryModal';
+import LoanApplicationFormModal from '../components/common/LoanApplicationFormModal';
 import {
   ArrowLeft,
   CreditCard,
@@ -33,6 +34,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const [receiptPayment, setReceiptPayment] = useState(null);
   const [whatsappItem, setWhatsappItem] = useState(null);
   const [showPaymentHistoryModal, setShowPaymentHistoryModal] = useState(false);
+  const [showLoanFormModal, setShowLoanFormModal] = useState(false);
 
   const fetchLoanData = async () => {
     try {
@@ -134,6 +136,15 @@ export const LoanDetail = ({ loanId, onBack }) => {
           >
             <Share2 className="w-4 h-4" />
             <span>Payment History (வாட்ஸ்அப்)</span>
+          </button>
+
+          <button
+            onClick={() => setShowLoanFormModal(true)}
+            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl glass border border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300 font-bold text-xs hover:bg-sky-50 dark:hover:bg-sky-950/40 active:scale-95 transition"
+            title="Download or Print Official Loan Application & Promissory Form"
+          >
+            <Printer className="w-4 h-4 text-sky-500" />
+            <span>Loan Form</span>
           </button>
         </div>
       </div>
@@ -476,6 +487,15 @@ export const LoanDetail = ({ loanId, onBack }) => {
           loan={loan}
           payments={payments}
           onClose={() => setShowPaymentHistoryModal(false)}
+        />
+      )}
+
+      {/* Official Loan Application Form */}
+      {showLoanFormModal && (
+        <LoanApplicationFormModal
+          isOpen={showLoanFormModal}
+          prefillData={loan}
+          onClose={() => setShowLoanFormModal(false)}
         />
       )}
     </div>

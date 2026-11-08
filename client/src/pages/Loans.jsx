@@ -22,6 +22,7 @@ import {
   ArrowUpRight,
   Send,
   FileText,
+  Printer,
 } from 'lucide-react';
 
 export const Loans = ({ initialType = 'all', onViewLoan }) => {
@@ -41,6 +42,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
   const [receiptPayment, setReceiptPayment] = useState(null);
   const [whatsappItem, setWhatsappItem] = useState(null);
   const [showFormModal, setShowFormModal] = useState(false);
+  const [selectedFormLoan, setSelectedFormLoan] = useState(null);
 
   const fetchLoans = async () => {
     try {
@@ -96,9 +98,12 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
 
         <div className="flex items-center space-x-2 shrink-0 self-start sm:self-auto">
           <button
-            onClick={() => setShowFormModal(true)}
+            onClick={() => {
+              setSelectedFormLoan(null);
+              setShowFormModal(true);
+            }}
             className="min-h-[44px] py-2 px-3.5 text-xs font-bold rounded-2xl glass border border-sky-300/80 dark:border-sky-700/60 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 transition"
-            title="Download or Print Blank/Filled Loan Application Form"
+            title="Download or Print Blank Loan Application Form"
           >
             <FileText className="w-4 h-4 text-sky-500" />
             <span>{lang === 'ta' ? 'படிவம் பதிவிறக்கம்' : 'Application Form'}</span>
@@ -281,6 +286,18 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                     </button>
 
                     <button
+                      onClick={() => {
+                        setSelectedFormLoan(loan);
+                        setShowFormModal(true);
+                      }}
+                      className="glass min-h-[48px] py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-sky-50 flex items-center justify-center space-x-1"
+                      title={lang === 'ta' ? 'விண்ணப்பப் படிவம்' : 'Application Form'}
+                    >
+                      <FileText className="w-3.5 h-3.5 text-sky-500" />
+                      <span>Form</span>
+                    </button>
+
+                    <button
                       onClick={() => onViewLoan && onViewLoan(loan._id)}
                       className="glass min-h-[48px] py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-sky-50 flex items-center justify-center space-x-1"
                     >
@@ -441,6 +458,17 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                             </button>
 
                             <button
+                              onClick={() => {
+                                setSelectedFormLoan(loan);
+                                setShowFormModal(true);
+                              }}
+                              className="p-1.5 rounded-xl glass hover:bg-sky-50 text-slate-600 dark:text-slate-300 transition"
+                              title={lang === 'ta' ? 'விண்ணப்பப் படிவம்' : 'Application Form'}
+                            >
+                              <FileText className="w-3.5 h-3.5 text-sky-500" />
+                            </button>
+
+                            <button
                               onClick={() => onViewLoan && onViewLoan(loan._id)}
                               className="p-1.5 rounded-xl glass hover:bg-sky-50 text-slate-600 dark:text-slate-300 transition"
                               title="View Ledger / தவணை விவரம்"
@@ -501,7 +529,11 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
       {/* Official Loan Application Form (Print & Download) */}
       <LoanApplicationFormModal
         isOpen={showFormModal}
-        onClose={() => setShowFormModal(false)}
+        prefillData={selectedFormLoan}
+        onClose={() => {
+          setShowFormModal(false);
+          setSelectedFormLoan(null);
+        }}
       />
     </div>
   );

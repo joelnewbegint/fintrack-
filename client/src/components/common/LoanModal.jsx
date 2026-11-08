@@ -43,12 +43,47 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
   // Loan Terms State
   const [principal, setPrincipal] = useState(20000);
   const [interestPercent, setInterestPercent] = useState(10);
+  const [chargeAmount, setChargeAmount] = useState(2000);
+  const [interestType, setInterestType] = useState('deduction'); // 'deduction' (minus from principal) or 'addon'
   const [financeType, setFinanceType] = useState('daily');
   const [duration, setDuration] = useState(100);
   const [startDate, setStartDate] = useState(formatDateForInput());
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Two-way interactive calculation handlers
+  const handlePrincipalChange = (val) => {
+    setPrincipal(val);
+    const p = val === '' ? 0 : Number(val);
+    const pct = Number(interestPercent) || 0;
+    setChargeAmount(Math.round((p * pct) / 100));
+  };
+
+  const handlePresetPrincipal = (p) => {
+    setPrincipal(p);
+    const pct = Number(interestPercent) || 0;
+    setChargeAmount(Math.round((p * pct) / 100));
+  };
+
+  const handleChargeAmountChange = (val) => {
+    setChargeAmount(val);
+    const c = val === '' ? 0 : Number(val);
+    const p = Number(principal) || 0;
+    if (p > 0 && val !== '') {
+      const pct = Number(((c / p) * 100).toFixed(2));
+      setInterestPercent(pct);
+    }
+  };
+
+  const handleInterestPercentChange = (val) => {
+    setInterestPercent(val);
+    const pct = val === '' ? 0 : Number(val);
+    const p = Number(principal) || 0;
+    if (val !== '') {
+      setChargeAmount(Math.round((p * pct) / 100));
+    }
+  };
 
   // Synchronize customer list and fetch if empty
   useEffect(() => {
@@ -79,16 +114,26 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
     else if (financeType === 'monthly') setDuration(10);
   }, [financeType]);
 
-  // Live Calculations
+  // Live Calculations (Minus charge in principal for deduction mode)
   const principalNum = Number(principal) || 0;
   const interestNum = Number(interestPercent) || 0;
+  const chargeAmountNum = Number(chargeAmount) || 0;
   const durationNum = Number(duration) || 1;
 
-  const totalInterest = Math.round((principalNum * interestNum) / 100);
-  const totalPayable = principalNum + totalInterest;
-  const installmentAmount = Math.ceil(totalPayable / durationNum);
+  // In-Hand Cash given to borrower (Minus from Principal in deduction mode)
+  const inHandAmount = interestType === 'deduction'
+    ? Math.max(0, principalNum - chargeAmountNum)
+    : principalNum;
 
-  // Compute estimated End Date
+  // Total amount borrower repays
+  const totalPayable = interestType === 'deduction'
+    ? principalNum
+    : principalNum + chargeAmountNum;
+
+  // Installment Due Amount
+  const installmentAmount = durationNum > 0 ? Math.ceil(totalPayable / durationNum) : 0;
+
+  // Compute estimated End Date / Due Date
   const calculateEndDate = () => {
     try {
       const d = new Date(startDate);
@@ -153,28 +198,6 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
     }
   };
 
-  // Add Kalam sample borrower for instant demo
-  const handleAddSampleBorrower = async () => {
-    try {
-      setAddingCustomer(true);
-      const res = await api.createCustomer({
-        name: 'Dr. A.P.J. Abdul Kalam / டாக்டர் ஏ.பி.ஜே. அப்துல் கலாம்',
-        phone: '9443110150',
-        area: 'Rameswaram / ராமேஸ்வரம்',
-        address: 'House of Kalam, Mosque Street, Rameswaram, Tamil Nadu - 623526',
-      });
-      if (res?.success && res.customer) {
-        setCustomerList((prev) => [res.customer, ...prev]);
-        setCustomerId(res.customer._id);
-        setShowQuickAdd(false);
-      }
-    } catch (err) {
-      setQuickAddError(err.message || 'Failed to add sample borrower');
-    } finally {
-      setAddingCustomer(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -191,6 +214,10 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
         customerId,
         principal: principalNum,
         interestPercent: interestNum,
+        chargeAmount: chargeAmountNum,
+        interestType,
+        totalPayable,
+        installmentAmount,
         financeType,
         duration: durationNum,
         startDate,
@@ -332,16 +359,6 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                       <UserPlus className="w-4 h-4 text-sky-600" />
                       <span>Quick Register New Borrower / புதிய வாடிக்கையாளர்</span>
                     </span>
-                    <button
-                      type="button"
-                      onClick={handleAddSampleBorrower}
-                      disabled={addingCustomer}
-                      className="text-[10px] px-2 py-0.5 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 font-bold hover:bg-amber-200 flex items-center gap-1"
-                      title="Add Dr. APJ Abdul Kalam as sample"
-                    >
-                      <Sparkles className="w-3 h-3 text-amber-600" />
-                      <span>Dr. Kalam Sample</span>
-                    </button>
                   </div>
 
                   {quickAddError && (
@@ -458,15 +475,6 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                           >
                             <UserPlus className="w-3.5 h-3.5" />
                             <span>+ Register Borrower</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleAddSampleBorrower}
-                            disabled={addingCustomer}
-                            className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-300 text-amber-700 dark:text-amber-300 text-xs font-bold inline-flex items-center space-x-1"
-                          >
-                            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                            <span>Dr. Kalam Sample</span>
                           </button>
                         </div>
                       </div>
@@ -599,7 +607,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                     step="500"
                     required
                     value={principal}
-                    onChange={(e) => setPrincipal(Number(e.target.value))}
+                    onChange={(e) => handlePrincipalChange(e.target.value)}
                     className="w-full pl-9 pr-4 h-11 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-base font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums"
                   />
                 </div>
@@ -609,9 +617,9 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                     <button
                       key={p}
                       type="button"
-                      onClick={() => setPrincipal(p)}
+                      onClick={() => handlePresetPrincipal(p)}
                       className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition min-h-[32px] ${
-                        principal === p
+                        Number(principal) === p
                           ? 'bg-sky-500 text-white border-sky-400'
                           : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
                       }`}
@@ -622,24 +630,110 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                 </div>
               </div>
 
-              {/* Interest % and Duration */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-black text-slate-800 dark:text-slate-200 mb-1">
-                    Interest % / வட்டி விகிதம்
-                  </label>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min="0"
-                    max="50"
-                    required
-                    value={interestPercent}
-                    onChange={(e) => setInterestPercent(Number(e.target.value))}
-                    className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums"
-                  />
+              {/* Automatic Interest & Charge Calculation Card */}
+              <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Calculator className="w-4 h-4 text-sky-500" />
+                    <span>Interest & Charges / வட்டி & கட்டணம்</span>
+                  </span>
+                  <span className="text-[10px] text-sky-600 dark:text-sky-400 font-bold bg-sky-50 dark:bg-sky-950/60 px-2 py-0.5 rounded-full border border-sky-200 dark:border-sky-800">
+                    Auto Calculation
+                  </span>
                 </div>
 
+                {/* Linked Inputs: Charge Amount (₹) and Interest Rate (%) */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Charge Amount / கட்டணத் தொகை (₹)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs font-black text-slate-400">₹</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        value={chargeAmount}
+                        onChange={(e) => handleChargeAmountChange(e.target.value)}
+                        placeholder="2000"
+                        className="w-full pl-7 pr-3 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <span className="text-[9.5px] text-slate-400 mt-0.5 block">
+                      Direct charge in ₹
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Interest Rate / வட்டி விகிதம் (%)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={interestPercent}
+                        onChange={(e) => handleInterestPercentChange(e.target.value)}
+                        placeholder="10"
+                        className="w-full pl-3 pr-7 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums text-slate-900 dark:text-white"
+                      />
+                      <span className="absolute right-3 top-2.5 text-xs font-black text-slate-400">%</span>
+                    </div>
+                    <span className="text-[9.5px] text-slate-400 mt-0.5 block">
+                      Auto-calculated rate
+                    </span>
+                  </div>
+                </div>
+
+                {/* Deduction Method Selector */}
+                <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                  <label className="block text-[10.5px] font-bold text-slate-600 dark:text-slate-400 mb-1.5">
+                    Deduction Method / கழிவு முறை:
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setInterestType('deduction')}
+                      className={`p-2 rounded-xl text-left border transition text-xs ${
+                        interestType === 'deduction'
+                          ? 'bg-sky-500 text-white border-sky-400 shadow-sm ring-1 ring-sky-300'
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      <p className="font-black text-[11px] leading-tight">
+                        ✓ Deduct from Principal
+                      </p>
+                      <p className="text-[9.5px] opacity-85 mt-0.5 leading-tight">
+                        முன்பிடித்தம் (In-Hand: {formatCurrency(inHandAmount)})
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setInterestType('addon')}
+                      className={`p-2 rounded-xl text-left border transition text-xs ${
+                        interestType === 'addon'
+                          ? 'bg-sky-500 text-white border-sky-400 shadow-sm ring-1 ring-sky-300'
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      <p className="font-black text-[11px] leading-tight">
+                        Add to Principal
+                      </p>
+                      <p className="text-[9.5px] opacity-85 mt-0.5 leading-tight">
+                        கூடுதல் வட்டி (Total: {formatCurrency(principalNum + chargeAmountNum)})
+                      </p>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Duration and Start Date */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-black text-slate-800 dark:text-slate-200 mb-1">
                     Duration ({financeType === 'daily' ? 'Days' : financeType === 'weekly' ? 'Weeks' : 'Months'})
@@ -654,37 +748,91 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                     className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-black text-slate-800 dark:text-slate-200 mb-1">
+                    Start Date / தொடங்கும் தேதி
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-xs outline-none focus:ring-2 focus:ring-sky-400"
+                  />
+                </div>
               </div>
 
-              {/* Start Date */}
-              <div>
-                <label className="block text-xs font-black text-slate-800 dark:text-slate-200 mb-1">
-                  Start Date / கடன் தொடங்கும் தேதி
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-xs outline-none focus:ring-2 focus:ring-sky-400"
-                />
+              {/* Automatic Due Date Banner */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-sky-50/70 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/70 text-xs">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="w-4 h-4 text-sky-500 shrink-0" />
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold uppercase block leading-tight">
+                      Automatic Due Date (கடன் முடிவுத் தேதி)
+                    </span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Last Installment Due
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono font-black text-sm text-sky-600 dark:text-sky-400 block">
+                    {calculateEndDate()}
+                  </span>
+                  <span className="text-[9.5px] font-semibold text-slate-500">
+                    {durationNum} {financeType === 'daily' ? 'days' : financeType === 'weekly' ? 'weeks' : 'months'}
+                  </span>
+                </div>
               </div>
 
               {/* Live Preview Card */}
-              <div className="p-3 rounded-2xl bg-sky-50/70 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-[10px] text-slate-500 uppercase font-bold">Estimated Due</span>
-                  <p className="text-base font-black text-sky-600 dark:text-sky-400">
-                    {formatCurrency(installmentAmount)}{' '}
-                    <span className="text-[10px] font-normal text-slate-500">
-                      / {financeType === 'daily' ? 'day' : financeType === 'weekly' ? 'week' : 'month'}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50/60 dark:from-sky-950/50 dark:to-indigo-950/50 border border-sky-200 dark:border-sky-800 space-y-2.5">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-sky-200 dark:border-sky-800/80 shadow-xs">
+                    <span className="text-[10px] text-slate-500 uppercase font-black">
+                      Due Amount / தவணை
                     </span>
-                  </p>
+                    <p className="text-lg font-black text-sky-600 dark:text-sky-400 tabular-nums">
+                      {formatCurrency(installmentAmount)}{' '}
+                      <span className="text-[10px] font-normal text-slate-500">
+                        / {financeType === 'daily' ? 'day' : financeType === 'weekly' ? 'week' : 'month'}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-sky-200 dark:border-sky-800/80 shadow-xs">
+                    <span className="text-[10px] text-slate-500 uppercase font-black">
+                      Due Date / முடிவு தேதி
+                    </span>
+                    <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums mt-1 font-mono">
+                      {calculateEndDate()}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold">Total Payable</span>
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                    {formatCurrency(totalPayable)}
-                  </p>
+
+                <div className="flex items-center justify-between pt-1.5 border-t border-sky-200/60 dark:border-sky-800/60 text-xs">
+                  <div>
+                    <span className="text-[10.5px] text-slate-600 dark:text-slate-400 font-bold block">
+                      In-Hand Cash (கையில் வழங்குவது):
+                    </span>
+                    <p className="font-black text-emerald-600 dark:text-emerald-400 text-sm tabular-nums">
+                      {formatCurrency(inHandAmount)}{' '}
+                      {interestType === 'deduction' && chargeAmountNum > 0 && (
+                        <span className="text-[10px] text-slate-400 font-normal">
+                          ({formatCurrency(principalNum)} - {formatCurrency(chargeAmountNum)})
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-[10.5px] text-slate-600 dark:text-slate-400 font-bold block">
+                      Total Repayable (மொத்த வசூல்):
+                    </span>
+                    <p className="font-black text-slate-900 dark:text-white text-sm tabular-nums">
+                      {formatCurrency(totalPayable)}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -710,21 +858,35 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                     <p className="font-black text-slate-900 dark:text-white uppercase">{financeType}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Principal</span>
+                    <span className="text-[10px] text-slate-400 uppercase">Principal (அசல்)</span>
                     <p className="font-black text-slate-900 dark:text-white tabular-nums">
                       {formatCurrency(principalNum)}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Interest ({interestNum}%)</span>
-                    <p className="font-black text-emerald-600 tabular-nums">
-                      + {formatCurrency(totalInterest)}
+                    <span className="text-[10px] text-slate-400 uppercase">
+                      {interestType === 'deduction' ? 'Deducted Charge (பிடித்தம்)' : 'Interest Charge'} ({interestNum}%)
+                    </span>
+                    <p className={`font-black tabular-nums ${interestType === 'deduction' ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {interestType === 'deduction' ? `- ${formatCurrency(chargeAmountNum)}` : `+ ${formatCurrency(chargeAmountNum)}`}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Total Payable</span>
+                    <span className="text-[10px] text-slate-400 uppercase">In-Hand Cash (கையில் வழங்குவது)</span>
+                    <p className="font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                      {formatCurrency(inHandAmount)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase">Total Repayable (மொத்த வசூல்)</span>
                     <p className="font-black text-slate-900 dark:text-white tabular-nums text-sm">
                       {formatCurrency(totalPayable)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase">Due Date (முடிவு தேதி)</span>
+                    <p className="font-black text-sky-600 dark:text-sky-400 tabular-nums text-sm font-mono">
+                      {calculateEndDate()}
                     </p>
                   </div>
                 </div>

@@ -53,6 +53,19 @@ const loanSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    chargeAmount: {
+      type: Number,
+      default: 0,
+    },
+    disbursedAmount: {
+      type: Number,
+      default: 0,
+    },
+    interestType: {
+      type: String,
+      enum: ['deduction', 'addon'],
+      default: 'deduction',
+    },
     financeType: {
       type: String,
       enum: ['daily', 'weekly', 'monthly'],

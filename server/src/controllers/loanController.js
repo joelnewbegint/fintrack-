@@ -25,12 +25,28 @@ export const createLoan = async (req, res, next) => {
     }
 
     const principalNum = Number(principal);
-    const interestPercentNum = Number(interestPercent);
+    const interestPercentNum = Number(interestPercent) || 0;
     const durationNum = Number(duration);
+    const interestType = req.body.interestType || 'deduction';
 
-    const totalInterest = (principalNum * interestPercentNum) / 100;
-    const totalPayable = principalNum + totalInterest;
-    const installmentAmount = Math.ceil(totalPayable / durationNum);
+    const calculatedInterest = Math.round((principalNum * interestPercentNum) / 100);
+    const chargeAmountNum = req.body.chargeAmount !== undefined
+      ? Number(req.body.chargeAmount)
+      : calculatedInterest;
+
+    // Disbursed (In-Hand Cash): Principal minus charge in deduction mode
+    const disbursedAmount = interestType === 'deduction'
+      ? Math.max(0, principalNum - chargeAmountNum)
+      : principalNum;
+
+    // Total Payable by borrower
+    let totalPayable = req.body.totalPayable !== undefined
+      ? Number(req.body.totalPayable)
+      : (interestType === 'deduction' ? principalNum : principalNum + chargeAmountNum);
+
+    let installmentAmount = req.body.installmentAmount !== undefined
+      ? Number(req.body.installmentAmount)
+      : Math.ceil(totalPayable / durationNum);
 
     const start = startDate ? new Date(startDate) : new Date();
 
@@ -79,6 +95,9 @@ export const createLoan = async (req, res, next) => {
       customerId,
       principal: principalNum,
       interestPercent: interestPercentNum,
+      chargeAmount: chargeAmountNum,
+      disbursedAmount,
+      interestType,
       financeType,
       duration: durationNum,
       installmentAmount,
