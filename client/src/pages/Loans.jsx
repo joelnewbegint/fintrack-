@@ -230,6 +230,18 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                     </span>
                   </div>
 
+                  {/* Line 2b: Principal, Upfront Charge & In-Hand Details */}
+                  <div className="flex items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                    <span>Principal: <strong className="text-slate-900 dark:text-white">{formatCurrency(loan.principal)}</strong></span>
+                    {loan.chargeAmount ? (
+                      <span className="text-sky-600 dark:text-sky-400 font-semibold">
+                        In-Hand: <strong>{formatCurrency(loan.disbursedAmount || (loan.principal - loan.chargeAmount))}</strong> (-{formatCurrency(loan.chargeAmount)})
+                      </span>
+                    ) : (
+                      <span>Interest: {loan.interestPercent}%</span>
+                    )}
+                  </div>
+
                   {/* Line 3: Recovery Progress + Remaining Balance */}
                   <div className="space-y-1 pt-1 border-t border-sky-100 dark:border-sky-900/40">
                     <div className="flex justify-between items-center text-xs">
@@ -381,9 +393,15 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
 
                         <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white tabular-nums">
                           {formatCurrency(loan.principal)}
-                          <span className="text-[10px] text-slate-400 font-normal block">
-                            +{loan.interestPercent}% int
-                          </span>
+                          {loan.chargeAmount ? (
+                            <span className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold block">
+                              -{formatCurrency(loan.chargeAmount)} charge (Disbursed: {formatCurrency(loan.disbursedAmount || (loan.principal - loan.chargeAmount))})
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-normal block">
+                              +{loan.interestPercent}% int
+                            </span>
+                          )}
                         </td>
 
                         <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white tabular-nums">

@@ -127,6 +127,8 @@ export const createLoan = async (req, res, next) => {
       },
     });
 
+    await newLoan.populate('customerId', 'name phone area address photo');
+
     res.status(201).json({
       success: true,
       message: 'Loan created successfully with installment schedule',

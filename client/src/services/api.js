@@ -421,15 +421,62 @@ export const api = {
     });
     if (result.ok) return result.data;
 
+    // If server responded with a specific API/validation error, do not silently swallow it
+    if (result.error && !result.isHtml) {
+      throw new Error(result.error);
+    }
+
     const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+    const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
+    const targetCust = customers.find((c) => c._id === loanData.customerId);
     const typePrefix = (loanData.financeType || 'daily')[0].toUpperCase();
+
+    const principalNum = Number(loanData.principal || loanData.principalAmount || 0);
+    const interestPercentNum = Number(loanData.interestPercent || 0);
+    const chargeAmountNum = Number(
+      loanData.chargeAmount !== undefined
+        ? loanData.chargeAmount
+        : Math.round((principalNum * interestPercentNum) / 100)
+    );
+    const interestType = loanData.interestType || 'deduction';
+    const disbursedAmount = interestType === 'deduction'
+      ? Math.max(0, principalNum - chargeAmountNum)
+      : principalNum;
+    const totalPayable = Number(
+      loanData.totalPayable !== undefined
+        ? loanData.totalPayable
+        : (interestType === 'deduction' ? principalNum : principalNum + chargeAmountNum)
+    );
+    const installmentAmount = Number(
+      loanData.installmentAmount !== undefined
+        ? loanData.installmentAmount
+        : Math.ceil(totalPayable / (loanData.duration || 1))
+    );
+
     const newLoan = {
       ...loanData,
       _id: 'loan_' + Date.now(),
-      loanNo: `VK-2026-${typePrefix}${String(loans.length + 1).padStart(3, '0')}`,
+      loanNo: `LN-${typePrefix}26-${Math.floor(1000 + Math.random() * 9000)}`,
+      customerId: targetCust || {
+        _id: loanData.customerId,
+        name: loanData.customerName || 'Borrower',
+        phone: loanData.customerPhone || '',
+        area: loanData.customerArea || '',
+      },
+      customerName: targetCust?.name || loanData.customerName,
+      customerPhone: targetCust?.phone || loanData.customerPhone,
+      principal: principalNum,
+      interestPercent: interestPercentNum,
+      chargeAmount: chargeAmountNum,
+      disbursedAmount,
+      interestType,
+      totalPayable,
+      installmentAmount,
+      balanceAmount: totalPayable,
+      remainingBalance: totalPayable,
+      totalCollected: 0,
       paidInstallments: 0,
       totalPaid: 0,
-      balanceAmount: loanData.totalRepayable || loanData.principalAmount,
       status: 'active',
       overdueDays: 0,
       penaltyApplied: 0,

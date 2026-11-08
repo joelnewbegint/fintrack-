@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { connectDB, closeDB } from './config/db.js';
 import User from './models/User.js';
 import Customer from './models/Customer.js';
@@ -10,6 +12,11 @@ import AuditLog from './models/AuditLog.js';
 import Settings from './models/Settings.js';
 import Investment from './models/Investment.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), 'server/.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config();
 
 export const seedData = async (exitOnComplete = true) => {
@@ -372,7 +379,14 @@ export const seedData = async (exitOnComplete = true) => {
       const cfg = loanConfigs[idx];
       const customer = createdCustomers[cfg.custIndex];
       const principal = cfg.principal;
-      const totalPayable = principal + (principal * cfg.interest) / 100;
+      const interestType = cfg.interestType || 'deduction';
+      const chargeAmount = Math.round((principal * cfg.interest) / 100);
+      const disbursedAmount = interestType === 'deduction'
+        ? Math.max(0, principal - chargeAmount)
+        : principal;
+      const totalPayable = interestType === 'deduction'
+        ? principal
+        : principal + chargeAmount;
       const installmentAmount = Math.ceil(totalPayable / cfg.duration);
 
       const startDate = new Date(today);
@@ -395,6 +409,9 @@ export const seedData = async (exitOnComplete = true) => {
         customerId: customer._id,
         principal,
         interestPercent: cfg.interest,
+        chargeAmount,
+        disbursedAmount,
+        interestType,
         financeType: cfg.type,
         duration: cfg.duration,
         installmentAmount,
@@ -406,7 +423,7 @@ export const seedData = async (exitOnComplete = true) => {
         totalCollected: 0,
         remainingBalance: totalPayable,
         schedule,
-        notes: `Standard ${cfg.type} scheme agreement`,
+        notes: `Standard ${cfg.type} scheme agreement (Deduction: ₹${chargeAmount.toLocaleString('en-IN')}, Disbursed: ₹${disbursedAmount.toLocaleString('en-IN')})`,
       });
 
       totalLoansCreated++;
