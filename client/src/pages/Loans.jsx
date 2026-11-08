@@ -548,6 +548,10 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
       <LoanApplicationFormModal
         isOpen={showFormModal}
         prefillData={selectedFormLoan}
+        onLoanCreated={() => {
+          fetchLoans();
+          fetchCustomers();
+        }}
         onClose={() => {
           setShowFormModal(false);
           setSelectedFormLoan(null);

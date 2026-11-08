@@ -1,12 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLanguage } from '../../context/LanguageContext';
+import api from '../../services/api';
 import {
   X,
   Printer,
   FileText,
   Camera,
   RotateCcw,
+  Save,
+  CheckCircle,
+  Trash2,
 } from 'lucide-react';
 
 // Pristine Blank Form Template (Zero Dump Data)
@@ -154,22 +158,147 @@ const mapIncomingData = (data) => {
   };
 };
 
-export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }) => {
+export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, onLoanCreated = null }) => {
   const { lang } = useLanguage();
   const printAreaRef = useRef(null);
 
-  const [formData, setFormData] = useState(() => (prefillData ? mapIncomingData(prefillData) : BLANK_FORM_DATA));
-  const [isBlankMode, setIsBlankMode] = useState(() => !prefillData);
+  const [formData, setFormData] = useState(() => {
+    if (prefillData) return mapIncomingData(prefillData);
+    try {
+      const saved = localStorage.getItem('fintrack_loan_form_draft');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return BLANK_FORM_DATA;
+  });
+  const [isBlankMode, setIsBlankMode] = useState(() => {
+    if (prefillData) return false;
+    try {
+      const saved = localStorage.getItem('fintrack_loan_form_draft');
+      return !saved;
+    } catch {
+      return true;
+    }
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     if (prefillData) {
       setFormData(mapIncomingData(prefillData));
       setIsBlankMode(false);
     } else {
+      try {
+        const saved = localStorage.getItem('fintrack_loan_form_draft');
+        if (saved) {
+          setFormData(JSON.parse(saved));
+          setIsBlankMode(false);
+          return;
+        }
+      } catch (e) {}
       setFormData(BLANK_FORM_DATA);
       setIsBlankMode(true);
     }
   }, [prefillData, isOpen]);
+
+  const handleFieldChange = (field, value) => {
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      if (!prefillData) {
+        try {
+          localStorage.setItem('fintrack_loan_form_draft', JSON.stringify(next));
+        } catch (e) {}
+      }
+      return next;
+    });
+    setIsBlankMode(false);
+  };
+
+  const handleClearDraft = () => {
+    if (window.confirm('Clear form back to clean blank? / படிவத்தை அழிக்கவா?')) {
+      try {
+        localStorage.removeItem('fintrack_loan_form_draft');
+      } catch (e) {}
+      setFormData(BLANK_FORM_DATA);
+      setIsBlankMode(true);
+      setSaveSuccessMsg('');
+      setSaveError('');
+    }
+  };
+
+  const handleSaveLoan = async () => {
+    setSaveError('');
+    setSaveSuccessMsg('');
+
+    const borrowerName = (formData.customerName || '').trim();
+    const principalNum = Number(formData.loanAmount) || 0;
+
+    if (!borrowerName) {
+      setSaveError('Please enter borrower full name / வாடிக்கையாளர் பெயர் உள்ளிடவும்');
+      return;
+    }
+    if (principalNum < 500) {
+      setSaveError('Please enter valid loan amount (min ₹500) / கடன் தொகை உள்ளிடவும்');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const custRes = await api.createCustomer({
+        name: borrowerName,
+        phone: (formData.phone || '').trim() || '9842100000',
+        area: (formData.area || '').trim() || 'Town',
+        address: (formData.address || '').trim() || 'Tamil Nadu',
+        idProofType: formData.idType || 'Aadhaar',
+        idProofNumber: formData.idNumber || '',
+        guarantor: {
+          name: formData.witness1Name || '',
+          phone: formData.witness1Phone || '',
+          address: formData.witness1Address || '',
+          relationship: formData.witness1Relation || 'Guarantor',
+        },
+      });
+
+      const customerId = custRes?.customer?._id || 'cust_' + Date.now();
+
+      const scheme = (formData.scheme || 'daily').toLowerCase();
+      const financeType = scheme.includes('weekly') ? 'weekly' : scheme.includes('monthly') ? 'monthly' : 'daily';
+      let durationNum = parseInt(formData.tenure, 10);
+      if (isNaN(durationNum) || durationNum <= 0) {
+        durationNum = financeType === 'daily' ? 100 : financeType === 'weekly' ? 15 : 10;
+      }
+
+      const chargeAmount = Math.round((principalNum * 10) / 100);
+      const installmentAmount = Math.ceil(principalNum / durationNum);
+
+      const loanRes = await api.createLoan({
+        customerId,
+        principal: principalNum,
+        interestPercent: 10,
+        chargeAmount,
+        interestType: 'deduction',
+        totalPayable: principalNum,
+        installmentAmount,
+        financeType,
+        duration: durationNum,
+        startDate: formData.startDate || new Date().toISOString().split('T')[0],
+        notes: formData.purpose || 'Issued from Loan Application Form',
+      });
+
+      setSaveSuccessMsg(`Loan ${loanRes?.loan?.loanNo || ''} and Borrower registered successfully!`);
+      try {
+        localStorage.removeItem('fintrack_loan_form_draft');
+      } catch (e) {}
+
+      if (onLoanCreated) {
+        onLoanCreated(loanRes?.loan);
+      }
+    } catch (err) {
+      setSaveError(err.message || 'Failed to save loan');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -260,6 +389,30 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }
           </div>
 
           <div className="flex items-center space-x-2">
+            {!prefillData && (
+              <button
+                type="button"
+                onClick={handleSaveLoan}
+                disabled={isSaving}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-md shadow-emerald-600/30 active:scale-95 transition disabled:opacity-50"
+                title="Permanently save this loan and borrower into FinTrack"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{isSaving ? 'Saving...' : 'Save & Store Loan / சேமிக்கவும்'}</span>
+              </button>
+            )}
+
+            {!prefillData && !isBlankMode && (
+              <button
+                type="button"
+                onClick={handleClearDraft}
+                className="p-1.5 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 text-xs font-bold transition flex items-center space-x-1"
+                title="Clear draft / படிவத்தை அழிக்க"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             {prefillData && (
               <button
                 onClick={toggleBlankMode}
@@ -292,6 +445,19 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }
             </button>
           </div>
         </div>
+
+        {saveSuccessMsg && (
+          <div className="p-2.5 mb-2 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center space-x-2 print:hidden animate-fade-in shadow-xs">
+            <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{saveSuccessMsg}</span>
+          </div>
+        )}
+        {saveError && (
+          <div className="p-2.5 mb-2 rounded-xl bg-red-50 border border-red-300 text-red-800 text-xs font-bold flex items-center space-x-2 print:hidden animate-fade-in shadow-xs">
+            <X className="w-4 h-4 text-red-600 shrink-0" />
+            <span>{saveError}</span>
+          </div>
+        )}
 
         {/* Printable Loan Application Form Sheet (Strict Single A4 Boxed Form) */}
         <div
@@ -407,18 +573,38 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }
                 <span className="text-[7px] font-bold text-[#10295c] uppercase">
                   முழு பெயர் / Full Name:
                 </span>
-                <span className="text-[9px] font-bold text-[#0d1b3e] truncate">
-                  {isBlankMode ? '' : formData.customerName}
-                </span>
+                {!prefillData ? (
+                  <input
+                    type="text"
+                    value={isBlankMode ? '' : formData.customerName}
+                    onChange={(e) => handleFieldChange('customerName', e.target.value)}
+                    placeholder="Enter full name..."
+                    className="text-[9px] font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
+                  />
+                ) : (
+                  <span className="text-[9px] font-bold text-[#0d1b3e] truncate">
+                    {isBlankMode ? '' : formData.customerName}
+                  </span>
+                )}
               </div>
 
               <div className="col-span-6 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
                 <span className="text-[7px] font-bold text-[#10295c] uppercase">
                   தந்தை / கணவர் பெயர் / Father or Spouse:
                 </span>
-                <span className="text-[9px] font-bold text-[#0d1b3e] truncate">
-                  {isBlankMode ? '' : formData.fatherSpouseName}
-                </span>
+                {!prefillData ? (
+                  <input
+                    type="text"
+                    value={isBlankMode ? '' : formData.fatherSpouseName}
+                    onChange={(e) => handleFieldChange('fatherSpouseName', e.target.value)}
+                    placeholder="Father/Spouse..."
+                    className="text-[9px] font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
+                  />
+                ) : (
+                  <span className="text-[9px] font-bold text-[#0d1b3e] truncate">
+                    {isBlankMode ? '' : formData.fatherSpouseName}
+                  </span>
+                )}
               </div>
 
               {/* Row 2: Mobile No, Alternate Phone, DOB, Occupation */}
@@ -426,18 +612,38 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }
                 <span className="text-[7px] font-bold text-[#10295c] uppercase">
                   கைபேசி எண் / Mobile No:
                 </span>
-                <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : formData.phone}
-                </span>
+                {!prefillData ? (
+                  <input
+                    type="tel"
+                    value={isBlankMode ? '' : formData.phone}
+                    onChange={(e) => handleFieldChange('phone', e.target.value)}
+                    placeholder="Mobile..."
+                    className="text-[8.5px] font-mono font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
+                  />
+                ) : (
+                  <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
+                    {isBlankMode ? '' : formData.phone}
+                  </span>
+                )}
               </div>
 
               <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
                 <span className="text-[7px] font-bold text-[#10295c] uppercase">
                   மாற்று எண் / Alternate Phone:
                 </span>
-                <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : formData.altPhone}
-                </span>
+                {!prefillData ? (
+                  <input
+                    type="tel"
+                    value={isBlankMode ? '' : formData.altPhone}
+                    onChange={(e) => handleFieldChange('altPhone', e.target.value)}
+                    placeholder="Alt phone..."
+                    className="text-[8.5px] font-mono font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
+                  />
+                ) : (
+                  <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
+                    {isBlankMode ? '' : formData.altPhone}
+                  </span>
+                )}
               </div>
 
               <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
@@ -453,9 +659,19 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }
                 <span className="text-[7px] font-bold text-[#10295c] uppercase">
                   தொழில் / Occupation:
                 </span>
-                <span className="text-[8.5px] font-bold text-[#0d1b3e] truncate">
-                  {isBlankMode ? '' : formData.occupation}
-                </span>
+                {!prefillData ? (
+                  <input
+                    type="text"
+                    value={isBlankMode ? '' : formData.occupation}
+                    onChange={(e) => handleFieldChange('occupation', e.target.value)}
+                    placeholder="Occupation..."
+                    className="text-[8.5px] font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
+                  />
+                ) : (
+                  <span className="text-[8.5px] font-bold text-[#0d1b3e] truncate">
+                    {isBlankMode ? '' : formData.occupation}
+                  </span>
+                )}
               </div>
 
               {/* Row 3: Present Address (Tall Cell) & Area / Monthly Income */}
@@ -463,9 +679,19 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }
                 <span className="text-[7px] font-bold text-[#10295c] uppercase">
                   தற்போதைய முகவரி / Present Address:
                 </span>
-                <span className="text-[8.5px] font-semibold text-[#0d1b3e] leading-snug line-clamp-2">
-                  {isBlankMode ? '' : formData.address}
-                </span>
+                {!prefillData ? (
+                  <input
+                    type="text"
+                    value={isBlankMode ? '' : formData.address}
+                    onChange={(e) => handleFieldChange('address', e.target.value)}
+                    placeholder="Present address..."
+                    className="text-[8.5px] font-semibold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
+                  />
+                ) : (
+                  <span className="text-[8.5px] font-semibold text-[#0d1b3e] leading-snug line-clamp-2">
+                    {isBlankMode ? '' : formData.address}
+                  </span>
+                )}
               </div>
 
               <div className="col-span-4 bg-white p-0 flex flex-col">
@@ -535,9 +761,28 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }
                 <span className="text-[7px] font-bold text-[#10295c] uppercase">
                   கடன் தொகை / LOAN AMOUNT:
                 </span>
-                <span className="text-[10px] font-black text-[#10295c]">
-                  {isBlankMode ? '' : (formData.loanAmount ? `₹ ${formData.loanAmount}` : '')}
-                </span>
+                {!prefillData ? (
+                  <div className="flex items-center">
+                    <span className="text-[10px] font-black text-[#10295c] mr-1">₹</span>
+                    <input
+                      type="number"
+                      value={isBlankMode ? '' : formData.loanAmount}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleFieldChange('loanAmount', val);
+                        const num = Number(val) || 0;
+                        const inst = Math.ceil(num / 100);
+                        handleFieldChange('installmentAmount', String(inst));
+                      }}
+                      placeholder="e.g. 20000"
+                      className="text-[10px] font-black text-[#10295c] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
+                    />
+                  </div>
+                ) : (
+                  <span className="text-[10px] font-black text-[#10295c]">
+                    {isBlankMode ? '' : (formData.loanAmount ? `₹ ${formData.loanAmount}` : '')}
+                  </span>
+                )}
               </div>
 
               <div className="col-span-4 bg-white p-1 flex flex-col justify-between min-h-[26px] print:min-h-[28px]">
@@ -555,18 +800,41 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }
                 <span className="text-[7px] font-bold text-[#10295c] uppercase">
                   கால அளவு / TENURE:
                 </span>
-                <span className="text-[8.5px] font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : formData.tenure}
-                </span>
+                {!prefillData ? (
+                  <input
+                    type="text"
+                    value={isBlankMode ? '' : formData.tenure}
+                    onChange={(e) => handleFieldChange('tenure', e.target.value)}
+                    placeholder="100 Days"
+                    className="text-[8.5px] font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
+                  />
+                ) : (
+                  <span className="text-[8.5px] font-bold text-[#0d1b3e]">
+                    {isBlankMode ? '' : formData.tenure}
+                  </span>
+                )}
               </div>
 
               <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[26px] print:min-h-[28px]">
                 <span className="text-[7px] font-bold text-[#10295c] uppercase">
                   தவணைத் தொகை / DUE AMOUNT:
                 </span>
-                <span className="text-[9.5px] font-black text-[#10295c]">
-                  {isBlankMode ? '' : (formData.installmentAmount ? `₹ ${formData.installmentAmount} / தவணை` : '')}
-                </span>
+                {!prefillData ? (
+                  <div className="flex items-center">
+                    <span className="text-[9.5px] font-black text-[#10295c] mr-1">₹</span>
+                    <input
+                      type="number"
+                      value={isBlankMode ? '' : formData.installmentAmount}
+                      onChange={(e) => handleFieldChange('installmentAmount', e.target.value)}
+                      placeholder="e.g. 200"
+                      className="text-[9.5px] font-black text-[#10295c] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
+                    />
+                  </div>
+                ) : (
+                  <span className="text-[9.5px] font-black text-[#10295c]">
+                    {isBlankMode ? '' : (formData.installmentAmount ? `₹ ${formData.installmentAmount} / தவணை` : '')}
+                  </span>
+                )}
               </div>
 
               {/* Row 2: Start Date, End Date, Purpose of Loan (Strictly Balanced 3+3+6 Columns) */}
@@ -574,27 +842,63 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null }
                 <span className="text-[7px] font-bold text-[#10295c] uppercase">
                   துவக்க தேதி / START DATE:
                 </span>
-                <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : formatDateDisplay(formData.startDate)}
-                </span>
+                {!prefillData ? (
+                  <input
+                    type="date"
+                    value={formData.startDate || ''}
+                    onChange={(e) => {
+                      const s = e.target.value;
+                      handleFieldChange('startDate', s);
+                      try {
+                        const d = new Date(s);
+                        d.setDate(d.getDate() + 100);
+                        handleFieldChange('endDate', d.toISOString().split('T')[0]);
+                      } catch (err) {}
+                    }}
+                    className="text-[8.5px] font-mono font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
+                  />
+                ) : (
+                  <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
+                    {isBlankMode ? '' : formatDateDisplay(formData.startDate)}
+                  </span>
+                )}
               </div>
 
               <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[26px] print:min-h-[28px]">
                 <span className="text-[7px] font-bold text-[#10295c] uppercase">
                   முடிவு தேதி / END DATE:
                 </span>
-                <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : formatDateDisplay(formData.endDate)}
-                </span>
+                {!prefillData ? (
+                  <input
+                    type="date"
+                    value={formData.endDate || ''}
+                    onChange={(e) => handleFieldChange('endDate', e.target.value)}
+                    className="text-[8.5px] font-mono font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
+                  />
+                ) : (
+                  <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
+                    {isBlankMode ? '' : formatDateDisplay(formData.endDate)}
+                  </span>
+                )}
               </div>
 
               <div className="col-span-6 bg-white p-1 flex flex-col justify-between min-h-[26px] print:min-h-[28px]">
                 <span className="text-[7px] font-bold text-[#10295c] uppercase">
                   கடன் நோக்கம் / PURPOSE OF LOAN:
                 </span>
-                <span className="text-[8.5px] font-bold text-[#0d1b3e] truncate">
-                  {isBlankMode ? '' : formData.purpose}
-                </span>
+                {!prefillData ? (
+                  <input
+                    type="text"
+                    value={isBlankMode ? '' : formData.purpose}
+                    onChange={(e) => handleFieldChange('purpose', e.target.value)}
+                    placeholder="Business, tailoring, agriculture..."
+                    className="text-[8.5px] font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
+                  />
+                ) : (
+                  <span className="text-[8.5px] font-bold text-[#0d1b3e] truncate">
+                    {isBlankMode ? '' : formData.purpose}
+                  </span>
+                )}
               </div>
             </div>
           </div>
