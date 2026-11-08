@@ -31,22 +31,25 @@ export const getCustomers = async (req, res, next) => {
 
     const customers = await Customer.find(query).sort({ createdAt: -1 });
 
-    // Populate active loans count and total outstanding for each customer
+    // Populate active loans count, total loans count, and total outstanding for each customer
     const customerIds = customers.map((c) => c._id);
-    const activeLoans = await Loan.find({
+    const allCustomerLoans = await Loan.find({
       customerId: { $in: customerIds },
-      status: { $in: ['active', 'overdue'] },
-    }).select('customerId remainingBalance principal financeType');
+    }).select('customerId remainingBalance principal financeType status');
 
     const customerLoanMap = {};
-    activeLoans.forEach((loan) => {
+    allCustomerLoans.forEach((loan) => {
       const cid = loan.customerId.toString();
       if (!customerLoanMap[cid]) {
-        customerLoanMap[cid] = { activeLoanCount: 0, totalOutstanding: 0, types: [] };
+        customerLoanMap[cid] = { activeLoanCount: 0, totalOutstanding: 0, totalLoansCount: 0, types: [] };
       }
-      customerLoanMap[cid].activeLoanCount += 1;
-      customerLoanMap[cid].totalOutstanding += loan.remainingBalance;
-      if (!customerLoanMap[cid].types.includes(loan.financeType)) {
+      customerLoanMap[cid].totalLoansCount += 1;
+      const rem = Number(loan.remainingBalance != null ? loan.remainingBalance : loan.principal) || 0;
+      if (loan.status === 'active' || loan.status === 'overdue' || rem > 0) {
+        customerLoanMap[cid].activeLoanCount += 1;
+        customerLoanMap[cid].totalOutstanding += rem;
+      }
+      if (loan.financeType && !customerLoanMap[cid].types.includes(loan.financeType)) {
         customerLoanMap[cid].types.push(loan.financeType);
       }
     });
@@ -55,6 +58,7 @@ export const getCustomers = async (req, res, next) => {
       const stats = customerLoanMap[c._id.toString()] || {
         activeLoanCount: 0,
         totalOutstanding: 0,
+        totalLoansCount: 0,
         types: [],
       };
       return {

@@ -164,10 +164,16 @@ export const Customers = ({ onViewCustomer }) => {
                       className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border shrink-0 whitespace-nowrap ${
                         c.activeLoanCount > 0
                           ? 'bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-950/70 dark:text-sky-300'
+                          : (c.totalLoansCount || 0) > 0
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-300'
                           : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400'
                       }`}
                     >
-                      {c.activeLoanCount || 0} Loans
+                      {c.activeLoanCount > 0
+                        ? `${c.activeLoanCount} Active${c.totalLoansCount > c.activeLoanCount ? ` (${c.totalLoansCount} Loans)` : ' Loan'}`
+                        : (c.totalLoansCount || 0) > 0
+                        ? `${c.totalLoansCount} Settled`
+                        : '0 Loans'}
                     </span>
                   </div>
 
@@ -203,7 +209,9 @@ export const Customers = ({ onViewCustomer }) => {
                     <span className="text-[10px] text-slate-400 uppercase font-semibold block leading-none">
                       Total Due
                     </span>
-                    <p className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400 tabular-nums whitespace-nowrap mt-0.5">
+                    <p className={`text-sm sm:text-base font-black tabular-nums whitespace-nowrap mt-0.5 ${
+                      (c.totalOutstanding || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'
+                    }`}>
                       {formatCurrency(c.totalOutstanding || 0)}
                     </p>
                   </div>

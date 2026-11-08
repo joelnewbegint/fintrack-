@@ -49,14 +49,8 @@ export const cleanseDumpData = () => {
       if (!l) return false;
       const id = String(l._id || '');
       const loanNo = String(l.loanNo || '');
-      if (id.startsWith('loan_tn_')) return true;
-      if (
-        loanNo.startsWith('LN-D26-') ||
-        loanNo.startsWith('LN-W26-') ||
-        loanNo.startsWith('LN-M26-')
-      ) {
-        return true;
-      }
+      // ONLY flag old dummy mock loans from initial template (never delete LN-D26-, LN-W26-, LN-M26-)
+      if (id.startsWith('loan_tn_') || id.startsWith('loan_00') || loanNo.startsWith('LN-2026-0')) return true;
       return false;
     };
 
@@ -64,8 +58,8 @@ export const cleanseDumpData = () => {
       if (!p) return false;
       const id = String(p._id || '');
       const receiptNo = String(p.receiptNo || '');
-      if (id.startsWith('pay_')) return true;
-      if (receiptNo.startsWith('RCP-26-1000')) return true;
+      // ONLY flag old dummy mock payments (never delete RCP-26-)
+      if (id.startsWith('pay_tn_') || id.startsWith('pay_00') || receiptNo.startsWith('RCP-2026-0')) return true;
       return false;
     };
 
@@ -140,30 +134,30 @@ export const cleanseDumpData = () => {
 
 /**
  * Universal Real Dataset Initializer:
- * Seeds the full real operational workbook records (35 customers, 36 loans, 542 payments)
+ * Seeds the full real operational workbook records (24 canonical borrowers, 36 loans, 542 payments)
  * across all mobile phones, laptops, and tablets automatically on first load.
  */
 export const initRealDataset = () => {
   if (typeof window === 'undefined' || !window.localStorage) return;
   try {
-    const isMigrated = localStorage.getItem('fintrack_real_dataset_v1');
+    const isMigrated = localStorage.getItem('fintrack_real_dataset_v4');
     if (isMigrated !== 'true') {
       localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(initialCustomers));
       localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(initialLoans));
       localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(initialPayments));
       localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify(initialInvestments));
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(initialExpenses));
-      localStorage.setItem('fintrack_real_dataset_v1', 'true');
-      console.log('✅ Synchronized real workbook dataset across device storage!');
+      localStorage.setItem('fintrack_real_dataset_v4', 'true');
+      console.log('✅ Synchronized real workbook dataset (24 borrowers, 36 loans, 542 payments) across device storage!');
     }
   } catch (err) {
     console.warn('Real dataset init notice:', err);
   }
 };
 
-// Immediately invoke cleanser and real dataset sync
-cleanseDumpData();
+// Immediately initialize real dataset, then sanitize any ancient mock remnants
 initRealDataset();
+cleanseDumpData();
 
 const getStored = (key, fallback) => {
   try {
@@ -487,29 +481,78 @@ export const api = {
   getCustomers: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
     const result = await safeFetchJson(`/api/customers?${query}`, { headers: getHeaders() });
-    if (result.ok) return result.data;
+    if (result.ok && result.data && Array.isArray(result.data.customers)) {
+      return result.data;
+    }
 
     let customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
+    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+
+    // Compute active loans count, total loans count, and total outstanding for each customer
+    const loanMap = {};
+    loans.forEach((loan) => {
+      const cid = String(loan.customerId?._id || loan.customerId || '');
+      if (!cid) return;
+      if (!loanMap[cid]) {
+        loanMap[cid] = { activeLoanCount: 0, totalOutstanding: 0, totalLoansCount: 0, types: [] };
+      }
+      loanMap[cid].totalLoansCount += 1;
+      const status = loan.status;
+      const rem = Number(loan.remainingBalance != null ? loan.remainingBalance : loan.balanceAmount) || 0;
+      if (status === 'active' || status === 'overdue' || rem > 0) {
+        loanMap[cid].activeLoanCount += 1;
+        loanMap[cid].totalOutstanding += rem;
+      }
+      const type = loan.financeType || 'daily';
+      if (!loanMap[cid].types.includes(type)) {
+        loanMap[cid].types.push(type);
+      }
+    });
+
+    customers = customers.map((c) => {
+      const stats = loanMap[String(c._id)] || {
+        activeLoanCount: 0,
+        totalOutstanding: 0,
+        totalLoansCount: 0,
+        types: [],
+      };
+      return {
+        ...c,
+        ...stats,
+      };
+    });
+
+    const allAreas = Array.from(new Set(customers.map((c) => c.area).filter(Boolean)));
+
+    if (params.area && params.area !== 'all') {
+      customers = customers.filter((c) => c.area === params.area);
+    }
+
     if (params.search) {
       const q = params.search.toLowerCase();
       customers = customers.filter(
         (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.phone.includes(q) ||
+          (c.name && c.name.toLowerCase().includes(q)) ||
+          (c.phone && c.phone.includes(q)) ||
           (c.area && c.area.toLowerCase().includes(q))
       );
     }
-    return { success: true, count: customers.length, customers };
+    return { success: true, count: customers.length, areas: allAreas, customers };
   },
 
   getCustomerById: async (id) => {
     const result = await safeFetchJson(`/api/customers/${id}`, { headers: getHeaders() });
-    if (result.ok) return result.data;
+    if (result.ok && result.data) return result.data;
 
     const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
-    const customer = customers.find((c) => c._id === id);
-    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans).filter((l) => l.customerId === id);
-    return { success: true, customer, loans };
+    const customer = customers.find((c) => String(c._id) === String(id));
+    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans).filter(
+      (l) => String(l.customerId?._id || l.customerId) === String(id)
+    );
+    const payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments).filter(
+      (p) => String(p.customerId?._id || p.customerId) === String(id)
+    );
+    return { success: true, customer, loans, payments };
   },
 
   createCustomer: async (customerData) => {
@@ -566,9 +609,29 @@ export const api = {
   getLoans: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
     const result = await safeFetchJson(`/api/loans?${query}`, { headers: getHeaders() });
-    if (result.ok) return result.data;
+    if (result.ok && result.data && Array.isArray(result.data.loans)) return result.data;
 
     let loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+    const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
+    const customerMap = {};
+    customers.forEach((c) => {
+      customerMap[String(c._id)] = c;
+    });
+
+    loans = loans.map((l) => {
+      let cust = l.customerId;
+      if (typeof cust === 'string' && customerMap[cust]) {
+        cust = customerMap[cust];
+      }
+      return {
+        ...l,
+        customerId: cust,
+        customerName: l.customerName || (typeof cust === 'object' && cust ? cust.name : ''),
+        customerPhone: l.customerPhone || (typeof cust === 'object' && cust ? cust.phone : ''),
+        remainingBalance: Number(l.remainingBalance != null ? l.remainingBalance : l.balanceAmount) || 0,
+      };
+    });
+
     if (params.status && params.status !== 'all') {
       loans = loans.filter((l) => l.status === params.status);
     }
@@ -579,9 +642,10 @@ export const api = {
       const q = params.search.toLowerCase();
       loans = loans.filter(
         (l) =>
-          l.loanNo.toLowerCase().includes(q) ||
-          l.customerName.toLowerCase().includes(q) ||
-          l.customerPhone.includes(q)
+          (l.loanNo && l.loanNo.toLowerCase().includes(q)) ||
+          (l.customerName && l.customerName.toLowerCase().includes(q)) ||
+          (l.customerId?.name && l.customerId.name.toLowerCase().includes(q)) ||
+          (l.customerPhone && l.customerPhone.includes(q))
       );
     }
     return { success: true, count: loans.length, loans };
@@ -589,11 +653,31 @@ export const api = {
 
   getLoanById: async (id) => {
     const result = await safeFetchJson(`/api/loans/${id}`, { headers: getHeaders() });
-    if (result.ok) return result.data;
+    if (result.ok && result.data) return result.data;
 
     const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
-    const loan = loans.find((l) => l._id === id);
-    const payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments).filter((p) => p.loanId === id);
+    const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
+    const customerMap = {};
+    customers.forEach((c) => {
+      customerMap[String(c._id)] = c;
+    });
+
+    let loan = loans.find((l) => String(l._id) === String(id));
+    if (loan) {
+      let cust = loan.customerId;
+      if (typeof cust === 'string' && customerMap[cust]) {
+        cust = customerMap[cust];
+      }
+      loan = {
+        ...loan,
+        customerId: cust,
+        customerName: loan.customerName || (typeof cust === 'object' && cust ? cust.name : ''),
+        customerPhone: loan.customerPhone || (typeof cust === 'object' && cust ? cust.phone : ''),
+      };
+    }
+    const payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments).filter(
+      (p) => String(p.loanId?._id || p.loanId) === String(id)
+    );
     return { success: true, loan, payments };
   },
 
@@ -693,16 +777,41 @@ export const api = {
   getPayments: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
     const result = await safeFetchJson(`/api/payments?${query}`, { headers: getHeaders() });
-    if (result.ok) return result.data;
+    if (result.ok && result.data && Array.isArray(result.data.payments)) return result.data;
 
     let payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments);
+    const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
+    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+
+    const custMap = {};
+    customers.forEach((c) => {
+      custMap[String(c._id)] = c;
+    });
+    const loanMap = {};
+    loans.forEach((l) => {
+      loanMap[String(l._id)] = l;
+    });
+
+    payments = payments.map((p) => {
+      const c = typeof p.customerId === 'object' && p.customerId !== null ? p.customerId : custMap[String(p.customerId)] || null;
+      const l = typeof p.loanId === 'object' && p.loanId !== null ? p.loanId : loanMap[String(p.loanId)] || null;
+      return {
+        ...p,
+        customerId: c || p.customerId,
+        loanId: l || p.loanId,
+        customerName: p.customerName || (c ? c.name : ''),
+        loanNo: p.loanNo || (l ? l.loanNo : ''),
+        paymentDate: p.paymentDate || p.date,
+      };
+    });
+
     if (params.search) {
       const q = params.search.toLowerCase();
       payments = payments.filter(
         (p) =>
-          p.receiptNo.toLowerCase().includes(q) ||
-          p.customerName.toLowerCase().includes(q) ||
-          p.loanNo.toLowerCase().includes(q)
+          (p.receiptNo && p.receiptNo.toLowerCase().includes(q)) ||
+          (p.customerName && p.customerName.toLowerCase().includes(q)) ||
+          (p.loanNo && p.loanNo.toLowerCase().includes(q))
       );
     }
     return { success: true, count: payments.length, payments };

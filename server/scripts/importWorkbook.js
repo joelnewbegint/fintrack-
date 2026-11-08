@@ -47,46 +47,33 @@ const cleanNum = (val) => {
   return isNaN(n) ? 0 : n;
 };
 
-// Customer name & detail normalizer
-const customerProfiles = {
-  Thilaga: { nameTamil: 'திலகா', phone: '9579477655', area: 'Madhanur', address: 'Madhanur Main Road' },
-  Manchi: { nameTamil: 'மஞ்சி', phone: '9047239301', area: 'Madhanur', address: 'Madhanur', notes: 'Chicken Stall Business' },
-  Surenthar: { nameTamil: 'சுரேந்தர்', phone: '9842199001', area: 'Ambur', address: 'Ambur', notes: 'Hotel Business' },
-  Thannarasu: { nameTamil: 'தன்னரசு', phone: '9123512770', area: 'CTM', address: 'CTM Road' },
-  Thennarasu: { nameTamil: 'தன்னரசு', phone: '9123512770', area: 'CTM', address: 'CTM Road' },
-  Purusoth: { nameTamil: 'புருஷோத்', phone: '9842199002', area: 'Agaram', address: 'Agaram' },
-  Pursoth: { nameTamil: 'புருஷோத்', phone: '9842199002', area: 'Agaram', address: 'Agaram' },
-  Anitha: { nameTamil: 'அனிதா', phone: '9944445940', area: 'RS Hotal', address: 'RS Hotal Area' },
-  Jayanthi: { nameTamil: 'ஜெயந்தி', phone: '9600724033', area: 'Agaram', address: 'Agaram' },
-  Dinesha: { nameTamil: 'தினேஷ்', phone: '9842199003', area: 'Agaram', address: 'Agaram' },
-  Dinesh: { nameTamil: 'தினேஷ்', phone: '9842199003', area: 'Agaram', address: 'Agaram' },
-  Dhinesh: { nameTamil: 'தினேஷ்', phone: '9842199003', area: 'Agaram', address: 'Agaram' },
-  Sanggar: { nameTamil: 'சங்கர்', phone: '9123512770', area: 'Agaram', address: 'Agaram' },
-  Sangar: { nameTamil: 'சங்கர்', phone: '9123512770', area: 'Agaram', address: 'Agaram' },
-  kalaiselvi: { nameTamil: 'கலைச்செல்வி', phone: '9842199004', area: 'Agaram', address: 'Agaram' },
-  Kalaiselvi: { nameTamil: 'கலைச்செல்வி', phone: '9842199004', area: 'Agaram', address: 'Agaram' },
-  Vennda: { nameTamil: 'வெண்டா', phone: '9600436585', area: 'Agaram', address: 'Agaram' },
-  Venta: { nameTamil: 'வெண்டா', phone: '9600436585', area: 'Agaram', address: 'Agaram' },
-  Sutha: { nameTamil: 'சுதா', phone: '9842199005', area: 'Agaram', address: 'Agaram' },
-  Rajsegar: { nameTamil: 'ராஜசேகர்', phone: '9600436585', area: 'Kallukutai', address: 'Kallukutai' },
-  Rajasegar: { nameTamil: 'ராஜசேகர்', phone: '9600436585', area: 'Kallukutai', address: 'Kallukutai' },
-  Saranya: { nameTamil: 'சரண்யா', phone: '9842199006', area: 'Agaram', address: 'Agaram' },
-  Gopi: { nameTamil: 'கோபி', phone: '9842199007', area: 'Agaram', address: 'Agaram' },
-  Mogan: { nameTamil: 'மோகன்', phone: '9842199008', area: 'Agaram', address: 'Agaram' },
-  mogan: { nameTamil: 'மோகன்', phone: '9842199008', area: 'Agaram', address: 'Agaram' },
-  mohan: { nameTamil: 'மோகன்', phone: '9842199008', area: 'Agaram', address: 'Agaram' },
-  Murthi: { nameTamil: 'மூர்த்தி', phone: '9123512770', area: 'Agaram', address: 'Agaram' },
-  Nirmala: { nameTamil: 'நிர்மலா', phone: '8124977664', area: 'Madhanur', address: 'Madhanur' },
-  Srinivasa: { nameTamil: 'சீனிவாசன்', phone: '9842199009', area: 'Madhanur', address: 'Madhanur' },
-  srinivasan: { nameTamil: 'சீனிவாசன்', phone: '9842199009', area: 'Madhanur', address: 'Madhanur' },
-  Srinisan: { nameTamil: 'சீனிவாசன்', phone: '9842199009', area: 'Madhanur', address: 'Madhanur' },
-  Sathish: { nameTamil: 'சதீஷ்', phone: '8382047979', area: 'Agaram', address: 'Agaram' },
-  Premlatha: { nameTamil: 'பிரேமலதா', phone: '9842199010', area: 'Madhanur', address: 'Madhanur' },
-  Ld: { nameTamil: 'எல்.டி', phone: '9842199011', area: 'Madhanur', address: 'Madhanur' },
-  Ammu: { nameTamil: 'அம்மு', phone: '9842199012', area: 'Cinnathatalam', address: 'Cinnathatalam' },
-  Santhiya: { nameTamil: 'சந்தியா', phone: '9842199013', area: 'Agaram', address: 'Agaram' },
-  'RS Hotal': { nameTamil: 'ஆர்.எஸ் ஹோட்டல்', phone: '9944445940', area: 'RS Hotal', address: 'RS Hotal' },
-};
+// Customer name & detail normalizer - 24 Canonical Borrowers
+const canonicalCustomerSpecs = [
+  { key: 'Thilaga', nameTamil: 'திலகா', phone: '9579477655', area: 'Madhanur', address: 'Madhanur Main Road', aliases: ['thilaga'] },
+  { key: 'Manchi', nameTamil: 'மஞ்சி', phone: '9047239301', area: 'Madhanur', address: 'Madhanur', notes: 'Chicken Stall Business', aliases: ['manchi'] },
+  { key: 'Surenthar', nameTamil: 'சுரேந்தர்', phone: '9842199001', area: 'Ambur', address: 'Ambur', notes: 'Hotel Business', aliases: ['surenthar'] },
+  { key: 'Thennarasu', nameTamil: 'தன்னரசு', phone: '9123512770', area: 'CTM', address: 'CTM Road', aliases: ['thannarasu', 'thennarasu'] },
+  { key: 'Purusoth', nameTamil: 'புருஷோத்', phone: '9842199002', area: 'Agaram', address: 'Agaram', aliases: ['pursoth', 'purusoth'] },
+  { key: 'Anitha', nameTamil: 'அனிதா', phone: '9944445940', area: 'RS Hotal', address: 'RS Hotal Area', aliases: ['anitha', 'rs hotal', 'rshotal'] },
+  { key: 'Jayanthi', nameTamil: 'ஜெயந்தி', phone: '9600724033', area: 'Agaram', address: 'Agaram', aliases: ['jayanthi'] },
+  { key: 'Dinesh', nameTamil: 'தினேஷ்', phone: '9842199003', area: 'Agaram', address: 'Agaram', aliases: ['dinesh', 'dinesha', 'dhinesh'] },
+  { key: 'Sangar', nameTamil: 'சங்கர்', phone: '9123512770', area: 'Agaram', address: 'Agaram', aliases: ['sangar', 'sanggar'] },
+  { key: 'Kalaiselvi', nameTamil: 'கலைச்செல்வி', phone: '9842199004', area: 'Agaram', address: 'Agaram', aliases: ['kalaiselvi'] },
+  { key: 'Vennda', nameTamil: 'வெண்டா', phone: '9600436585', area: 'Agaram', address: 'Agaram', aliases: ['vennda', 'venta'] },
+  { key: 'Sutha', nameTamil: 'சுதா', phone: '9842199005', area: 'Agaram', address: 'Agaram', aliases: ['sutha'] },
+  { key: 'Rajasegar', nameTamil: 'ராஜசேகர்', phone: '9600436585', area: 'Kallukutai', address: 'Kallukutai', aliases: ['rajasegar', 'rajsegar'] },
+  { key: 'Saranya', nameTamil: 'சரண்யா', phone: '9842199006', area: 'Agaram', address: 'Agaram', aliases: ['saranya'] },
+  { key: 'Gopi', nameTamil: 'கோபி', phone: '9842199007', area: 'Agaram', address: 'Agaram', aliases: ['gopi'] },
+  { key: 'Mogan', nameTamil: 'மோகன்', phone: '9842199008', area: 'Agaram', address: 'Agaram', aliases: ['mogan', 'mohan'] },
+  { key: 'Murthi', nameTamil: 'மூர்த்தி', phone: '9123512770', area: 'Agaram', address: 'Agaram', aliases: ['murthi'] },
+  { key: 'Nirmala', nameTamil: 'நிர்மலா', phone: '8124977664', area: 'Madhanur', address: 'Madhanur', aliases: ['nirmala'] },
+  { key: 'Srinivasan', nameTamil: 'சீனிவாசன்', phone: '9842199009', area: 'Madhanur', address: 'Madhanur', aliases: ['srinivasan', 'srinivasa', 'srinisan'] },
+  { key: 'Sathish', nameTamil: 'சதீஷ்', phone: '8382047979', area: 'Agaram', address: 'Agaram', aliases: ['sathish'] },
+  { key: 'Premlatha', nameTamil: 'பிரேமலதா', phone: '9842199010', area: 'Madhanur', address: 'Madhanur', aliases: ['premlatha'] },
+  { key: 'Ld', nameTamil: 'எல்.டி', phone: '9842199011', area: 'Madhanur', address: 'Madhanur', aliases: ['ld'] },
+  { key: 'Ammu', nameTamil: 'அம்மு', phone: '9842199012', area: 'Cinnathatalam', address: 'Cinnathatalam', aliases: ['ammu'] },
+  { key: 'Santhiya', nameTamil: 'சந்தியா', phone: '9842199013', area: 'Agaram', address: 'Agaram', aliases: ['santhiya'] },
+];
 
 async function run() {
   console.log('🔄 Connecting to MongoDB Atlas...');
@@ -135,40 +122,37 @@ async function run() {
   await Expense.deleteMany({});
   console.log('🧹 Cleaned existing operational collections.');
 
-  // Create Customers
-  const customerMap = {}; // normalizedName -> Customer doc
-  for (const [key, prof] of Object.entries(customerProfiles)) {
-    const canonicalKey = key.trim().toLowerCase();
-    if (!customerMap[canonicalKey]) {
-      const doc = await Customer.create({
-        name: `${key} (${prof.nameTamil})`,
-        phone: prof.phone,
-        address: prof.address || `${prof.area}, Tamil Nadu`,
-        area: prof.area || 'Agaram',
-        idProofType: 'Aadhaar',
-        notes: prof.notes || '',
-      });
-      customerMap[canonicalKey] = doc;
+  // Create 24 Canonical Customers
+  const customerMap = {}; // alias (lowercase) -> Customer doc
+  for (const prof of canonicalCustomerSpecs) {
+    const doc = await Customer.create({
+      name: `${prof.key} (${prof.nameTamil})`,
+      phone: prof.phone,
+      address: prof.address || `${prof.area}, Tamil Nadu`,
+      area: prof.area || 'Agaram',
+      idProofType: 'Aadhaar',
+      notes: prof.notes || '',
+    });
+    customerMap[prof.key.toLowerCase()] = doc;
+    for (const alias of prof.aliases) {
+      customerMap[alias.toLowerCase()] = doc;
     }
   }
-  console.log(`👤 Created ${Object.keys(customerMap).length} unique Customers in MongoDB.`);
+  console.log(`👤 Created ${canonicalCustomerSpecs.length} canonical Customers in MongoDB.`);
 
   const getCustomer = async (rawName) => {
     if (!rawName) return null;
     const clean = rawName.trim().toLowerCase();
     if (customerMap[clean]) return customerMap[clean];
-    // Alias matching
-    if (clean === 'thennarasu' || clean === 'thannarasu') return customerMap['thannarasu'] || customerMap['thennarasu'];
-    if (clean === 'pursoth' || clean === 'purusoth') return customerMap['purusoth'] || customerMap['pursoth'];
-    if (clean === 'dinesh' || clean === 'dinesha' || clean === 'dhinesh') return customerMap['dinesh'] || customerMap['dinesha'];
-    if (clean === 'sangar' || clean === 'sanggar') return customerMap['sangar'] || customerMap['sanggar'];
-    if (clean === 'kalaiselvi') return customerMap['kalaiselvi'];
-    if (clean === 'venta' || clean === 'vennda') return customerMap['vennda'] || customerMap['venta'];
-    if (clean === 'rajsegar' || clean === 'rajasegar') return customerMap['rajsegar'] || customerMap['rajasegar'];
-    if (clean === 'mogan' || clean === 'mohan') return customerMap['mogan'] || customerMap['mohan'];
-    if (clean === 'srinivasa' || clean === 'srinisan' || clean === 'srinivasan') return customerMap['srinivasa'];
 
-    // Fallback: create dynamic customer
+    // Alias / substring matching
+    for (const [alias, doc] of Object.entries(customerMap)) {
+      if (clean === alias || clean.startsWith(alias) || alias.startsWith(clean)) {
+        return doc;
+      }
+    }
+
+    // Dynamic fallback
     const doc = await Customer.create({
       name: rawName.trim(),
       phone: '98421' + Math.floor(10000 + Math.random() * 90000),

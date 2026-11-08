@@ -70,10 +70,10 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
 
   const { customer, loans = [], payments = [] } = data;
 
-  const totalLent = loans.reduce((acc, l) => acc + l.principal, 0);
-  const totalRepaid = payments.reduce((acc, p) => acc + p.amount, 0);
-  const activeLoans = loans.filter((l) => l.status === 'active' || l.status === 'overdue');
-  const totalOutstanding = activeLoans.reduce((acc, l) => acc + l.remainingBalance, 0);
+  const totalLent = loans.reduce((acc, l) => acc + (l.principal || l.principalAmount || 0), 0);
+  const totalRepaid = payments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+  const activeLoans = loans.filter((l) => l.status === 'active' || l.status === 'overdue' || (l.remainingBalance || 0) > 0);
+  const totalOutstanding = activeLoans.reduce((acc, l) => acc + (Number(l.remainingBalance != null ? l.remainingBalance : l.balanceAmount) || 0), 0);
 
   return (
     <div className="space-y-6">
