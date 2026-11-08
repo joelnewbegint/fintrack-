@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { formatDate } from '../utils/currency';
 import WhatsAppConnect from '../components/common/WhatsAppConnect';
 import ComfortSettings from '../components/common/ComfortSettings';
+import CloudSyncSection from '../components/common/CloudSyncSection';
 import { usePWA } from '../context/PWAContext';
 import {
   Settings as SettingsIcon,
@@ -23,6 +24,8 @@ import {
   Sliders,
   Zap,
   RefreshCw,
+  Cloud,
+  Database,
 } from 'lucide-react';
 
 export const Settings = () => {
@@ -148,6 +151,18 @@ export const Settings = () => {
           >
             <Smartphone className="w-4 h-4 text-emerald-500" />
             <span>WhatsApp Connect (வாட்ஸ்அப்)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSection('cloudSync')}
+            className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
+              activeSection === 'cloudSync'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-500/25 ring-2 ring-emerald-400/40'
+                : 'glass text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-emerald-100/60 dark:border-emerald-900/40'
+            }`}
+          >
+            <Cloud className="w-4 h-4 text-emerald-500" />
+            <span>Cloud Sync & Devices (சாதனங்கள் இணைப்பு)</span>
           </button>
 
           <button
@@ -335,6 +350,9 @@ export const Settings = () => {
 
       {/* 1. WhatsApp Connect Tab */}
       {activeSection === 'whatsapp' && <WhatsAppConnect />}
+
+      {/* 1.5 Cloud Database & Multi-Device Sync Tab */}
+      {activeSection === 'cloudSync' && <CloudSyncSection />}
 
       {/* 2. Business Profile Tab */}
       {activeSection === 'business' && (

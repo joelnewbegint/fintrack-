@@ -51,10 +51,55 @@ const getHeaders = () => {
   return headers;
 };
 
+/**
+ * Resolves the active Backend Server API base URL:
+ * 1. User manual override stored in localStorage (allows switching backend on any device!)
+ * 2. Build-time Vite env variable (VITE_API_BASE_URL)
+ * 3. Default to http://localhost:5000 if running on local dev machine
+ * 4. Fallback to empty string (relative)
+ */
+export const getApiBaseUrl = () => {
+  try {
+    const userUrl = localStorage.getItem('fintrack_api_base_url');
+    if (userUrl && userUrl.trim()) {
+      return userUrl.trim().replace(/\/+$/, '');
+    }
+  } catch (e) {}
+
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim().replace(/\/+$/, '');
+  }
+
+  // If local development machine, default to port 5000
+  if (
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ) {
+    return 'http://localhost:5000';
+  }
+
+  return '';
+};
+
+export const setApiBaseUrl = (url) => {
+  try {
+    if (!url || !url.trim()) {
+      localStorage.removeItem('fintrack_api_base_url');
+    } else {
+      localStorage.setItem('fintrack_api_base_url', url.trim().replace(/\/+$/, ''));
+    }
+  } catch (e) {
+    console.warn('Could not save API base URL to localStorage:', e);
+  }
+};
+
 // Check if response is valid JSON; returns { ok: true, data } or { ok: false, error }
 const safeFetchJson = async (url, options = {}) => {
   try {
-    const res = await fetch(url, options);
+    const baseUrl = getApiBaseUrl();
+    const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+    const res = await fetch(fullUrl, options);
     const contentType = res.headers.get('content-type') || '';
     const text = await res.text();
 
@@ -823,6 +868,213 @@ export const api = {
         totalExpensesCount: expenses.length,
         todayExpenses,
         monthlyExpenses,
+      },
+    };
+  },
+
+  // ----------------------------------------------------
+  // Cloud Database & Cross-Device Sync Operations
+  // ----------------------------------------------------
+  getApiBaseUrl,
+  setApiBaseUrl,
+
+  getLocalCounts: () => {
+    return {
+      customers: getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers).length,
+      loans: getStored(STORAGE_KEYS.LOANS, initialLoans).length,
+      payments: getStored(STORAGE_KEYS.PAYMENTS, initialPayments).length,
+      investments: getStored(STORAGE_KEYS.INVESTMENTS, initialInvestments).length,
+      expenses: getStored(STORAGE_KEYS.EXPENSES, initialExpenses).length,
+    };
+  },
+
+  checkBackendHealth: async (overrideUrl) => {
+    const baseUrl = overrideUrl !== undefined ? overrideUrl.trim().replace(/\/+$/, '') : getApiBaseUrl();
+    if (!baseUrl) {
+      return {
+        online: false,
+        reason: 'No backend server URL configured. App is operating in Local Device Storage mode.',
+        isConfigured: false,
+      };
+    }
+
+    const testUrl = `${baseUrl}/api/health`;
+    const start = Date.now();
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+      const res = await fetch(testUrl, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const latency = Date.now() - start;
+      if (res.ok) {
+        const json = await res.json().catch(() => ({}));
+        return {
+          online: true,
+          status: json.status || 'online',
+          latency,
+          url: baseUrl,
+          database: 'MongoDB Atlas',
+          isConfigured: true,
+        };
+      }
+      return {
+        online: false,
+        status: res.status,
+        latency,
+        reason: `Server responded with HTTP ${res.status}`,
+        isConfigured: true,
+      };
+    } catch (err) {
+      return {
+        online: false,
+        latency: Date.now() - start,
+        reason: err.name === 'AbortError' ? 'Connection timed out (6s)' : err.message,
+        isConfigured: true,
+      };
+    }
+  },
+
+  syncLocalDataToCloud: async () => {
+    const baseUrl = getApiBaseUrl();
+    if (!baseUrl) {
+      throw new Error('Please configure a valid Backend Server URL first before syncing to cloud.');
+    }
+
+    const health = await api.checkBackendHealth();
+    if (!health.online) {
+      throw new Error(`Cannot connect to backend server: ${health.reason || 'Server offline'}`);
+    }
+
+    const localCustomers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
+    const localLoans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+    const localPayments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments);
+
+    let syncedCust = 0;
+    let syncedLoans = 0;
+    let syncedPayments = 0;
+
+    // Sync customers
+    for (const c of localCustomers) {
+      try {
+        const payload = { ...c };
+        delete payload._id; // Let MongoDB assign or match
+        const res = await safeFetchJson('/api/customers', {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) syncedCust++;
+      } catch (e) {
+        // Customer may already exist
+      }
+    }
+
+    // Sync loans
+    for (const l of localLoans) {
+      try {
+        const payload = { ...l };
+        delete payload._id;
+        const res = await safeFetchJson('/api/loans', {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) syncedLoans++;
+      } catch (e) {}
+    }
+
+    // Sync payments
+    for (const p of localPayments) {
+      try {
+        const payload = { ...p };
+        delete payload._id;
+        const res = await safeFetchJson('/api/payments', {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) syncedPayments++;
+      } catch (e) {}
+    }
+
+    return {
+      success: true,
+      synced: {
+        customers: syncedCust,
+        loans: syncedLoans,
+        payments: syncedPayments,
+      },
+    };
+  },
+
+  downloadBackup: async () => {
+    const data = {
+      app: "VK BANKER'S & FINANCE",
+      exportedAt: new Date().toISOString(),
+      version: '1.0.6',
+      customers: getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers),
+      loans: getStored(STORAGE_KEYS.LOANS, initialLoans),
+      payments: getStored(STORAGE_KEYS.PAYMENTS, initialPayments),
+      settings: getStored(STORAGE_KEYS.SETTINGS, initialSettings),
+      investments: getStored(STORAGE_KEYS.INVESTMENTS, initialInvestments),
+      expenses: getStored(STORAGE_KEYS.EXPENSES, initialExpenses),
+    };
+
+    const json = JSON.stringify(data, null, 2);
+    return new Blob([json], { type: 'application/json' });
+  },
+
+  restoreBackup: async (jsonOrObject) => {
+    let data = jsonOrObject;
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch (err) {
+        throw new Error('Invalid JSON backup file: Could not parse text');
+      }
+    }
+
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid backup file format');
+    }
+
+    let customerCount = 0;
+    let loanCount = 0;
+    let paymentCount = 0;
+
+    if (Array.isArray(data.customers)) {
+      setStored(STORAGE_KEYS.CUSTOMERS, data.customers);
+      customerCount = data.customers.length;
+    }
+    if (Array.isArray(data.loans)) {
+      setStored(STORAGE_KEYS.LOANS, data.loans);
+      loanCount = data.loans.length;
+    }
+    if (Array.isArray(data.payments)) {
+      setStored(STORAGE_KEYS.PAYMENTS, data.payments);
+      paymentCount = data.payments.length;
+    }
+    if (data.settings && typeof data.settings === 'object') {
+      setStored(STORAGE_KEYS.SETTINGS, data.settings);
+    }
+    if (Array.isArray(data.investments)) {
+      setStored(STORAGE_KEYS.INVESTMENTS, data.investments);
+    }
+    if (Array.isArray(data.expenses)) {
+      setStored(STORAGE_KEYS.EXPENSES, data.expenses);
+    }
+
+    return {
+      success: true,
+      imported: {
+        customers: customerCount,
+        loans: loanCount,
+        payments: paymentCount,
       },
     };
   },

@@ -351,3 +351,4 @@ export const generateStatementMessage = ({
   msg += `Thank you! VK Banker's & Finance`;
   return msg;
 };
+

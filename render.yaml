@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: fintrack-backend
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node src/index.js
+    plan: free
+    region: oregon
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        value: mongodb://tjoelnewbegin03_db_user:z2wec4J1R5amU25x@ac-rfl6lwp-shard-00-00.ibksuvq.mongodb.net:27017,ac-rfl6lwp-shard-00-01.ibksuvq.mongodb.net:27017,ac-rfl6lwp-shard-00-02.ibksuvq.mongodb.net:27017/fintrack?ssl=true&replicaSet=atlas-oz1rmn-shard-0&authSource=admin
+      - key: JWT_SECRET
+        value: fintrack_super_secure_jwt_secret_key_2026_tamilnadu_finance
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_URL
+        value: https://vk-banker.web.app
+      - key: WHATSAPP_NUMBER
+        value: 919842112345
