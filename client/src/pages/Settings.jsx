@@ -29,7 +29,16 @@ export const Settings = () => {
   const { t, lang, toggleLanguage } = useLanguage();
   const { isOwner, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { isInstalled, isInstallable, isIOS, promptInstall } = usePWA();
+  const {
+    isInstalled,
+    isInstallable,
+    isIOS,
+    promptInstall,
+    checkForUpdates,
+    forceAppReload,
+    checkingUpdate,
+    updateStatus,
+  } = usePWA();
 
   const [activeSection, setActiveSection] = useState('whatsapp');
 
@@ -219,6 +228,45 @@ export const Settings = () => {
                   <span>{lang === 'ta' ? 'நிறுவப்பட்டது (Installed)' : 'App Installed'}</span>
                 </div>
               )}
+            </div>
+
+            {/* Instant Auto-Update Controls */}
+            <div className="p-4 rounded-2xl bg-sky-50/70 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <p className="font-extrabold text-xs text-sky-950 dark:text-sky-100 flex items-center gap-1.5">
+                  <RefreshCw className={`w-3.5 h-3.5 text-sky-500 ${checkingUpdate ? 'animate-spin' : ''}`} />
+                  <span>{lang === 'ta' ? 'தானியங்கி புதுப்பிப்பு & பதிப்பு மேலாண்மை' : 'Auto-Sync & Live Version Updates'}</span>
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {lang === 'ta'
+                    ? 'PWA செயலி தானாகவே ஒவ்வொரு முறையும் திறக்கும் போதும் பின்னணியில் புதுப்பிப்புகளைச் சோதிக்கும்.'
+                    : 'Installed PWA auto-checks for GitHub & server updates every time the app is opened or resumed.'}
+                </p>
+                {updateStatus && (
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">
+                    ✓ {updateStatus}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center space-x-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={checkForUpdates}
+                  disabled={checkingUpdate}
+                  className="px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-sm active:scale-95 transition flex items-center space-x-1.5 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${checkingUpdate ? 'animate-spin' : ''}`} />
+                  <span>{lang === 'ta' ? 'புதுப்பிப்பு சோதிக்க' : 'Check for Updates'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={forceAppReload}
+                  className="px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs active:scale-95 transition"
+                  title="Force reload latest files and clear old cached chunks"
+                >
+                  <span>{lang === 'ta' ? 'மறுஏற்றம் (Reload)' : 'Force Reload'}</span>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">

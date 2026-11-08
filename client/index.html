@@ -27,15 +27,61 @@
         window.location.reload();
       });
 
-      // Register Progressive Web App Service Worker
+      // Register Progressive Web App Service Worker with Auto-Update Poller
       if ('serviceWorker' in navigator) {
+        var refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          if (!refreshing) {
+            refreshing = true;
+            console.log('🔄 New app version detected! Reloading to activate latest code...');
+            window.location.reload();
+          }
+        });
+
         window.addEventListener('load', function() {
           navigator.serviceWorker.register('/sw.js', { scope: '/' })
             .then(function(reg) {
               console.log('VK BANKER\'S Service Worker active with scope:', reg.scope);
+
+              // 1. Check for updates immediately on startup
+              reg.update();
+
+              // 2. Automatically check for updates whenever user returns to or focuses the app
+              document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'visible') {
+                  reg.update();
+                }
+              });
+              window.addEventListener('focus', function() {
+                reg.update();
+              });
+              window.addEventListener('online', function() {
+                reg.update();
+              });
+
+              // 3. Periodically check for updates every 10 minutes
+              setInterval(function() {
+                reg.update();
+              }, 10 * 60 * 1000);
+
+              // 4. If a new version is waiting, activate it immediately
+              if (reg.waiting) {
+                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+              }
+
+              reg.addEventListener('updatefound', function() {
+                var newWorker = reg.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener('statechange', function() {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('⚡ New update ready! Activating...');
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              });
             })
             .catch(function(err) {
-              console.warn('Service Worker registration skipped:', err);
+              console.warn('Service Worker registration notice:', err);
             });
         });
       }

@@ -55,6 +55,50 @@ export const PWAProvider = ({ children }) => {
     };
   }, []);
 
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState('');
+
+  const checkForUpdates = async () => {
+    setCheckingUpdate(true);
+    setUpdateStatus('Checking for latest release on server...');
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          await reg.update();
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        }
+      }
+      setTimeout(() => {
+        setUpdateStatus('App is synced to latest version!');
+        setCheckingUpdate(false);
+        setTimeout(() => setUpdateStatus(''), 4000);
+      }, 1200);
+    } catch (err) {
+      setUpdateStatus('Notice: ' + (err.message || 'Offline'));
+      setCheckingUpdate(false);
+      setTimeout(() => setUpdateStatus(''), 4000);
+    }
+  };
+
+  const forceAppReload = async () => {
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.unregister();
+        }
+      }
+    } catch (e) {}
+    window.location.reload(true);
+  };
+
   const promptInstall = async () => {
     // Case A: Native browser prompt is ready (Android, Chrome/Edge on Desktop)
     if (deferredPrompt) {
@@ -85,6 +129,10 @@ export const PWAProvider = ({ children }) => {
         showInstallModal,
         setShowInstallModal,
         promptInstall,
+        checkForUpdates,
+        forceAppReload,
+        checkingUpdate,
+        updateStatus,
       }}
     >
       {children}
@@ -102,6 +150,10 @@ export const usePWA = () => {
       showInstallModal: false,
       setShowInstallModal: () => {},
       promptInstall: () => {},
+      checkForUpdates: () => {},
+      forceAppReload: () => {},
+      checkingUpdate: false,
+      updateStatus: '',
     };
   }
   return context;

@@ -10,7 +10,7 @@
  * 5. Automatic cache purge on version updates.
  */
 
-const CACHE_NAME = 'vk-bankers-pwa-v1.0.2';
+const CACHE_NAME = 'vk-bankers-pwa-v1.0.5';
 
 const STATIC_SHELL_ASSETS = [
   '/manifest.webmanifest',
@@ -23,17 +23,17 @@ const STATIC_SHELL_ASSETS = [
   '/offline.html',
 ];
 
-// Install: Cache public static icons & offline fallback
+// Install: Skip waiting immediately to make new version active
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_SHELL_ASSETS);
     })
   );
-  self.skipWaiting();
 });
 
-// Activate: Clean up all old caches immediately
+// Activate: Clean up all old caches immediately & claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
