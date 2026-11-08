@@ -17,6 +17,130 @@ const STORAGE_KEYS = {
   EXPENSES: 'fintrack_local_expenses',
 };
 
+/**
+ * Universal Dump Data Cleanser:
+ * Automatically purges any legacy demo/mock data (Murugesan, Kaliappan, etc.)
+ * from localStorage across all devices (mobile phone, laptop, tablets).
+ */
+export const cleanseDumpData = () => {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const isDumpCustomer = (c) => {
+      if (!c) return false;
+      const id = String(c._id || '');
+      const name = String(c.name || '');
+      if (id.startsWith('cust_tn_')) return true;
+      const dumpNames = [
+        'Murugesan',
+        'Kaliappan',
+        'Fathima Beevi',
+        'Shanmugam',
+        'Meenakshi',
+        'Selvam',
+        'Jayalakshmi',
+        'Duraisamy',
+        'Banumathi',
+        'Annamalai',
+      ];
+      return dumpNames.some((dn) => name.includes(dn));
+    };
+
+    const isDumpLoan = (l) => {
+      if (!l) return false;
+      const id = String(l._id || '');
+      const loanNo = String(l.loanNo || '');
+      if (id.startsWith('loan_tn_')) return true;
+      if (
+        loanNo.startsWith('LN-D26-') ||
+        loanNo.startsWith('LN-W26-') ||
+        loanNo.startsWith('LN-M26-')
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    const isDumpPayment = (p) => {
+      if (!p) return false;
+      const id = String(p._id || '');
+      const receiptNo = String(p.receiptNo || '');
+      if (id.startsWith('pay_')) return true;
+      if (receiptNo.startsWith('RCP-26-1000')) return true;
+      return false;
+    };
+
+    const isDumpInvestment = (i) => {
+      if (!i) return false;
+      const id = String(i._id || '');
+      const name = String(i.investorName || '');
+      if (id.startsWith('inv_001')) return true;
+      if (name.includes('Subramanian')) return true;
+      return false;
+    };
+
+    // Clean Customers
+    const rawCust = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
+    if (rawCust) {
+      try {
+        const parsed = JSON.parse(rawCust);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((c) => !isDumpCustomer(c));
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(cleaned));
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Clean Loans
+    const rawLoans = localStorage.getItem(STORAGE_KEYS.LOANS);
+    if (rawLoans) {
+      try {
+        const parsed = JSON.parse(rawLoans);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((l) => !isDumpLoan(l));
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(cleaned));
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Clean Payments
+    const rawPayments = localStorage.getItem(STORAGE_KEYS.PAYMENTS);
+    if (rawPayments) {
+      try {
+        const parsed = JSON.parse(rawPayments);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((p) => !isDumpPayment(p));
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(cleaned));
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Clean Investments
+    const rawInv = localStorage.getItem(STORAGE_KEYS.INVESTMENTS);
+    if (rawInv) {
+      try {
+        const parsed = JSON.parse(rawInv);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((i) => !isDumpInvestment(i));
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify(cleaned));
+          }
+        }
+      } catch (e) {}
+    }
+  } catch (err) {
+    console.warn('Dump data cleanse notice:', err);
+  }
+};
+
+// Immediately invoke cleanser on startup
+cleanseDumpData();
+
 const getStored = (key, fallback) => {
   try {
     const data = localStorage.getItem(key);
@@ -60,7 +184,9 @@ const getHeaders = () => {
  */
 export const getApiBaseUrl = () => {
   try {
-    const userUrl = localStorage.getItem('fintrack_api_base_url');
+    const userUrl =
+      localStorage.getItem('fintrack_api_base_url') ||
+      localStorage.getItem('fintrack_api_url');
     if (userUrl && userUrl.trim()) {
       return userUrl.trim().replace(/\/+$/, '');
     }
@@ -86,8 +212,11 @@ export const setApiBaseUrl = (url) => {
   try {
     if (!url || !url.trim()) {
       localStorage.removeItem('fintrack_api_base_url');
+      localStorage.removeItem('fintrack_api_url');
     } else {
-      localStorage.setItem('fintrack_api_base_url', url.trim().replace(/\/+$/, ''));
+      const cleanUrl = url.trim().replace(/\/+$/, '');
+      localStorage.setItem('fintrack_api_base_url', cleanUrl);
+      localStorage.setItem('fintrack_api_url', cleanUrl);
     }
   } catch (e) {
     console.warn('Could not save API base URL to localStorage:', e);
@@ -1078,6 +1207,8 @@ export const api = {
       },
     };
   },
+
+  cleanseDumpData,
 };
 
 export default api;

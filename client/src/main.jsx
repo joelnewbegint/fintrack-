@@ -1,6 +1,8 @@
 export const getApiBase = () => {
   if (typeof window !== 'undefined') {
-    const custom = localStorage.getItem('fintrack_api_url');
+    const custom =
+      localStorage.getItem('fintrack_api_url') ||
+      localStorage.getItem('fintrack_api_base_url');
     if (custom && custom.trim()) {
       return custom.trim().replace(/\/+$/, '');
     }

@@ -79,6 +79,11 @@ export function App() {
     }
   };
 
+  // Cleanse any legacy dump/demo data on app launch across mobile and desktop
+  useEffect(() => {
+    api.cleanseDumpData();
+  }, []);
+
   useEffect(() => {
     if (user) {
       fetchModalData();

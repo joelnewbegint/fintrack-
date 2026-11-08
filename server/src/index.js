@@ -18,8 +18,6 @@ import rateLimit from 'express-rate-limit';
 import { connectDB } from './config/db.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { initCronJobs } from './cron/overdueCron.js';
-import Customer from './models/Customer.js';
-import seedData from './seed.js';
 
 // Global error handlers for resilience
 process.on('unhandledRejection', (reason, promise) => {
@@ -136,11 +134,22 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    // Check if database needs initial seeding
-    const customerCount = await Customer.countDocuments();
-    if (customerCount === 0) {
-      console.log('ℹ️ Database is empty. Running automatic initial seed...');
-      await seedData(false);
+    // Ensure default settings exist if clean database
+    const settingsCount = await (await import('./models/Settings.js')).default.countDocuments();
+    if (settingsCount === 0) {
+      const Settings = (await import('./models/Settings.js')).default;
+      await Settings.create({
+        businessName: "VK BANKER'S & FINANCE",
+        businessNameTamil: 'வி.கே. பேங்கர்ஸ் & பைனான்ஸ்',
+        ownerName: 'Vasantha Kumar K',
+        phone: '+91 98421 12345',
+        address: '45, Cross Cut Road, Gandhipuram, Coimbatore - 641012, Tamil Nadu',
+        defaultPenaltyPercent: 2,
+        graceDays: 1,
+        defaultLanguage: 'ta',
+        currencySymbol: '₹',
+      });
+      console.log('🏢 Initialized default business settings (clean database, zero dump data).');
     }
 
     // Start background cron jobs
