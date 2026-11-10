@@ -79,7 +79,9 @@ export const cleanseDumpData = () => {
         const parsed = JSON.parse(rawCust);
         if (Array.isArray(parsed)) {
           const cleaned = parsed.filter((c) => !isDumpCustomer(c));
-          if (cleaned.length !== parsed.length) {
+          if (cleaned.length === 0 && Array.isArray(initialCustomers) && initialCustomers.length > 0) {
+            localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(initialCustomers));
+          } else if (cleaned.length !== parsed.length) {
             localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(cleaned));
           }
         }
@@ -93,7 +95,9 @@ export const cleanseDumpData = () => {
         const parsed = JSON.parse(rawLoans);
         if (Array.isArray(parsed)) {
           const cleaned = parsed.filter((l) => !isDumpLoan(l));
-          if (cleaned.length !== parsed.length) {
+          if (cleaned.length < 30 && Array.isArray(initialLoans) && initialLoans.length >= 30) {
+            localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(initialLoans));
+          } else if (cleaned.length !== parsed.length) {
             localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(cleaned));
           }
         }
@@ -107,7 +111,9 @@ export const cleanseDumpData = () => {
         const parsed = JSON.parse(rawPayments);
         if (Array.isArray(parsed)) {
           const cleaned = parsed.filter((p) => !isDumpPayment(p));
-          if (cleaned.length !== parsed.length) {
+          if (cleaned.length < 100 && Array.isArray(initialPayments) && initialPayments.length >= 100) {
+            localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(initialPayments));
+          } else if (cleaned.length !== parsed.length) {
             localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(cleaned));
           }
         }
@@ -137,17 +143,24 @@ export const cleanseDumpData = () => {
  * Seeds the full real operational workbook records (24 canonical borrowers, 36 loans, 542 payments)
  * across all mobile phones, laptops, and tablets automatically on first load.
  */
-export const initRealDataset = () => {
+export const initRealDataset = (force = false) => {
   if (typeof window === 'undefined' || !window.localStorage) return;
   try {
-    const isMigrated = localStorage.getItem('fintrack_real_dataset_v4');
-    if (isMigrated !== 'true') {
+    const isMigrated = localStorage.getItem('fintrack_real_dataset_v6');
+    const existingLoansStr = localStorage.getItem(STORAGE_KEYS.LOANS);
+    let loanCount = 0;
+    try {
+      loanCount = JSON.parse(existingLoansStr || '[]').length;
+    } catch (e) {}
+
+    // Auto-heal if v6 flag is missing, OR if force=true, OR if local loans are missing/wiped (< 30 loans)
+    if (force || isMigrated !== 'true' || loanCount < 30) {
       localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(initialCustomers));
       localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(initialLoans));
       localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(initialPayments));
       localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify(initialInvestments));
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(initialExpenses));
-      localStorage.setItem('fintrack_real_dataset_v4', 'true');
+      localStorage.setItem('fintrack_real_dataset_v6', 'true');
       console.log('✅ Synchronized real workbook dataset (24 borrowers, 36 loans, 542 payments) across device storage!');
     }
   } catch (err) {
@@ -155,9 +168,9 @@ export const initRealDataset = () => {
   }
 };
 
-// Immediately initialize real dataset, then sanitize any ancient mock remnants
-initRealDataset();
+// Immediately sanitize any ancient mock remnants, then initialize real dataset
 cleanseDumpData();
+initRealDataset();
 
 const getStored = (key, fallback) => {
   try {
@@ -174,6 +187,17 @@ const getStored = (key, fallback) => {
       parsed.length === 0 &&
       Array.isArray(fallback) &&
       fallback.length > 0
+    ) {
+      localStorage.setItem(key, JSON.stringify(fallback));
+      return fallback;
+    }
+    // Auto-heal loans if fewer than 30 loans while fallback has 36
+    if (
+      key === STORAGE_KEYS.LOANS &&
+      Array.isArray(parsed) &&
+      parsed.length < 30 &&
+      Array.isArray(fallback) &&
+      fallback.length >= 30
     ) {
       localStorage.setItem(key, JSON.stringify(fallback));
       return fallback;
@@ -495,32 +519,67 @@ export const api = {
 
     // Compute active loans count, total loans count, and total outstanding for each customer
     const loanMap = {};
+    const loanMapByName = {};
+
     loans.forEach((loan) => {
       const cid = String(loan.customerId?._id || loan.customerId || '');
-      if (!cid) return;
-      if (!loanMap[cid]) {
-        loanMap[cid] = { activeLoanCount: 0, totalOutstanding: 0, totalLoansCount: 0, types: [] };
+      const notesClean = (loan.notes || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const nameClean = (loan.customerName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      const applyToBucket = (bucket) => {
+        bucket.totalLoansCount += 1;
+        const status = loan.status;
+        const rem = Number(loan.remainingBalance != null ? loan.remainingBalance : loan.balanceAmount) || 0;
+        if (status === 'active' || status === 'overdue' || rem > 0) {
+          bucket.activeLoanCount += 1;
+          bucket.totalOutstanding += rem;
+        }
+        const type = loan.financeType || 'daily';
+        if (!bucket.types.includes(type)) {
+          bucket.types.push(type);
+        }
+      };
+
+      if (cid) {
+        if (!loanMap[cid]) {
+          loanMap[cid] = { activeLoanCount: 0, totalOutstanding: 0, totalLoansCount: 0, types: [] };
+        }
+        applyToBucket(loanMap[cid]);
       }
-      loanMap[cid].totalLoansCount += 1;
-      const status = loan.status;
-      const rem = Number(loan.remainingBalance != null ? loan.remainingBalance : loan.balanceAmount) || 0;
-      if (status === 'active' || status === 'overdue' || rem > 0) {
-        loanMap[cid].activeLoanCount += 1;
-        loanMap[cid].totalOutstanding += rem;
-      }
-      const type = loan.financeType || 'daily';
-      if (!loanMap[cid].types.includes(type)) {
-        loanMap[cid].types.push(type);
+
+      // Also index by raw name keywords (e.g. thilaga, manchi, etc.)
+      for (const token of [notesClean, nameClean]) {
+        if (token) {
+          if (!loanMapByName[token]) {
+            loanMapByName[token] = { activeLoanCount: 0, totalOutstanding: 0, totalLoansCount: 0, types: [] };
+          }
+          applyToBucket(loanMapByName[token]);
+        }
       }
     });
 
     customers = customers.map((c) => {
-      const stats = loanMap[String(c._id)] || {
+      const cNameClean = (c.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const cSimple = (c.name || '').toLowerCase().split('(')[0].trim().replace(/[^a-z0-9]/g, '');
+
+      // Check ID first, then fuzzy name match
+      let stats = loanMap[String(c._id)];
+      if (!stats || stats.totalLoansCount === 0) {
+        for (const [key, val] of Object.entries(loanMapByName)) {
+          if (cSimple && (key.includes(cSimple) || cSimple.includes(key))) {
+            stats = val;
+            break;
+          }
+        }
+      }
+
+      stats = stats || {
         activeLoanCount: 0,
         totalOutstanding: 0,
         totalLoansCount: 0,
         types: [],
       };
+
       return {
         ...c,
         ...stats,
@@ -551,12 +610,30 @@ export const api = {
 
     const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
     const customer = customers.find((c) => String(c._id) === String(id));
-    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans).filter(
+    let loans = getStored(STORAGE_KEYS.LOANS, initialLoans).filter(
       (l) => String(l.customerId?._id || l.customerId) === String(id)
     );
-    const payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments).filter(
+    let payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments).filter(
       (p) => String(p.customerId?._id || p.customerId) === String(id)
     );
+
+    // Name fallback for loans/payments if not linked by ID
+    if (customer) {
+      const cSimple = (customer.name || '').toLowerCase().split('(')[0].trim();
+      if (loans.length === 0 && cSimple) {
+        loans = getStored(STORAGE_KEYS.LOANS, initialLoans).filter(
+          (l) =>
+            (l.notes && l.notes.toLowerCase().includes(cSimple)) ||
+            (l.customerName && l.customerName.toLowerCase().includes(cSimple))
+        );
+      }
+      if (payments.length === 0 && cSimple) {
+        payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments).filter(
+          (p) => p.notes && p.notes.toLowerCase().includes(cSimple)
+        );
+      }
+    }
+
     return { success: true, customer, loans, payments };
   },
 

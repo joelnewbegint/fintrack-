@@ -18,8 +18,10 @@ import {
   CreditCard,
   User,
   Smartphone,
+  Download,
 } from 'lucide-react';
 import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
+import { downloadCustomerStatementPDF } from '../utils/schedule';
 
 export const Customers = ({ onViewCustomer }) => {
   const { t, lang } = useLanguage();
@@ -236,6 +238,23 @@ export const Customers = ({ onViewCustomer }) => {
                       </button>
                     </>
                   )}
+
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await api.getCustomerById(c._id);
+                        if (res.success) {
+                          downloadCustomerStatementPDF(res.customer || c, res.loans || [], res.payments || []);
+                        }
+                      } catch (e) {
+                        console.error('Download statement failed:', e);
+                      }
+                    }}
+                    className="p-1.5 min-h-[34px] min-w-[34px] flex items-center justify-center rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-300 dark:border-sky-700/60 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition shadow-sm active:scale-95"
+                    title={lang === 'ta' ? 'அறிக்கை & அட்டவணை பதிவிறக்கம் (PDF)' : 'Download Statement (PDF)'}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </button>
 
                   <button
                     onClick={() => setWhatsappCustomer(c)}
