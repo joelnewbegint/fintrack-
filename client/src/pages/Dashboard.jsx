@@ -689,7 +689,7 @@ export const Dashboard = ({
                   </div>
                 </div>
                 <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-2 tabular-nums whitespace-nowrap">
-                  +{formatCurrency(cards.profitFromSettled || completedLoansList.reduce((acc, l) => acc + Math.max(0, (l.totalCollected || l.totalPayable || 0) - (l.principal || 0)), 0))}
+                  +{formatCurrency(cards.profitFromSettled ?? cards.profitEarned ?? completedLoansList.reduce((acc, l) => acc + (l.profit || l.chargeAmount || Math.max(0, (l.totalCollected || l.totalPayable || 0) - (l.principal || 0))), 0))}
                 </p>
               </div>
               <p className="text-[11px] text-slate-400 mt-2">

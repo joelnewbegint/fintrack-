@@ -46,6 +46,11 @@ export const getDashboardStats = async (req, res, next) => {
               $cond: [{ $in: ['$status', ['active', 'overdue']] }, '$totalPayable', 0],
             },
           },
+          activeChargeAmount: {
+            $sum: {
+              $cond: [{ $in: ['$status', ['active', 'overdue']] }, '$chargeAmount', 0],
+            },
+          },
           activeCollected: {
             $sum: {
               $cond: [{ $in: ['$status', ['active', 'overdue']] }, '$totalCollected', 0],
@@ -60,6 +65,11 @@ export const getDashboardStats = async (req, res, next) => {
           settledTotalPayable: {
             $sum: {
               $cond: [{ $eq: ['$status', 'completed'] }, '$totalPayable', 0],
+            },
+          },
+          settledChargeAmount: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'completed'] }, '$chargeAmount', 0],
             },
           },
           settledAmount: {
@@ -82,9 +92,11 @@ export const getDashboardStats = async (req, res, next) => {
       completedLoans: 0,
       activePrincipal: 0,
       activeTotalPayable: 0,
+      activeChargeAmount: 0,
       activeCollected: 0,
       settledPrincipal: 0,
       settledTotalPayable: 0,
+      settledChargeAmount: 0,
       settledAmount: 0,
     };
 
@@ -92,14 +104,19 @@ export const getDashboardStats = async (req, res, next) => {
     const settledAmount = totalStats.settledAmount || totalStats.settledTotalPayable || 0;
 
     // 2. Profit from Settled: Pure profit/interest realized exclusively from completed loans
+    // Supports upfront deduction loans (settledChargeAmount) and addon loans
     const profitFromSettled = Math.max(
-      0,
-      (totalStats.settledTotalPayable || totalStats.settledAmount) - totalStats.settledPrincipal
+      totalStats.settledChargeAmount || 0,
+      Math.max(0, (totalStats.settledTotalPayable || totalStats.settledAmount) - totalStats.settledPrincipal)
     );
 
     // 3. Active Interest: Expected interest currently sitting in active/running loans.
     // When a loan completes, it automatically leaves active loans, which reduces activeInterest and transfers into profitFromSettled!
-    const activeInterest = Math.max(0, totalStats.activeTotalPayable - totalStats.activePrincipal);
+    // Supports upfront deduction loans (activeChargeAmount) and addon loans
+    const activeInterest = Math.max(
+      totalStats.activeChargeAmount || 0,
+      Math.max(0, totalStats.activeTotalPayable - totalStats.activePrincipal)
+    );
 
     // Keep profitEarned mapped to profitFromSettled for consistency
     const profitEarned = profitFromSettled;

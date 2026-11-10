@@ -290,14 +290,23 @@ export const api = {
     const totalActiveCapital = activeLoans.reduce((sum, l) => sum + (l.principalAmount || l.principal || 0), 0);
     const totalBalance = activeLoans.reduce((sum, l) => sum + (l.balanceAmount || l.remainingBalance || 0), 0);
 
-    // Active interest = (totalRepayable - principal) of all active loans.
+    // Helper to calculate interest/profit for any loan:
+    // Handles upfront deduction loans (chargeAmount) and addon loans (totalRepayable - principal)
+    const getLoanInterest = (l) => {
+      if (Number(l.chargeAmount) > 0) return Number(l.chargeAmount);
+      const rep = Number(l.totalRepayable || l.totalPayable || 0);
+      const pr = Number(l.principalAmount || l.principal || 0);
+      const disb = Number(l.disbursedAmount || 0);
+      if (rep > pr) return rep - pr;
+      if (disb > 0 && pr > disb) return pr - disb;
+      if (Number(l.interestPercent) > 0 && pr > 0) return Math.round((pr * Number(l.interestPercent)) / 100);
+      return 0;
+    };
+
+    // Active interest = expected interest currently sitting in active/running loans.
     // When a loan settles/completes, it leaves active loans, which automatically decreases activeInterest
     // and transfers into profitFromSettled!
-    const activeInterest = activeLoans.reduce((sum, l) => {
-      const rep = Number(l.totalRepayable || l.totalPayable || (l.principalAmount || l.principal || 0));
-      const pr = Number(l.principalAmount || l.principal || 0);
-      return sum + Math.max(0, rep - pr);
-    }, 0);
+    const activeInterest = activeLoans.reduce((sum, l) => sum + getLoanInterest(l), 0);
 
     // Total Settled Amount = sum of total repayments/settled amount across all completed loans
     const settledAmount = completedLoans.reduce((sum, l) => {
@@ -305,12 +314,8 @@ export const api = {
       return sum + paid;
     }, 0);
 
-    // Profit from Settled = realized profit from completed loans (totalPaid - principal)
-    const profitFromSettled = completedLoans.reduce((sum, l) => {
-      const paid = Number(l.totalPaid || l.totalCollected || l.totalRepayable || l.totalPayable || 0);
-      const pr = Number(l.principalAmount || l.principal || 0);
-      return sum + Math.max(0, paid - pr);
-    }, 0);
+    // Profit from Settled = realized profit from completed loans
+    const profitFromSettled = completedLoans.reduce((sum, l) => sum + getLoanInterest(l), 0);
 
     const todayStr = new Date().toISOString().slice(0, 10);
     const todayPayments = payments.filter((p) => (p.paymentDate || '').startsWith(todayStr));
@@ -452,7 +457,7 @@ export const api = {
         remainingBalance: 0,
         financeType: l.financeType || 'daily',
         status: 'completed',
-        profit: Math.max(0, (l.totalPaid || l.totalRepayable || 0) - (l.principalAmount || l.principal || 0)),
+        profit: getLoanInterest(l),
         settledDate: l.settledDate || l.endDate || new Date().toISOString(),
       })),
       dailyCollectionBreakdown,
