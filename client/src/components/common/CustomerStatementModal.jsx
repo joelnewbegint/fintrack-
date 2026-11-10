@@ -423,3 +423,4 @@ export const CustomerStatementModal = ({ customer, loans = [], payments = [], on
 };
 
 export default CustomerStatementModal;
+

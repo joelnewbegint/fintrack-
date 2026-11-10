@@ -84,6 +84,35 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
     fetchLoans();
   }, [typeFilter, statusFilter, search]);
 
+  const resolveCustomer = (loan) => {
+    if (loan.customerId && typeof loan.customerId === 'object' && loan.customerId.name) {
+      return loan.customerId;
+    }
+    const rawCid =
+      typeof loan.customerId === 'object' && loan.customerId !== null
+        ? String(loan.customerId._id || '')
+        : String(loan.customerId || '');
+    if (rawCid && customers.length > 0) {
+      const found = customers.find((c) => String(c._id) === rawCid);
+      if (found) return found;
+    }
+    if (loan.customerName) {
+      return {
+        name: loan.customerName,
+        phone: loan.customerPhone || '',
+        area: loan.customerArea || '',
+      };
+    }
+    if (loan.notes && customers.length > 0) {
+      const foundByNote = customers.find((c) => {
+        const simple = (c.name || '').toLowerCase().split('(')[0].trim();
+        return simple && loan.notes.toLowerCase().includes(simple);
+      });
+      if (foundByNote) return foundByNote;
+    }
+    return { name: loan.customerName || 'Borrower', phone: '', area: '' };
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Header & New Loan Action */}
@@ -177,7 +206,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
             </div>
           ) : (
             loans.map((loan) => {
-              const cust = loan.customerId || {};
+              const cust = resolveCustomer(loan);
               const parsed = parseCustomerName(cust.name);
               const recoveryPct =
                 loan.totalPayable > 0
@@ -344,7 +373,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                 </thead>
                 <tbody className="divide-y divide-sky-100/60 dark:divide-sky-900/30 text-xs">
                   {loans.map((loan) => {
-                    const cust = loan.customerId || {};
+                    const cust = resolveCustomer(loan);
                     const recoveryPct =
                       loan.totalPayable > 0
                         ? Math.round((loan.totalCollected / loan.totalPayable) * 100)

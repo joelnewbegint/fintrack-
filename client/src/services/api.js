@@ -146,21 +146,31 @@ export const cleanseDumpData = () => {
 export const initRealDataset = (force = false) => {
   if (typeof window === 'undefined' || !window.localStorage) return;
   try {
-    const isMigrated = localStorage.getItem('fintrack_real_dataset_v6');
+    const isMigrated = localStorage.getItem('fintrack_real_dataset_v7');
     const existingLoansStr = localStorage.getItem(STORAGE_KEYS.LOANS);
     let loanCount = 0;
+    let firstLoan = null;
     try {
-      loanCount = JSON.parse(existingLoansStr || '[]').length;
+      const parsed = JSON.parse(existingLoansStr || '[]');
+      loanCount = parsed.length;
+      firstLoan = parsed[0];
     } catch (e) {}
 
-    // Auto-heal if v6 flag is missing, OR if force=true, OR if local loans are missing/wiped (< 30 loans)
-    if (force || isMigrated !== 'true' || loanCount < 30) {
+    // Auto-heal if v7 flag is missing, OR if force=true, OR if local loans are missing/wiped (< 30 loans), OR if customer details are missing on loans
+    const needsHeal =
+      force ||
+      isMigrated !== 'true' ||
+      loanCount < 30 ||
+      !firstLoan?.customerName ||
+      typeof firstLoan?.customerId !== 'object';
+
+    if (needsHeal) {
       localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(initialCustomers));
       localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(initialLoans));
       localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(initialPayments));
       localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify(initialInvestments));
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(initialExpenses));
-      localStorage.setItem('fintrack_real_dataset_v6', 'true');
+      localStorage.setItem('fintrack_real_dataset_v7', 'true');
       console.log('✅ Synchronized real workbook dataset (24 borrowers, 36 loans, 542 payments) across device storage!');
     }
   } catch (err) {
@@ -696,20 +706,47 @@ export const api = {
     let loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
     const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
     const customerMap = {};
-    customers.forEach((c) => {
+    const customerNameMap = {};
+
+    [...initialCustomers, ...customers].forEach((c) => {
       customerMap[String(c._id)] = c;
+      const simple = (c.name || '').toLowerCase().split('(')[0].trim();
+      if (simple) customerNameMap[simple] = c;
     });
 
     loans = loans.map((l) => {
       let cust = l.customerId;
-      if (typeof cust === 'string' && customerMap[cust]) {
-        cust = customerMap[cust];
+      const rawCid = typeof cust === 'object' && cust !== null ? String(cust._id || '') : String(cust || '');
+
+      // Resolve customer if missing or just an ID
+      if (!cust || typeof cust !== 'object' || !cust.name) {
+        if (rawCid && customerMap[rawCid]) {
+          cust = customerMap[rawCid];
+        } else if (l.notes) {
+          for (const [key, val] of Object.entries(customerNameMap)) {
+            if (l.notes.toLowerCase().includes(key)) {
+              cust = val;
+              break;
+            }
+          }
+        }
       }
+
+      const cName = (typeof cust === 'object' && cust ? cust.name : '') || l.customerName || 'Borrower';
+      const cPhone = (typeof cust === 'object' && cust ? cust.phone : '') || l.customerPhone || '';
+      const cArea = (typeof cust === 'object' && cust ? cust.area : '') || l.customerArea || '';
+
+      const enrichedCust =
+        typeof cust === 'object' && cust
+          ? { ...cust, name: cName, phone: cPhone, area: cArea }
+          : { _id: rawCid, name: cName, phone: cPhone, area: cArea };
+
       return {
         ...l,
-        customerId: cust,
-        customerName: l.customerName || (typeof cust === 'object' && cust ? cust.name : ''),
-        customerPhone: l.customerPhone || (typeof cust === 'object' && cust ? cust.phone : ''),
+        customerId: enrichedCust,
+        customerName: cName,
+        customerPhone: cPhone,
+        customerArea: cArea,
         remainingBalance: Number(l.remainingBalance != null ? l.remainingBalance : l.balanceAmount) || 0,
       };
     });
@@ -740,21 +777,47 @@ export const api = {
     const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
     const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
     const customerMap = {};
-    customers.forEach((c) => {
+    const customerNameMap = {};
+
+    [...initialCustomers, ...customers].forEach((c) => {
       customerMap[String(c._id)] = c;
+      const simple = (c.name || '').toLowerCase().split('(')[0].trim();
+      if (simple) customerNameMap[simple] = c;
     });
 
     let loan = loans.find((l) => String(l._id) === String(id));
     if (loan) {
       let cust = loan.customerId;
-      if (typeof cust === 'string' && customerMap[cust]) {
-        cust = customerMap[cust];
+      const rawCid = typeof cust === 'object' && cust !== null ? String(cust._id || '') : String(cust || '');
+
+      if (!cust || typeof cust !== 'object' || !cust.name) {
+        if (rawCid && customerMap[rawCid]) {
+          cust = customerMap[rawCid];
+        } else if (loan.notes) {
+          for (const [key, val] of Object.entries(customerNameMap)) {
+            if (loan.notes.toLowerCase().includes(key)) {
+              cust = val;
+              break;
+            }
+          }
+        }
       }
+
+      const cName = (typeof cust === 'object' && cust ? cust.name : '') || loan.customerName || 'Borrower';
+      const cPhone = (typeof cust === 'object' && cust ? cust.phone : '') || loan.customerPhone || '';
+      const cArea = (typeof cust === 'object' && cust ? cust.area : '') || loan.customerArea || '';
+
+      const enrichedCust =
+        typeof cust === 'object' && cust
+          ? { ...cust, name: cName, phone: cPhone, area: cArea }
+          : { _id: rawCid, name: cName, phone: cPhone, area: cArea };
+
       loan = {
         ...loan,
-        customerId: cust,
-        customerName: loan.customerName || (typeof cust === 'object' && cust ? cust.name : ''),
-        customerPhone: loan.customerPhone || (typeof cust === 'object' && cust ? cust.phone : ''),
+        customerId: enrichedCust,
+        customerName: cName,
+        customerPhone: cPhone,
+        customerArea: cArea,
       };
     }
     const payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments).filter(

@@ -355,3 +355,4 @@ export const downloadCustomerStatementPDF = (customer, loans = [], payments = []
     alert('Failed to generate PDF statement: ' + err.message);
   }
 };
+

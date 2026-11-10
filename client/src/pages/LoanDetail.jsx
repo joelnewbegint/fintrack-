@@ -79,7 +79,14 @@ export const LoanDetail = ({ loanId, onBack }) => {
     );
   }
 
-  const customer = loan.customerId || {};
+  const customer =
+    loan.customerId && typeof loan.customerId === 'object' && loan.customerId.name
+      ? loan.customerId
+      : {
+          name: loan.customerName || (typeof loan.customerId === 'object' ? loan.customerId?.name : '') || 'Borrower',
+          phone: loan.customerPhone || (typeof loan.customerId === 'object' ? loan.customerId?.phone : '') || '',
+          area: loan.customerArea || (typeof loan.customerId === 'object' ? loan.customerId?.area : '') || '',
+        };
   const recoveryPct =
     loan.totalPayable > 0
       ? Math.round((loan.totalCollected / loan.totalPayable) * 100)

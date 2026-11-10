@@ -1,14 +1,13 @@
-// Real Operational Dataset for VK BANKER'S & FINANCE
 export const initialSettings = {
-  businessName: "VK BANKER'S & FINANCE",
-  businessNameTamil: 'வி.கே. பேங்கர்ஸ் & பைனான்ஸ்',
-  ownerName: 'Vasantha Kumar K',
-  phone: '+91 98421 12345',
-  address: '45, Cross Cut Road, Gandhipuram, Coimbatore - 641012, Tamil Nadu',
-  defaultPenaltyPercent: 2,
-  graceDays: 1,
-  defaultLanguage: 'ta',
-  currencySymbol: '₹',
+  "businessName": "VK BANKER'S & FINANCE",
+  "businessNameTamil": "வி.கே. பேங்கர்ஸ் & பைனான்ஸ்",
+  "ownerName": "Vasantha Kumar K",
+  "phone": "+91 98421 12345",
+  "address": "45, Cross Cut Road, Gandhipuram, Coimbatore - 641012, Tamil Nadu",
+  "defaultPenaltyPercent": 2,
+  "graceDays": 1,
+  "defaultLanguage": "ta",
+  "currencySymbol": "₹"
 };
 
 export const initialCustomers = [
@@ -570,7 +569,14 @@ export const initialLoans = [
   {
     "_id": "6af0890579bba8b77c09e0a8",
     "loanNo": "LN-D26-1001",
-    "customerId": "6af0890279bba8b77c09e06f",
+    "customerId": {
+      "_id": "6af0890279bba8b77c09e06f",
+      "name": "Thilaga (திலகா)",
+      "phone": "9579477655",
+      "area": "Madhanur",
+      "address": "Madhanur Main Road",
+      "idProofType": "Aadhaar"
+    },
     "principal": 20000,
     "interestPercent": 15,
     "chargeAmount": 3000,
@@ -591,12 +597,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:36:53.493Z",
     "updatedAt": "2026-11-08T14:36:53.493Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Thilaga (திலகா)",
+    "customerPhone": "9579477655",
+    "customerArea": "Madhanur"
   },
   {
     "_id": "6af0890679bba8b77c09e0d4",
     "loanNo": "LN-D26-1002",
-    "customerId": "6af0890279bba8b77c09e073",
+    "customerId": {
+      "_id": "6af0890279bba8b77c09e073",
+      "name": "Manchi (மஞ்சி)",
+      "phone": "9047239301",
+      "area": "Madhanur",
+      "address": "Madhanur",
+      "idProofType": "Aadhaar"
+    },
     "principal": 100000,
     "interestPercent": 15,
     "chargeAmount": 15000,
@@ -617,12 +633,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:36:54.838Z",
     "updatedAt": "2026-11-08T14:36:54.838Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Manchi (மஞ்சி)",
+    "customerPhone": "9047239301",
+    "customerArea": "Madhanur"
   },
   {
     "_id": "6af0890b79bba8b77c09e15e",
     "loanNo": "LN-D26-1003",
-    "customerId": "6af0890379bba8b77c09e077",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e077",
+      "name": "Surenthar (சுரேந்தர்)",
+      "phone": "9842199001",
+      "area": "Ambur",
+      "address": "Ambur",
+      "idProofType": "Aadhaar"
+    },
     "principal": 100000,
     "interestPercent": 13,
     "chargeAmount": 13000,
@@ -643,12 +669,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:36:59.037Z",
     "updatedAt": "2026-11-08T14:36:59.037Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Surenthar (சுரேந்தர்)",
+    "customerPhone": "9842199001",
+    "customerArea": "Ambur"
   },
   {
     "_id": "6af0890c79bba8b77c09e1a0",
     "loanNo": "LN-D26-1004",
-    "customerId": "6af0890379bba8b77c09e07b",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e07b",
+      "name": "Thennarasu (தன்னரசு)",
+      "phone": "9123512770",
+      "area": "CTM",
+      "address": "CTM Road",
+      "idProofType": "Aadhaar"
+    },
     "principal": 30000,
     "interestPercent": 15,
     "chargeAmount": 4500,
@@ -669,12 +705,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:00.960Z",
     "updatedAt": "2026-11-08T14:37:00.960Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Thennarasu (தன்னரசு)",
+    "customerPhone": "9123512770",
+    "customerArea": "CTM"
   },
   {
     "_id": "6af0890f79bba8b77c09e1e6",
     "loanNo": "LN-D26-1005",
-    "customerId": "6af0890379bba8b77c09e07e",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e07e",
+      "name": "Purusoth (புருஷோத்)",
+      "phone": "9842199002",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 30000,
     "interestPercent": 12,
     "chargeAmount": 3600,
@@ -695,12 +741,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:03.215Z",
     "updatedAt": "2026-11-08T14:37:03.215Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Purusoth (புருஷோத்)",
+    "customerPhone": "9842199002",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0891379bba8b77c09e264",
     "loanNo": "LN-D26-1006",
-    "customerId": "6af0890379bba8b77c09e081",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e081",
+      "name": "Anitha (அனிதா)",
+      "phone": "9944445940",
+      "area": "RS Hotal",
+      "address": "RS Hotal Area",
+      "idProofType": "Aadhaar"
+    },
     "principal": 25000,
     "interestPercent": 14,
     "chargeAmount": 3500,
@@ -721,12 +777,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:07.119Z",
     "updatedAt": "2026-11-08T14:37:07.119Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Anitha (அனிதா)",
+    "customerPhone": "9944445940",
+    "customerArea": "RS Hotal"
   },
   {
     "_id": "6af0891479bba8b77c09e282",
     "loanNo": "LN-D26-1007",
-    "customerId": "6af0890379bba8b77c09e084",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e084",
+      "name": "Jayanthi (ஜெயந்தி)",
+      "phone": "9600724033",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 10000,
     "interestPercent": 15,
     "chargeAmount": 1500,
@@ -747,12 +813,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:08.042Z",
     "updatedAt": "2026-11-08T14:37:08.042Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Jayanthi (ஜெயந்தி)",
+    "customerPhone": "9600724033",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0891479bba8b77c09e284",
     "loanNo": "LN-D26-1008",
-    "customerId": "6af0890379bba8b77c09e086",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e086",
+      "name": "Dinesh (தினேஷ்)",
+      "phone": "9842199003",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 50000,
     "interestPercent": 15,
     "chargeAmount": 7500,
@@ -773,12 +849,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:08.107Z",
     "updatedAt": "2026-11-08T14:37:08.107Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Dinesh (தினேஷ்)",
+    "customerPhone": "9842199003",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0891779bba8b77c09e2f8",
     "loanNo": "LN-D26-1009",
-    "customerId": "6af0890379bba8b77c09e088",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e088",
+      "name": "Sangar (சங்கர்)",
+      "phone": "9123512770",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 50000,
     "interestPercent": 15,
     "chargeAmount": 7500,
@@ -799,12 +885,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:11.700Z",
     "updatedAt": "2026-11-08T14:37:11.700Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Sangar (சங்கர்)",
+    "customerPhone": "9123512770",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0891979bba8b77c09e32a",
     "loanNo": "LN-D26-1010",
-    "customerId": "6af0890379bba8b77c09e08a",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e08a",
+      "name": "Kalaiselvi (கலைச்செல்வி)",
+      "phone": "9842199004",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 30000,
     "interestPercent": 15,
     "chargeAmount": 4500,
@@ -825,12 +921,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:13.280Z",
     "updatedAt": "2026-11-08T14:37:13.280Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Kalaiselvi (கலைச்செல்வி)",
+    "customerPhone": "9842199004",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0891c79bba8b77c09e386",
     "loanNo": "LN-D26-1011",
-    "customerId": "6af0890379bba8b77c09e08c",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e08c",
+      "name": "Vennda (வெண்டா)",
+      "phone": "9600436585",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 15000,
     "interestPercent": 15,
     "chargeAmount": 2250,
@@ -851,12 +957,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:16.075Z",
     "updatedAt": "2026-11-08T14:37:16.075Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Vennda (வெண்டா)",
+    "customerPhone": "9600436585",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0891e79bba8b77c09e3bc",
     "loanNo": "LN-D26-1012",
-    "customerId": "6af0890479bba8b77c09e08e",
+    "customerId": {
+      "_id": "6af0890479bba8b77c09e08e",
+      "name": "Sutha (சுதா)",
+      "phone": "9842199005",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 20000,
     "interestPercent": 15,
     "chargeAmount": 3000,
@@ -877,12 +993,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:18.062Z",
     "updatedAt": "2026-11-08T14:37:18.062Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Sutha (சுதா)",
+    "customerPhone": "9842199005",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0892279bba8b77c09e43c",
     "loanNo": "LN-D26-1013",
-    "customerId": "6af0890479bba8b77c09e090",
+    "customerId": {
+      "_id": "6af0890479bba8b77c09e090",
+      "name": "Rajasegar (ராஜசேகர்)",
+      "phone": "9600436585",
+      "area": "Kallukutai",
+      "address": "Kallukutai",
+      "idProofType": "Aadhaar"
+    },
     "principal": 70000,
     "interestPercent": 15,
     "chargeAmount": 10500,
@@ -903,12 +1029,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:22.105Z",
     "updatedAt": "2026-11-08T14:37:22.105Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Rajasegar (ராஜசேகர்)",
+    "customerPhone": "9600436585",
+    "customerArea": "Kallukutai"
   },
   {
     "_id": "6af0892279bba8b77c09e442",
     "loanNo": "LN-D26-1014",
-    "customerId": "6af0890479bba8b77c09e092",
+    "customerId": {
+      "_id": "6af0890479bba8b77c09e092",
+      "name": "Saranya (சரண்யா)",
+      "phone": "9842199006",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 15000,
     "interestPercent": 15,
     "chargeAmount": 2250,
@@ -929,12 +1065,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:22.294Z",
     "updatedAt": "2026-11-08T14:37:22.294Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Saranya (சரண்யா)",
+    "customerPhone": "9842199006",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0892679bba8b77c09e4d0",
     "loanNo": "LN-W26-1015",
-    "customerId": "6af0890379bba8b77c09e088",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e088",
+      "name": "Sangar (சங்கர்)",
+      "phone": "9123512770",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 20000,
     "interestPercent": 15,
     "chargeAmount": 3000,
@@ -955,12 +1101,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:26.600Z",
     "updatedAt": "2026-11-08T14:37:26.600Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Sangar (சங்கர்)",
+    "customerPhone": "9123512770",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0892679bba8b77c09e4d2",
     "loanNo": "LN-M26-1016",
-    "customerId": "6af0890479bba8b77c09e096",
+    "customerId": {
+      "_id": "6af0890479bba8b77c09e096",
+      "name": "Mogan (மோகன்)",
+      "phone": "9842199008",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 10000,
     "interestPercent": 20,
     "chargeAmount": 2000,
@@ -981,12 +1137,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:26.660Z",
     "updatedAt": "2026-11-08T14:37:26.660Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Mogan (மோகன்)",
+    "customerPhone": "9842199008",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0892679bba8b77c09e4dc",
     "loanNo": "LN-W26-1017",
-    "customerId": "6af0890479bba8b77c09e094",
+    "customerId": {
+      "_id": "6af0890479bba8b77c09e094",
+      "name": "Gopi (கோபி)",
+      "phone": "9842199007",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 10000,
     "interestPercent": 15,
     "chargeAmount": 1500,
@@ -1007,12 +1173,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:26.967Z",
     "updatedAt": "2026-11-08T14:37:26.967Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Gopi (கோபி)",
+    "customerPhone": "9842199007",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0892779bba8b77c09e4e0",
     "loanNo": "LN-D26-1018",
-    "customerId": "6af0890479bba8b77c09e098",
+    "customerId": {
+      "_id": "6af0890479bba8b77c09e098",
+      "name": "Murthi (மூர்த்தி)",
+      "phone": "9123512770",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 10000,
     "interestPercent": 15,
     "chargeAmount": 1500,
@@ -1033,12 +1209,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:27.100Z",
     "updatedAt": "2026-11-08T14:37:27.100Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Murthi (மூர்த்தி)",
+    "customerPhone": "9123512770",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0892779bba8b77c09e4e4",
     "loanNo": "LN-D26-1019",
-    "customerId": "6af0890279bba8b77c09e06f",
+    "customerId": {
+      "_id": "6af0890279bba8b77c09e06f",
+      "name": "Thilaga (திலகா)",
+      "phone": "9579477655",
+      "area": "Madhanur",
+      "address": "Madhanur Main Road",
+      "idProofType": "Aadhaar"
+    },
     "principal": 15000,
     "interestPercent": 15,
     "chargeAmount": 2250,
@@ -1059,12 +1245,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:27.222Z",
     "updatedAt": "2026-11-08T14:37:27.222Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Thilaga (திலகா)",
+    "customerPhone": "9579477655",
+    "customerArea": "Madhanur"
   },
   {
     "_id": "6af0892779bba8b77c09e4e8",
     "loanNo": "LN-D26-1020",
-    "customerId": "6af0890579bba8b77c09e09a",
+    "customerId": {
+      "_id": "6af0890579bba8b77c09e09a",
+      "name": "Nirmala (நிர்மலா)",
+      "phone": "8124977664",
+      "area": "Madhanur",
+      "address": "Madhanur",
+      "idProofType": "Aadhaar"
+    },
     "principal": 10000,
     "interestPercent": 15,
     "chargeAmount": 1500,
@@ -1085,12 +1281,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:27.341Z",
     "updatedAt": "2026-11-08T14:37:27.341Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Nirmala (நிர்மலா)",
+    "customerPhone": "8124977664",
+    "customerArea": "Madhanur"
   },
   {
     "_id": "6af0892779bba8b77c09e4ec",
     "loanNo": "LN-D26-1021",
-    "customerId": "6af0890379bba8b77c09e086",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e086",
+      "name": "Dinesh (தினேஷ்)",
+      "phone": "9842199003",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 50000,
     "interestPercent": 15,
     "chargeAmount": 7500,
@@ -1111,12 +1317,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:27.475Z",
     "updatedAt": "2026-11-08T14:37:27.475Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Dinesh (தினேஷ்)",
+    "customerPhone": "9842199003",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0892779bba8b77c09e4f0",
     "loanNo": "LN-D26-1022",
-    "customerId": "6af0890579bba8b77c09e09c",
+    "customerId": {
+      "_id": "6af0890579bba8b77c09e09c",
+      "name": "Srinivasan (சீனிவாசன்)",
+      "phone": "9842199009",
+      "area": "Madhanur",
+      "address": "Madhanur",
+      "idProofType": "Aadhaar"
+    },
     "principal": 30000,
     "interestPercent": 15,
     "chargeAmount": 4500,
@@ -1137,12 +1353,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:27.608Z",
     "updatedAt": "2026-11-08T14:37:27.608Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Srinivasan (சீனிவாசன்)",
+    "customerPhone": "9842199009",
+    "customerArea": "Madhanur"
   },
   {
     "_id": "6af0892779bba8b77c09e4f4",
     "loanNo": "LN-D26-1023",
-    "customerId": "6af0890579bba8b77c09e09e",
+    "customerId": {
+      "_id": "6af0890579bba8b77c09e09e",
+      "name": "Sathish (சதீஷ்)",
+      "phone": "8382047979",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 20000,
     "interestPercent": 7.5,
     "chargeAmount": 1500,
@@ -1163,12 +1389,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:27.721Z",
     "updatedAt": "2026-11-08T14:37:27.721Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Sathish (சதீஷ்)",
+    "customerPhone": "8382047979",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0892779bba8b77c09e4f8",
     "loanNo": "LN-D26-1024",
-    "customerId": "6af0890379bba8b77c09e088",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e088",
+      "name": "Sangar (சங்கர்)",
+      "phone": "9123512770",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 30000,
     "interestPercent": 15,
     "chargeAmount": 4500,
@@ -1189,12 +1425,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:27.847Z",
     "updatedAt": "2026-11-08T14:37:27.847Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Sangar (சங்கர்)",
+    "customerPhone": "9123512770",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0892779bba8b77c09e4fc",
     "loanNo": "LN-D26-1025",
-    "customerId": "6af0890379bba8b77c09e08a",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e08a",
+      "name": "Kalaiselvi (கலைச்செல்வி)",
+      "phone": "9842199004",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 20000,
     "interestPercent": 15,
     "chargeAmount": 3000,
@@ -1215,12 +1461,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:27.960Z",
     "updatedAt": "2026-11-08T14:37:27.960Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Kalaiselvi (கலைச்செல்வி)",
+    "customerPhone": "9842199004",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0892879bba8b77c09e500",
     "loanNo": "LN-D26-1026",
-    "customerId": "6af0890479bba8b77c09e090",
+    "customerId": {
+      "_id": "6af0890479bba8b77c09e090",
+      "name": "Rajasegar (ராஜசேகர்)",
+      "phone": "9600436585",
+      "area": "Kallukutai",
+      "address": "Kallukutai",
+      "idProofType": "Aadhaar"
+    },
     "principal": 50000,
     "interestPercent": 15,
     "chargeAmount": 7500,
@@ -1241,12 +1497,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:28.100Z",
     "updatedAt": "2026-11-08T14:37:28.100Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Rajasegar (ராஜசேகர்)",
+    "customerPhone": "9600436585",
+    "customerArea": "Kallukutai"
   },
   {
     "_id": "6af0892879bba8b77c09e504",
     "loanNo": "LN-D26-1027",
-    "customerId": "6af0890279bba8b77c09e06f",
+    "customerId": {
+      "_id": "6af0890279bba8b77c09e06f",
+      "name": "Thilaga (திலகா)",
+      "phone": "9579477655",
+      "area": "Madhanur",
+      "address": "Madhanur Main Road",
+      "idProofType": "Aadhaar"
+    },
     "principal": 20000,
     "interestPercent": 15,
     "chargeAmount": 3000,
@@ -1267,12 +1533,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:28.210Z",
     "updatedAt": "2026-11-08T14:37:28.210Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Thilaga (திலகா)",
+    "customerPhone": "9579477655",
+    "customerArea": "Madhanur"
   },
   {
     "_id": "6af0892879bba8b77c09e508",
     "loanNo": "LN-D26-1028",
-    "customerId": "6af0890379bba8b77c09e088",
+    "customerId": {
+      "_id": "6af0890379bba8b77c09e088",
+      "name": "Sangar (சங்கர்)",
+      "phone": "9123512770",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 50000,
     "interestPercent": 12.4,
     "chargeAmount": 6200,
@@ -1293,12 +1569,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:28.315Z",
     "updatedAt": "2026-11-08T14:37:28.315Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Sangar (சங்கர்)",
+    "customerPhone": "9123512770",
+    "customerArea": "Agaram"
   },
   {
     "_id": "6af0892879bba8b77c09e50c",
     "loanNo": "LN-D26-1029",
-    "customerId": "6af0890479bba8b77c09e090",
+    "customerId": {
+      "_id": "6af0890479bba8b77c09e090",
+      "name": "Rajasegar (ராஜசேகர்)",
+      "phone": "9600436585",
+      "area": "Kallukutai",
+      "address": "Kallukutai",
+      "idProofType": "Aadhaar"
+    },
     "principal": 70000,
     "interestPercent": 15,
     "chargeAmount": 10500,
@@ -1319,12 +1605,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:28.430Z",
     "updatedAt": "2026-11-08T14:37:28.430Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Rajasegar (ராஜசேகர்)",
+    "customerPhone": "9600436585",
+    "customerArea": "Kallukutai"
   },
   {
     "_id": "6af0892879bba8b77c09e510",
     "loanNo": "LN-D26-1030",
-    "customerId": "6af0890279bba8b77c09e073",
+    "customerId": {
+      "_id": "6af0890279bba8b77c09e073",
+      "name": "Manchi (மஞ்சி)",
+      "phone": "9047239301",
+      "area": "Madhanur",
+      "address": "Madhanur",
+      "idProofType": "Aadhaar"
+    },
     "principal": 100000,
     "interestPercent": 15,
     "chargeAmount": 15000,
@@ -1345,12 +1641,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:28.531Z",
     "updatedAt": "2026-11-08T14:37:28.531Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Manchi (மஞ்சி)",
+    "customerPhone": "9047239301",
+    "customerArea": "Madhanur"
   },
   {
     "_id": "6af0892879bba8b77c09e514",
     "loanNo": "LN-D26-1031",
-    "customerId": "6af0890279bba8b77c09e073",
+    "customerId": {
+      "_id": "6af0890279bba8b77c09e073",
+      "name": "Manchi (மஞ்சி)",
+      "phone": "9047239301",
+      "area": "Madhanur",
+      "address": "Madhanur",
+      "idProofType": "Aadhaar"
+    },
     "principal": 150000,
     "interestPercent": 10,
     "chargeAmount": 15000,
@@ -1371,12 +1677,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:28.661Z",
     "updatedAt": "2026-11-08T14:37:28.661Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Manchi (மஞ்சி)",
+    "customerPhone": "9047239301",
+    "customerArea": "Madhanur"
   },
   {
     "_id": "6af0892879bba8b77c09e518",
     "loanNo": "LN-D26-1032",
-    "customerId": "6af0890579bba8b77c09e0a0",
+    "customerId": {
+      "_id": "6af0890579bba8b77c09e0a0",
+      "name": "Premlatha (பிரேமலதா)",
+      "phone": "9842199010",
+      "area": "Madhanur",
+      "address": "Madhanur",
+      "idProofType": "Aadhaar"
+    },
     "principal": 150000,
     "interestPercent": 10,
     "chargeAmount": 15000,
@@ -1397,12 +1713,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:28.782Z",
     "updatedAt": "2026-11-08T14:37:28.782Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Premlatha (பிரேமலதா)",
+    "customerPhone": "9842199010",
+    "customerArea": "Madhanur"
   },
   {
     "_id": "6af0892879bba8b77c09e51c",
     "loanNo": "LN-D26-1033",
-    "customerId": "6af0890579bba8b77c09e09c",
+    "customerId": {
+      "_id": "6af0890579bba8b77c09e09c",
+      "name": "Srinivasan (சீனிவாசன்)",
+      "phone": "9842199009",
+      "area": "Madhanur",
+      "address": "Madhanur",
+      "idProofType": "Aadhaar"
+    },
     "principal": 100000,
     "interestPercent": 15,
     "chargeAmount": 15000,
@@ -1423,12 +1749,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:28.920Z",
     "updatedAt": "2026-11-08T14:37:28.920Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Srinivasan (சீனிவாசன்)",
+    "customerPhone": "9842199009",
+    "customerArea": "Madhanur"
   },
   {
     "_id": "6af0892979bba8b77c09e520",
     "loanNo": "LN-D26-1034",
-    "customerId": "6af0890579bba8b77c09e0a2",
+    "customerId": {
+      "_id": "6af0890579bba8b77c09e0a2",
+      "name": "Ld (எல்.டி)",
+      "phone": "9842199011",
+      "area": "Madhanur",
+      "address": "Madhanur",
+      "idProofType": "Aadhaar"
+    },
     "principal": 100000,
     "interestPercent": 15,
     "chargeAmount": 15000,
@@ -1449,12 +1785,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:29.046Z",
     "updatedAt": "2026-11-08T14:37:29.046Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Ld (எல்.டி)",
+    "customerPhone": "9842199011",
+    "customerArea": "Madhanur"
   },
   {
     "_id": "6af0892979bba8b77c09e524",
     "loanNo": "LN-D26-1035",
-    "customerId": "6af0890579bba8b77c09e0a4",
+    "customerId": {
+      "_id": "6af0890579bba8b77c09e0a4",
+      "name": "Ammu (அம்மு)",
+      "phone": "9842199012",
+      "area": "Cinnathatalam",
+      "address": "Cinnathatalam",
+      "idProofType": "Aadhaar"
+    },
     "principal": 50000,
     "interestPercent": 15,
     "chargeAmount": 7500,
@@ -1475,12 +1821,22 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:29.181Z",
     "updatedAt": "2026-11-08T14:37:29.181Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Ammu (அம்மு)",
+    "customerPhone": "9842199012",
+    "customerArea": "Cinnathatalam"
   },
   {
     "_id": "6af0892979bba8b77c09e528",
     "loanNo": "LN-D26-1036",
-    "customerId": "6af0890579bba8b77c09e0a6",
+    "customerId": {
+      "_id": "6af0890579bba8b77c09e0a6",
+      "name": "Santhiya (சந்தியா)",
+      "phone": "9842199013",
+      "area": "Agaram",
+      "address": "Agaram",
+      "idProofType": "Aadhaar"
+    },
     "principal": 50000,
     "interestPercent": 15,
     "chargeAmount": 7500,
@@ -1501,7 +1857,10 @@ export const initialLoans = [
     "schedule": [],
     "createdAt": "2026-11-08T14:37:29.303Z",
     "updatedAt": "2026-11-08T14:37:29.303Z",
-    "__v": 0
+    "__v": 0,
+    "customerName": "Santhiya (சந்தியா)",
+    "customerPhone": "9842199013",
+    "customerArea": "Agaram"
   }
 ];
 
