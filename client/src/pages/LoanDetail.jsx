@@ -10,6 +10,7 @@ import WhatsAppReminderModal from '../components/common/WhatsAppReminderModal';
 import WhatsAppPaymentHistoryModal from '../components/common/WhatsAppPaymentHistoryModal';
 import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 import LoanApplicationFormModal from '../components/common/LoanApplicationFormModal';
+import { downloadLoanAgreementPDF } from '../utils/loanAgreementPdf';
 import {
   ArrowLeft,
   CreditCard,
@@ -23,6 +24,7 @@ import {
   FileText,
   Share2,
   Smartphone,
+  Download,
 } from 'lucide-react';
 
 export const LoanDetail = ({ loanId, onBack }) => {
@@ -142,12 +144,21 @@ export const LoanDetail = ({ loanId, onBack }) => {
           </button>
 
           <button
+            onClick={() => downloadLoanAgreementPDF(loan, customer)}
+            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-sky-500/20 active:scale-95 transition"
+            title="Download Official Loan Application & Agreement PDF with Borrower Photo"
+          >
+            <Download className="w-4 h-4" />
+            <span>Download Form PDF</span>
+          </button>
+
+          <button
             onClick={() => setShowLoanFormModal(true)}
             className="flex items-center space-x-1.5 h-11 px-4 rounded-xl glass border border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300 font-bold text-xs hover:bg-sky-50 dark:hover:bg-sky-950/40 active:scale-95 transition"
-            title="Download or Print Official Loan Application & Promissory Form"
+            title="Print Official Loan Application & Promissory Form"
           >
             <Printer className="w-4 h-4 text-sky-500" />
-            <span>Loan Form</span>
+            <span>Print Form</span>
           </button>
         </div>
       </div>

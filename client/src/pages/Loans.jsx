@@ -11,6 +11,7 @@ import ReceiptModal from '../components/common/ReceiptModal';
 import WhatsAppReminderModal from '../components/common/WhatsAppReminderModal';
 import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 import LoanApplicationFormModal from '../components/common/LoanApplicationFormModal';
+import { downloadLoanAgreementPDF } from '../utils/loanAgreementPdf';
 import {
   Plus,
   Search,
@@ -25,6 +26,7 @@ import {
   FileText,
   Printer,
   Smartphone,
+  Download,
 } from 'lucide-react';
 
 export const Loans = ({ initialType = 'all', onViewLoan }) => {
@@ -290,7 +292,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                   </div>
 
                   {/* Mobile Direct Action Buttons (48px Touch Targets) */}
-                  <div className="grid grid-cols-3 gap-2 pt-1">
+                  <div className="grid grid-cols-4 gap-1.5 pt-1">
                     {loan.remainingBalance > 0 ? (
                       <button
                         onClick={() =>
@@ -315,23 +317,20 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
 
                     <button
                       onClick={() => setWhatsappHubLoan(loan)}
-                      className="btn-sky-secondary min-h-[48px] py-2 text-xs font-bold flex items-center justify-center space-x-1.5 border-emerald-300/80 text-emerald-700 dark:text-emerald-300"
+                      className="btn-sky-secondary min-h-[48px] py-2 text-xs font-bold flex items-center justify-center space-x-1 border-emerald-300/80 text-emerald-700 dark:text-emerald-300"
                       title={lang === 'ta' ? 'வாட்ஸ்அப் செய்தி அனுப்ப' : 'Send WhatsApp Message'}
                     >
                       <Smartphone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                      <span>WhatsApp</span>
+                      <span className="hidden xs:inline">WhatsApp</span>
                     </button>
 
                     <button
-                      onClick={() => {
-                        setSelectedFormLoan(loan);
-                        setShowFormModal(true);
-                      }}
+                      onClick={() => downloadLoanAgreementPDF(loan, cust)}
                       className="glass min-h-[48px] py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-sky-50 flex items-center justify-center space-x-1"
-                      title={lang === 'ta' ? 'விண்ணப்பப் படிவம்' : 'Application Form'}
+                      title="Download Loan Agreement PDF / கடன் படிவம்"
                     >
-                      <FileText className="w-3.5 h-3.5 text-sky-500" />
-                      <span>Form</span>
+                      <Download className="w-3.5 h-3.5 text-sky-500" />
+                      <span>PDF</span>
                     </button>
 
                     <button
@@ -490,6 +489,14 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                               title={lang === 'ta' ? 'வாட்ஸ்அப் செய்தி அனுப்ப' : 'Send WhatsApp Message'}
                             >
                               <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
+                            </button>
+
+                            <button
+                              onClick={() => downloadLoanAgreementPDF(loan, cust)}
+                              className="p-1.5 rounded-xl glass hover:bg-sky-50 text-slate-600 hover:text-sky-600 dark:text-slate-300 transition"
+                              title="Download Loan Application PDF / கடன் படிவம்"
+                            >
+                              <Download className="w-3.5 h-3.5 text-sky-500" />
                             </button>
 
                             <button

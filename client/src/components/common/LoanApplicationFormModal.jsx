@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import api from '../../services/api';
+import { downloadLoanAgreementPDF } from '../../utils/loanAgreementPdf';
 import {
   X,
   Printer,
@@ -11,6 +12,7 @@ import {
   Save,
   CheckCircle,
   Trash2,
+  Download,
 } from 'lucide-react';
 
 // Pristine Blank Form Template (Zero Dump Data)
@@ -425,6 +427,18 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
               >
                 {isBlankMode ? <RotateCcw className="w-3.5 h-3.5 text-[#10295c]" /> : <FileText className="w-3.5 h-3.5 text-[#10295c]" />}
                 <span>{isBlankMode ? 'Show Filled Data' : 'Blank Form'}</span>
+              </button>
+            )}
+
+            {prefillData && (
+              <button
+                type="button"
+                onClick={() => downloadLoanAgreementPDF(prefillData)}
+                className="bg-sky-600 hover:bg-sky-700 text-white flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-md shadow-sky-600/30 active:scale-95 transition"
+                title="Download Official Agreement PDF / கடன் ஒப்பந்த PDF"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Agreement PDF</span>
               </button>
             )}
 

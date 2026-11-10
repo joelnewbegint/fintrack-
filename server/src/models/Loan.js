@@ -116,6 +116,10 @@ const loanSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    borrowerPhoto: {
+      type: String,
+      default: '',
+    },
     schedule: [installmentSchema],
     notes: {
       type: String,

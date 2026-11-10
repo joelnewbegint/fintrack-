@@ -736,7 +736,9 @@ export const api = {
         name: loanData.customerName || 'Borrower',
         phone: loanData.customerPhone || '',
         area: loanData.customerArea || '',
+        photoUrl: loanData.borrowerPhoto || '',
       },
+      borrowerPhoto: loanData.borrowerPhoto || targetCust?.photoUrl || '',
       customerName: targetCust?.name || loanData.customerName,
       customerPhone: targetCust?.phone || loanData.customerPhone,
       principal: principalNum,
@@ -758,6 +760,11 @@ export const api = {
     };
     loans.unshift(newLoan);
     setStored(STORAGE_KEYS.LOANS, loans);
+
+    if (targetCust && loanData.borrowerPhoto) {
+      targetCust.photoUrl = loanData.borrowerPhoto;
+      setStored(STORAGE_KEYS.CUSTOMERS, customers);
+    }
     return { success: true, loan: newLoan };
   },
 

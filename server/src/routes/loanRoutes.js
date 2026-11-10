@@ -25,6 +25,7 @@ const loanSchema = z.object({
     startDate: z.string().optional(),
     latePenaltyRate: z.number().optional(),
     notes: z.string().optional(),
+    borrowerPhoto: z.string().optional(),
   }),
 });
 

@@ -14,6 +14,7 @@ export const createLoan = async (req, res, next) => {
       startDate,
       latePenaltyRate,
       notes,
+      borrowerPhoto,
     } = req.body;
 
     const customer = await Customer.findById(customerId);
@@ -108,9 +109,19 @@ export const createLoan = async (req, res, next) => {
       latePenaltyRate: latePenaltyRate || 0,
       totalCollected: 0,
       remainingBalance: totalPayable,
+      borrowerPhoto: borrowerPhoto || customer.photoUrl || '',
       schedule,
       notes: notes || '',
     });
+
+    if (borrowerPhoto && (!customer.photoUrl || customer.photoUrl !== borrowerPhoto)) {
+      try {
+        customer.photoUrl = borrowerPhoto;
+        await customer.save();
+      } catch (e) {
+        console.warn('[LoanController] Could not update customer photoUrl:', e.message);
+      }
+    }
 
     await AuditLog.create({
       userId: req.user._id,
@@ -127,7 +138,7 @@ export const createLoan = async (req, res, next) => {
       },
     });
 
-    await newLoan.populate('customerId', 'name phone area address photo');
+    await newLoan.populate('customerId', 'name phone area address photoUrl photo');
 
     res.status(201).json({
       success: true,
