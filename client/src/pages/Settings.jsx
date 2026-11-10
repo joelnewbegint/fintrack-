@@ -557,6 +557,34 @@ export const Settings = () => {
             </button>
           </div>
 
+          <div className="glass-card rounded-3xl p-5 border border-red-200 dark:border-red-900/60 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-extrabold text-base text-red-600 dark:text-red-400">
+                Reset All Financial Data / முழு தரவையும் அழிக்க
+              </h3>
+              <p className="text-xs text-slate-500">
+                Completely purge all customers, loans, repayments, and expenses to start as a 100% brand new clean site.
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                if (
+                  window.confirm(
+                    'Are you sure you want to permanently erase ALL customers, loans, and payments? This will reset FinTrack to a brand new clean site!'
+                  )
+                ) {
+                  await api.clearAllData();
+                  alert('All data has been cleared! FinTrack is now a brand new clean site.');
+                  window.location.reload();
+                }
+              }}
+              className="flex items-center space-x-2 py-3 px-5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md shadow-red-500/20 active:scale-95 transition shrink-0"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Reset & Clear All Data</span>
+            </button>
+          </div>
+
           <div className="glass-card rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800/80 shadow-md space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center space-x-2">

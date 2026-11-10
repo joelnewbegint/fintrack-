@@ -18,171 +18,53 @@ const STORAGE_KEYS = {
 };
 
 /**
- * Universal Dump Data Cleanser:
- * Automatically purges any legacy demo/mock data (Murugesan, Kaliappan, etc.)
- * from localStorage across all devices (mobile phone, laptop, tablets).
+ * Universal Fresh Start Reset:
+ * Completely purges all customer records, loans, repayment ledgers, expenses, and investments
+ * across all mobile phones, laptops, and tablets to provide a 100% clean, brand new system.
  */
+export const resetToCleanSite = () => {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const isClean = localStorage.getItem('fintrack_clean_fresh_site_v2');
+    if (isClean !== 'true') {
+      localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(initialSettings));
+
+      // Clear any legacy migration keys
+      [
+        'fintrack_real_dataset_v1',
+        'fintrack_real_dataset_v2',
+        'fintrack_real_dataset_v3',
+        'fintrack_real_dataset_v4',
+        'fintrack_real_dataset_v5',
+        'fintrack_real_dataset_v6',
+        'fintrack_real_dataset_v7',
+        'fintrack_clean_fresh_site_v1',
+      ].forEach((key) => localStorage.removeItem(key));
+
+      localStorage.setItem('fintrack_clean_fresh_site_v2', 'true');
+      console.log('✨ FinTrack: Successfully initialized 100% fresh, clean new site!');
+    }
+  } catch (err) {
+    console.warn('Fresh site reset notice:', err);
+  }
+};
+
+resetToCleanSite();
+
 export const cleanseDumpData = () => {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  try {
-    const isDumpCustomer = (c) => {
-      if (!c) return false;
-      const id = String(c._id || '');
-      const name = String(c.name || '');
-      if (id.startsWith('cust_tn_')) return true;
-      const dumpNames = [
-        'Murugesan',
-        'Kaliappan',
-        'Fathima Beevi',
-        'Shanmugam',
-        'Meenakshi',
-        'Selvam',
-        'Jayalakshmi',
-        'Duraisamy',
-        'Banumathi',
-        'Annamalai',
-      ];
-      return dumpNames.some((dn) => name.includes(dn));
-    };
-
-    const isDumpLoan = (l) => {
-      if (!l) return false;
-      const id = String(l._id || '');
-      const loanNo = String(l.loanNo || '');
-      // ONLY flag old dummy mock loans from initial template (never delete LN-D26-, LN-W26-, LN-M26-)
-      if (id.startsWith('loan_tn_') || id.startsWith('loan_00') || loanNo.startsWith('LN-2026-0')) return true;
-      return false;
-    };
-
-    const isDumpPayment = (p) => {
-      if (!p) return false;
-      const id = String(p._id || '');
-      const receiptNo = String(p.receiptNo || '');
-      // ONLY flag old dummy mock payments (never delete RCP-26-)
-      if (id.startsWith('pay_tn_') || id.startsWith('pay_00') || receiptNo.startsWith('RCP-2026-0')) return true;
-      return false;
-    };
-
-    const isDumpInvestment = (i) => {
-      if (!i) return false;
-      const id = String(i._id || '');
-      const name = String(i.investorName || '');
-      if (id.startsWith('inv_001')) return true;
-      if (name.includes('Subramanian')) return true;
-      return false;
-    };
-
-    // Clean Customers
-    const rawCust = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-    if (rawCust) {
-      try {
-        const parsed = JSON.parse(rawCust);
-        if (Array.isArray(parsed)) {
-          const cleaned = parsed.filter((c) => !isDumpCustomer(c));
-          if (cleaned.length === 0 && Array.isArray(initialCustomers) && initialCustomers.length > 0) {
-            localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(initialCustomers));
-          } else if (cleaned.length !== parsed.length) {
-            localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(cleaned));
-          }
-        }
-      } catch (e) {}
-    }
-
-    // Clean Loans
-    const rawLoans = localStorage.getItem(STORAGE_KEYS.LOANS);
-    if (rawLoans) {
-      try {
-        const parsed = JSON.parse(rawLoans);
-        if (Array.isArray(parsed)) {
-          const cleaned = parsed.filter((l) => !isDumpLoan(l));
-          if (cleaned.length < 30 && Array.isArray(initialLoans) && initialLoans.length >= 30) {
-            localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(initialLoans));
-          } else if (cleaned.length !== parsed.length) {
-            localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(cleaned));
-          }
-        }
-      } catch (e) {}
-    }
-
-    // Clean Payments
-    const rawPayments = localStorage.getItem(STORAGE_KEYS.PAYMENTS);
-    if (rawPayments) {
-      try {
-        const parsed = JSON.parse(rawPayments);
-        if (Array.isArray(parsed)) {
-          const cleaned = parsed.filter((p) => !isDumpPayment(p));
-          if (cleaned.length < 100 && Array.isArray(initialPayments) && initialPayments.length >= 100) {
-            localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(initialPayments));
-          } else if (cleaned.length !== parsed.length) {
-            localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(cleaned));
-          }
-        }
-      } catch (e) {}
-    }
-
-    // Clean Investments
-    const rawInv = localStorage.getItem(STORAGE_KEYS.INVESTMENTS);
-    if (rawInv) {
-      try {
-        const parsed = JSON.parse(rawInv);
-        if (Array.isArray(parsed)) {
-          const cleaned = parsed.filter((i) => !isDumpInvestment(i));
-          if (cleaned.length !== parsed.length) {
-            localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify(cleaned));
-          }
-        }
-      } catch (e) {}
-    }
-  } catch (err) {
-    console.warn('Dump data cleanse notice:', err);
-  }
+  resetToCleanSite();
 };
 
-/**
- * Universal Real Dataset Initializer:
- * Seeds the full real operational workbook records (24 canonical borrowers, 36 loans, 542 payments)
- * across all mobile phones, laptops, and tablets automatically on first load.
- */
-export const initRealDataset = (force = false) => {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  try {
-    const isMigrated = localStorage.getItem('fintrack_real_dataset_v7');
-    const existingLoansStr = localStorage.getItem(STORAGE_KEYS.LOANS);
-    let loanCount = 0;
-    let firstLoan = null;
-    try {
-      const parsed = JSON.parse(existingLoansStr || '[]');
-      loanCount = parsed.length;
-      firstLoan = parsed[0];
-    } catch (e) {}
-
-    // Auto-heal if v7 flag is missing, OR if force=true, OR if local loans are missing/wiped (< 30 loans), OR if customer details are missing on loans
-    const needsHeal =
-      force ||
-      isMigrated !== 'true' ||
-      loanCount < 30 ||
-      !firstLoan?.customerName ||
-      typeof firstLoan?.customerId !== 'object';
-
-    if (needsHeal) {
-      localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(initialCustomers));
-      localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(initialLoans));
-      localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(initialPayments));
-      localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify(initialInvestments));
-      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(initialExpenses));
-      localStorage.setItem('fintrack_real_dataset_v7', 'true');
-      console.log('✅ Synchronized real workbook dataset (24 borrowers, 36 loans, 542 payments) across device storage!');
-    }
-  } catch (err) {
-    console.warn('Real dataset init notice:', err);
-  }
+export const initRealDataset = () => {
+  resetToCleanSite();
 };
 
-// Immediately sanitize any ancient mock remnants, then initialize real dataset
-cleanseDumpData();
-initRealDataset();
-
-const getStored = (key, fallback) => {
+const getStored = (key, fallback = []) => {
   try {
     const data = localStorage.getItem(key);
     if (!data) {
@@ -191,28 +73,7 @@ const getStored = (key, fallback) => {
       }
       return fallback;
     }
-    const parsed = JSON.parse(data);
-    if (
-      Array.isArray(parsed) &&
-      parsed.length === 0 &&
-      Array.isArray(fallback) &&
-      fallback.length > 0
-    ) {
-      localStorage.setItem(key, JSON.stringify(fallback));
-      return fallback;
-    }
-    // Auto-heal loans if fewer than 30 loans while fallback has 36
-    if (
-      key === STORAGE_KEYS.LOANS &&
-      Array.isArray(parsed) &&
-      parsed.length < 30 &&
-      Array.isArray(fallback) &&
-      fallback.length >= 30
-    ) {
-      localStorage.setItem(key, JSON.stringify(fallback));
-      return fallback;
-    }
-    return parsed;
+    return JSON.parse(data);
   } catch {
     return fallback;
   }
@@ -1496,6 +1357,24 @@ export const api = {
     };
   },
 
+  clearAllData: async () => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify([]));
+    }
+    try {
+      await safeFetchJson('/api/settings/clear-all-data', {
+        method: 'POST',
+        headers: getHeaders(),
+      });
+    } catch (e) {}
+    return { success: true };
+  },
+
+  resetToCleanSite,
   cleanseDumpData,
   initRealDataset,
 };

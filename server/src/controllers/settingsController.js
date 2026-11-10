@@ -61,3 +61,28 @@ export const getAuditLogs = async (req, res, next) => {
     next(error);
   }
 };
+
+export const clearAllData = async (req, res, next) => {
+  try {
+    const Customer = (await import('../models/Customer.js')).default;
+    const Loan = (await import('../models/Loan.js')).default;
+    const Payment = (await import('../models/Payment.js')).default;
+    const Expense = (await import('../models/Expense.js')).default;
+    const Investment = (await import('../models/Investment.js')).default;
+
+    await Promise.all([
+      Customer.deleteMany({}),
+      Loan.deleteMany({}),
+      Payment.deleteMany({}),
+      Expense.deleteMany({}),
+      Investment.deleteMany({}),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: 'All financial data successfully cleared. Brand new clean site.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
