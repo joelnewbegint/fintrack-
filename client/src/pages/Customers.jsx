@@ -21,6 +21,7 @@ import {
   Download,
 } from 'lucide-react';
 import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
+import StatementDownloadModal from '../components/common/StatementDownloadModal';
 import { downloadCustomerStatementPDF } from '../utils/schedule';
 
 export const Customers = ({ onViewCustomer }) => {
@@ -37,6 +38,8 @@ export const Customers = ({ onViewCustomer }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [whatsappCustomer, setWhatsappCustomer] = useState(null);
+  const [statementCustomerData, setStatementCustomerData] = useState(null);
+  const [loadingStatementId, setLoadingStatementId] = useState(null);
 
   const fetchCustomers = async () => {
     try {
@@ -242,18 +245,26 @@ export const Customers = ({ onViewCustomer }) => {
                   <button
                     onClick={async () => {
                       try {
+                        setLoadingStatementId(c._id);
                         const res = await api.getCustomerById(c._id);
                         if (res.success) {
-                          downloadCustomerStatementPDF(res.customer || c, res.loans || [], res.payments || []);
+                          setStatementCustomerData({
+                            customer: res.customer || c,
+                            loans: res.loans || [],
+                            payments: res.payments || [],
+                          });
                         }
                       } catch (e) {
                         console.error('Download statement failed:', e);
+                      } finally {
+                        setLoadingStatementId(null);
                       }
                     }}
-                    className="p-1.5 min-h-[34px] min-w-[34px] flex items-center justify-center rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-300 dark:border-sky-700/60 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition shadow-sm active:scale-95"
-                    title={lang === 'ta' ? 'அறிக்கை & அட்டவணை பதிவிறக்கம் (PDF)' : 'Download Statement (PDF)'}
+                    disabled={loadingStatementId === c._id}
+                    className="p-1.5 min-h-[34px] min-w-[34px] flex items-center justify-center rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-300 dark:border-sky-700/60 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition shadow-sm active:scale-95 disabled:opacity-50"
+                    title={lang === 'ta' ? 'கணக்கு அறிக்கை பதிவிறக்கம் (Active / Settled PDF)' : 'Download Statement (Active / Settled PDF)'}
                   >
-                    <Download className="w-3.5 h-3.5" />
+                    <Download className={`w-3.5 h-3.5 ${loadingStatementId === c._id ? 'animate-bounce' : ''}`} />
                   </button>
 
                   <button
@@ -301,6 +312,17 @@ export const Customers = ({ onViewCustomer }) => {
           isOpen={!!whatsappCustomer}
           onClose={() => setWhatsappCustomer(null)}
           initialCustomer={whatsappCustomer}
+        />
+      )}
+
+      {/* 3-Option Statement Download Modal (Active / Settled / Complete) */}
+      {statementCustomerData && (
+        <StatementDownloadModal
+          isOpen={Boolean(statementCustomerData)}
+          onClose={() => setStatementCustomerData(null)}
+          customer={statementCustomerData.customer}
+          loans={statementCustomerData.loans}
+          payments={statementCustomerData.payments}
         />
       )}
     </div>

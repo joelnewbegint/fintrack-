@@ -591,3 +591,4 @@ export const downloadLoanAgreementPDF = (loan, customer = {}) => {
 };
 
 export default buildLoanAgreementPDF;
+

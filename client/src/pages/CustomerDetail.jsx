@@ -15,6 +15,7 @@ import ReceiptModal from '../components/common/ReceiptModal';
 import WhatsAppPaymentHistoryModal from '../components/common/WhatsAppPaymentHistoryModal';
 import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 import CustomerStatementModal from '../components/common/CustomerStatementModal';
+import StatementDownloadModal from '../components/common/StatementDownloadModal';
 import {
   ArrowLeft,
   Phone,
@@ -51,6 +52,7 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
   const [showPaymentHistoryModal, setShowPaymentHistoryModal] = useState(false);
   const [showWhatsAppHub, setShowWhatsAppHub] = useState(false);
   const [showStatementModal, setShowStatementModal] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
 
   // Profile View Controls
   const [activeTab, setActiveTab] = useState('ledger'); // 'ledger' | 'schedule'
@@ -160,15 +162,15 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
 
         {/* Action Buttons: PDF, CSV, Print, WhatsApp, New Loan */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* 1. Download PDF Statement */}
+          {/* 1. Download Statement (Active / Settled / Complete) */}
           <button
-            onClick={() => downloadCustomerStatementPDF(customer, loans, payments)}
+            onClick={() => setShowDownloadModal(true)}
             className="flex items-center space-x-1.5 h-11 px-3.5 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-sky-500/20 active:scale-95 transition"
-            title="Download complete PDF statement with payment schedule"
+            title="Download Separate Active Loans, Settled Loans, or Complete Statement PDF"
           >
             <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Download PDF</span>
-            <span className="sm:hidden">PDF</span>
+            <span className="hidden sm:inline">Download Statement</span>
+            <span className="sm:hidden">Statement</span>
           </button>
 
           {/* 2. Export CSV / Excel */}
@@ -311,11 +313,11 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
 
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => downloadCustomerStatementPDF(customer, loans, payments)}
+              onClick={() => setShowDownloadModal(true)}
               className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center space-x-1"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Save PDF</span>
+              <span>Download Statement (Active / Settled)</span>
             </button>
             <span className="text-slate-300 dark:text-slate-700">•</span>
             <button
@@ -740,6 +742,18 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
           loans={loans}
           payments={payments}
           onClose={() => setShowStatementModal(false)}
+        />
+      )}
+
+      {/* 3-Option Statement Download Modal (Active / Settled / Complete) */}
+      {showDownloadModal && (
+        <StatementDownloadModal
+          isOpen={showDownloadModal}
+          onClose={() => setShowDownloadModal(false)}
+          customer={customer}
+          loans={loans}
+          payments={payments}
+          onOpenStatementSheet={() => setShowStatementModal(true)}
         />
       )}
     </div>
