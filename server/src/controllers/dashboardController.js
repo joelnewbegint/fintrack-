@@ -11,6 +11,42 @@ export const getDashboardStats = async (req, res, next) => {
     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
     // 1. Overall Loan Aggregate (Separating Active Loans vs Settled Loans)
+    // Robust per-loan interest expression supporting upfront deduction, addon, disbursed difference, and interest percentage
+    const loanInterestExpr = {
+      $cond: [
+        { $gt: ['$chargeAmount', 0] },
+        '$chargeAmount',
+        {
+          $cond: [
+            { $gt: ['$totalPayable', '$principal'] },
+            { $subtract: ['$totalPayable', '$principal'] },
+            {
+              $cond: [
+                {
+                  $and: [
+                    { $gt: ['$disbursedAmount', 0] },
+                    { $lt: ['$disbursedAmount', '$principal'] },
+                  ],
+                },
+                { $subtract: ['$principal', '$disbursedAmount'] },
+                {
+                  $round: [
+                    {
+                      $multiply: [
+                        { $ifNull: ['$principal', 0] },
+                        { $divide: [{ $ifNull: ['$interestPercent', 0] }, 100] },
+                      ],
+                    },
+                    0,
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
     const loanAggregate = await Loan.aggregate([
       {
         $group: {
@@ -22,59 +58,87 @@ export const getDashboardStats = async (req, res, next) => {
           totalLoans: { $sum: 1 },
           activeLoans: {
             $sum: {
-              $cond: [{ $in: ['$status', ['active', 'overdue']] }, 1, 0],
+              $cond: [{ $in: ['$status', ['active', 'overdue', 'Active', 'Overdue']] }, 1, 0],
             },
           },
           overdueLoans: {
             $sum: {
-              $cond: [{ $eq: ['$status', 'overdue'] }, 1, 0],
+              $cond: [{ $in: ['$status', ['overdue', 'Overdue']] }, 1, 0],
             },
           },
           completedLoans: {
             $sum: {
-              $cond: [{ $eq: ['$status', 'completed'] }, 1, 0],
+              $cond: [{ $in: ['$status', ['completed', 'closed', 'Completed', 'Closed']] }, 1, 0],
             },
           },
           // Active loans principal and totalPayable
           activePrincipal: {
             $sum: {
-              $cond: [{ $in: ['$status', ['active', 'overdue']] }, '$principal', 0],
+              $cond: [{ $in: ['$status', ['active', 'overdue', 'Active', 'Overdue']] }, '$principal', 0],
             },
           },
           activeTotalPayable: {
             $sum: {
-              $cond: [{ $in: ['$status', ['active', 'overdue']] }, '$totalPayable', 0],
+              $cond: [{ $in: ['$status', ['active', 'overdue', 'Active', 'Overdue']] }, '$totalPayable', 0],
             },
           },
           activeChargeAmount: {
             $sum: {
-              $cond: [{ $in: ['$status', ['active', 'overdue']] }, '$chargeAmount', 0],
+              $cond: [{ $in: ['$status', ['active', 'overdue', 'Active', 'Overdue']] }, { $ifNull: ['$chargeAmount', 0] }, 0],
+            },
+          },
+          activeInterest: {
+            $sum: {
+              $cond: [
+                {
+                  $or: [
+                    { $in: ['$status', ['active', 'overdue', 'Active', 'Overdue']] },
+                    {
+                      $and: [
+                        { $nin: ['$status', ['completed', 'closed', 'Completed', 'Closed']] },
+                        { $gt: [{ $ifNull: ['$remainingBalance', '$principal'] }, 0] },
+                      ],
+                    },
+                  ],
+                },
+                loanInterestExpr,
+                0,
+              ],
             },
           },
           activeCollected: {
             $sum: {
-              $cond: [{ $in: ['$status', ['active', 'overdue']] }, '$totalCollected', 0],
+              $cond: [{ $in: ['$status', ['active', 'overdue', 'Active', 'Overdue']] }, '$totalCollected', 0],
             },
           },
           // Settled loans principal and totalCollected/totalPayable
           settledPrincipal: {
             $sum: {
-              $cond: [{ $eq: ['$status', 'completed'] }, '$principal', 0],
+              $cond: [{ $in: ['$status', ['completed', 'closed', 'Completed', 'Closed']] }, '$principal', 0],
             },
           },
           settledTotalPayable: {
             $sum: {
-              $cond: [{ $eq: ['$status', 'completed'] }, '$totalPayable', 0],
+              $cond: [{ $in: ['$status', ['completed', 'closed', 'Completed', 'Closed']] }, '$totalPayable', 0],
             },
           },
           settledChargeAmount: {
             $sum: {
-              $cond: [{ $eq: ['$status', 'completed'] }, '$chargeAmount', 0],
+              $cond: [{ $in: ['$status', ['completed', 'closed', 'Completed', 'Closed']] }, { $ifNull: ['$chargeAmount', 0] }, 0],
+            },
+          },
+          settledInterest: {
+            $sum: {
+              $cond: [
+                { $in: ['$status', ['completed', 'closed', 'Completed', 'Closed']] },
+                loanInterestExpr,
+                0,
+              ],
             },
           },
           settledAmount: {
             $sum: {
-              $cond: [{ $eq: ['$status', 'completed'] }, '$totalCollected', 0],
+              $cond: [{ $in: ['$status', ['completed', 'closed', 'Completed', 'Closed']] }, '$totalCollected', 0],
             },
           },
         },
@@ -93,10 +157,12 @@ export const getDashboardStats = async (req, res, next) => {
       activePrincipal: 0,
       activeTotalPayable: 0,
       activeChargeAmount: 0,
+      activeInterest: 0,
       activeCollected: 0,
       settledPrincipal: 0,
       settledTotalPayable: 0,
       settledChargeAmount: 0,
+      settledInterest: 0,
       settledAmount: 0,
     };
 
@@ -104,16 +170,18 @@ export const getDashboardStats = async (req, res, next) => {
     const settledAmount = totalStats.settledAmount || totalStats.settledTotalPayable || 0;
 
     // 2. Profit from Settled: Pure profit/interest realized exclusively from completed loans
-    // Supports upfront deduction loans (settledChargeAmount) and addon loans
+    // Supports upfront deduction loans (settledInterest / settledChargeAmount) and addon loans
     const profitFromSettled = Math.max(
+      totalStats.settledInterest || 0,
       totalStats.settledChargeAmount || 0,
       Math.max(0, (totalStats.settledTotalPayable || totalStats.settledAmount) - totalStats.settledPrincipal)
     );
 
     // 3. Active Interest: Expected interest currently sitting in active/running loans.
     // When a loan completes, it automatically leaves active loans, which reduces activeInterest and transfers into profitFromSettled!
-    // Supports upfront deduction loans (activeChargeAmount) and addon loans
+    // Supports upfront deduction loans (activeInterest / activeChargeAmount) and addon loans
     const activeInterest = Math.max(
+      totalStats.activeInterest || 0,
       totalStats.activeChargeAmount || 0,
       Math.max(0, totalStats.activeTotalPayable - totalStats.activePrincipal)
     );

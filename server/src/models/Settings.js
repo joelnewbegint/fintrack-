@@ -44,6 +44,26 @@ const settingsSchema = new mongoose.Schema(
       type: String,
       default: '₹',
     },
+    holidays: [
+      {
+        date: {
+          type: String, // 'YYYY-MM-DD'
+        },
+        type: {
+          type: String,
+          enum: ['holiday', 'missed'],
+          default: 'holiday',
+        },
+        reason: {
+          type: String,
+          default: 'Holiday / விடுமுறை',
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

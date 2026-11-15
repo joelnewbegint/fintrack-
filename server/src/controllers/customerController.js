@@ -33,37 +33,96 @@ export const getCustomers = async (req, res, next) => {
 
     // Populate active loans count, total loans count, and total outstanding for each customer
     const customerIds = customers.map((c) => c._id);
+    const customerPhones = customers.map((c) => c.phone).filter(Boolean);
+    const customerNames = customers.map((c) => c.name).filter(Boolean);
+
     const allCustomerLoans = await Loan.find({
-      customerId: { $in: customerIds },
-    }).select('customerId remainingBalance principal financeType status');
+      $or: [
+        { customerId: { $in: customerIds } },
+        { customerPhone: { $in: customerPhones } },
+        { customerName: { $in: customerNames } },
+      ],
+    }).select('customerId customerPhone customerName notes remainingBalance principal totalPayable financeType status');
 
     const customerLoanMap = {};
+    const customerPhoneMap = {};
+    const customerNameMap = {};
+
     allCustomerLoans.forEach((loan) => {
-      const cid = loan.customerId.toString();
-      if (!customerLoanMap[cid]) {
-        customerLoanMap[cid] = { activeLoanCount: 0, totalOutstanding: 0, totalLoansCount: 0, types: [] };
+      const cid = loan.customerId ? loan.customerId.toString() : '';
+      const rem = Number(loan.remainingBalance != null ? loan.remainingBalance : loan.totalPayable || loan.principal) || 0;
+      const statusLower = String(loan.status || '').toLowerCase();
+      const isActive = statusLower === 'active' || statusLower === 'overdue' || (statusLower !== 'completed' && rem > 0);
+
+      const bucket = {
+        loanId: loan._id,
+        rem,
+        isActive,
+        financeType: loan.financeType,
+      };
+
+      if (cid) {
+        if (!customerLoanMap[cid]) customerLoanMap[cid] = [];
+        customerLoanMap[cid].push(bucket);
       }
-      customerLoanMap[cid].totalLoansCount += 1;
-      const rem = Number(loan.remainingBalance != null ? loan.remainingBalance : loan.principal) || 0;
-      if (loan.status === 'active' || loan.status === 'overdue' || rem > 0) {
-        customerLoanMap[cid].activeLoanCount += 1;
-        customerLoanMap[cid].totalOutstanding += rem;
+      if (loan.customerPhone) {
+        const pClean = loan.customerPhone.replace(/[^0-9]/g, '');
+        if (pClean) {
+          if (!customerPhoneMap[pClean]) customerPhoneMap[pClean] = [];
+          customerPhoneMap[pClean].push(bucket);
+        }
       }
-      if (loan.financeType && !customerLoanMap[cid].types.includes(loan.financeType)) {
-        customerLoanMap[cid].types.push(loan.financeType);
+      if (loan.customerName) {
+        const nClean = loan.customerName.toLowerCase().split('(')[0].trim().replace(/[^a-z0-9]/g, '');
+        if (nClean) {
+          if (!customerNameMap[nClean]) customerNameMap[nClean] = [];
+          customerNameMap[nClean].push(bucket);
+        }
       }
     });
 
     const enrichedCustomers = customers.map((c) => {
-      const stats = customerLoanMap[c._id.toString()] || {
-        activeLoanCount: 0,
-        totalOutstanding: 0,
-        totalLoansCount: 0,
-        types: [],
+      const cidStr = c._id.toString();
+      const pClean = (c.phone || '').replace(/[^0-9]/g, '');
+      const nClean = (c.name || '').toLowerCase().split('(')[0].trim().replace(/[^a-z0-9]/g, '');
+
+      const seen = new Set();
+      const matchedLoans = [];
+      const addBuckets = (list) => {
+        if (!list) return;
+        for (const item of list) {
+          const key = String(item.loanId);
+          if (!seen.has(key)) {
+            seen.add(key);
+            matchedLoans.push(item);
+          }
+        }
       };
+
+      addBuckets(customerLoanMap[cidStr]);
+      if (pClean) addBuckets(customerPhoneMap[pClean]);
+      if (nClean) addBuckets(customerNameMap[nClean]);
+
+      let activeLoanCount = 0;
+      let totalOutstanding = 0;
+      const types = [];
+
+      matchedLoans.forEach((b) => {
+        if (b.isActive) {
+          activeLoanCount += 1;
+          totalOutstanding += b.rem;
+        }
+        if (b.financeType && !types.includes(b.financeType)) {
+          types.push(b.financeType);
+        }
+      });
+
       return {
         ...c.toObject(),
-        ...stats,
+        activeLoanCount,
+        totalOutstanding,
+        totalLoansCount: matchedLoans.length,
+        types,
       };
     });
 
@@ -92,7 +151,9 @@ export const getCustomerById = async (req, res, next) => {
     }
 
     // Fetch customer's loans
-    const loans = await Loan.find({ customerId: customer._id }).sort({ createdAt: -1 });
+    const loanConditions = [{ customerId: customer._id }];
+    if (customer.phone) loanConditions.push({ customerPhone: customer.phone });
+    const loans = await Loan.find({ $or: loanConditions }).sort({ createdAt: -1 });
 
     // Fetch customer's payments
     const payments = await Payment.find({ customerId: customer._id })

@@ -4,7 +4,7 @@ import { formatCurrency, formatDateForInput } from '../../utils/currency';
 import { parseCustomerName } from '../../utils/customerName';
 import { useDeviceMode } from '../../context/DeviceModeContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { buildLoanAgreementPDF } from '../../utils/loanAgreementPdf';
+import { buildLoanAgreementPDF, downloadRepaymentSchedulePDF } from '../../utils/loanAgreementPdf';
 import {
   X,
   PlusCircle,
@@ -368,11 +368,21 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
   };
 
   // Success Screen Action Handlers
+  const [scheduleDownloadedSuccess, setScheduleDownloadedSuccess] = useState(false);
+
   const handleDownloadPdf = () => {
     if (pdfResult) {
       pdfResult.download();
       setDownloadedSuccess(true);
       setTimeout(() => setDownloadedSuccess(false), 3000);
+    }
+  };
+
+  const handleDownloadSchedule = () => {
+    if (createdLoan) {
+      downloadRepaymentSchedulePDF(createdLoan, selectedCustomer);
+      setScheduleDownloadedSuccess(true);
+      setTimeout(() => setScheduleDownloadedSuccess(false), 3000);
     }
   };
 
@@ -930,50 +940,39 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                     </span>
                   </div>
 
-                  {/* Linked Inputs: Charge Amount (₹) and Interest Rate (%) */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Charge Amount / கட்டணத் தொகை (₹)
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-xs font-black text-slate-400">₹</span>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          min="0"
-                          value={chargeAmount}
-                          onChange={(e) => handleChargeAmountChange(e.target.value)}
-                          placeholder="2000"
-                          className="w-full pl-7 pr-3 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums text-slate-900 dark:text-white"
-                        />
-                      </div>
-                      <span className="text-[9.5px] text-slate-400 mt-0.5 block">
-                        Direct charge in ₹
-                      </span>
+                  {/* Charge Amount (₹) - Percentage is hidden as required */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Charge Amount / கட்டணத் தொகை (₹)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs font-black text-slate-400">₹</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        value={chargeAmount}
+                        onChange={(e) => handleChargeAmountChange(e.target.value)}
+                        placeholder="2000"
+                        className="w-full pl-7 pr-3 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums text-slate-900 dark:text-white"
+                      />
                     </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Interest Rate / வட்டி விகிதம் (%)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          step="0.1"
-                          min="0"
-                          max="100"
-                          value={interestPercent}
-                          onChange={(e) => handleInterestPercentChange(e.target.value)}
-                          placeholder="10"
-                          className="w-full pl-3 pr-7 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums text-slate-900 dark:text-white"
-                        />
-                        <span className="absolute right-3 top-2.5 text-xs font-black text-slate-400">%</span>
-                      </div>
-                      <span className="text-[9.5px] text-slate-400 mt-0.5 block">
-                        Auto-calculated rate
-                      </span>
+                    {/* Quick preset charge buttons */}
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {[1000, 1500, 2000, 2500, 3000, 4500].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => handleChargeAmountChange(amt)}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition ${
+                            Number(chargeAmount) === amt
+                              ? 'bg-sky-500 text-white border-sky-500'
+                              : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                          }`}
+                        >
+                          ₹{amt.toLocaleString('en-IN')}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
@@ -1183,7 +1182,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase font-bold">
-                        {interestType === 'deduction' ? 'Deducted Charge (பிடித்தம்)' : 'Interest Charge'} ({interestNum}%)
+                        {interestType === 'deduction' ? 'Deducted Charge (பிடித்தம்)' : 'Processing Charge'}
                       </span>
                       <p className={`font-black tabular-nums ${interestType === 'deduction' ? 'text-amber-600' : 'text-emerald-600'}`}>
                         {interestType === 'deduction' ? `- ${formatCurrency(chargeAmountNum)}` : `+ ${formatCurrency(chargeAmountNum)}`}
@@ -1318,7 +1317,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                         <Download className="w-4 h-4 text-white" />
                       </div>
                       <div>
-                        <p className="leading-tight">1. Download Loan Application PDF</p>
+                        <p className="leading-tight">1. Download Loan Agreement &amp; Application PDF</p>
                         <p className="text-[10px] text-sky-100 font-medium">
                           கடன் விண்ணப்பம் மற்றும் ஒப்பந்த PDF பதிவிறக்கம்
                         </p>
@@ -1333,7 +1332,33 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                     )}
                   </button>
 
-                  {/* Option 2: Preview Loan Application PDF */}
+                  {/* Option 2: Download Repayment Schedule Statement PDF */}
+                  <button
+                    type="button"
+                    onClick={handleDownloadSchedule}
+                    className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs shadow-md shadow-indigo-500/25 active:scale-98 transition"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+                        <Calendar className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <p className="leading-tight">2. Download Repayment Schedule PDF</p>
+                        <p className="text-[10px] text-indigo-100 font-medium">
+                          தவணை அட்டவணை PDF பதிவிறக்கம் (Daily Ledger Schedule)
+                        </p>
+                      </div>
+                    </div>
+                    {scheduleDownloadedSuccess ? (
+                      <span className="text-[10px] bg-white text-indigo-700 font-black px-2 py-0.5 rounded-full">
+                        Saved ✓
+                      </span>
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-indigo-200" />
+                    )}
+                  </button>
+
+                  {/* Option 3: Preview Loan Application PDF */}
                   <button
                     type="button"
                     onClick={handlePreviewPdf}
@@ -1344,7 +1369,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                         <Eye className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="leading-tight">2. Preview Loan Application PDF</p>
+                        <p className="leading-tight">3. Preview Loan Application PDF</p>
                         <p className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
                           படிவத்தை முன்னோட்டமிட (View Document)
                         </p>
@@ -1353,7 +1378,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                     <ChevronRight className="w-4 h-4 text-slate-400" />
                   </button>
 
-                  {/* Option 3: Print Loan Application */}
+                  {/* Option 4: Print Loan Application */}
                   <button
                     type="button"
                     onClick={handlePrintPdf}
@@ -1364,7 +1389,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                         <Printer className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="leading-tight">3. Print Loan Application</p>
+                        <p className="leading-tight">4. Print Loan Application</p>
                         <p className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
                           உடனடி அச்சுப்பொறி அச்சு (Physical Copy)
                         </p>

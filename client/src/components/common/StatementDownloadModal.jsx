@@ -12,6 +12,7 @@ import {
   User,
   ShieldCheck,
   ChevronRight,
+  Calendar,
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { formatCurrency } from '../../utils/currency';
@@ -21,6 +22,7 @@ import {
   exportCustomerStatementCSV,
   filterLoansByStatementType,
 } from '../../utils/schedule';
+import { downloadRepaymentSchedulePDF } from '../../utils/loanAgreementPdf';
 
 export const StatementDownloadModal = ({
   isOpen,
@@ -96,6 +98,27 @@ export const StatementDownloadModal = ({
     } catch (err) {
       console.error('Error generating statement:', err);
       setErrorMessage(err.message || 'Failed to generate statement.');
+    } finally {
+      setGeneratingType(null);
+    }
+  };
+
+  const handleDownloadSchedule = async () => {
+    setErrorMessage('');
+    setSuccessMessage('');
+    setGeneratingType('schedule_pdf');
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      const targetLoan = activeData.filteredLoans[0] || loans[0];
+      if (!targetLoan) {
+        throw new Error('No loan account found to generate repayment schedule.');
+      }
+      downloadRepaymentSchedulePDF(targetLoan, customer, payments);
+      setSuccessMessage('Repayment Schedule PDF downloaded successfully!');
+      setTimeout(() => setSuccessMessage(''), 4000);
+    } catch (err) {
+      console.error('Error generating schedule:', err);
+      setErrorMessage(err.message || 'Failed to generate repayment schedule.');
     } finally {
       setGeneratingType(null);
     }
@@ -420,6 +443,72 @@ export const StatementDownloadModal = ({
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* ========================================================
+              OPTION 4: REPAYMENT SCHEDULE STATEMENT (தவணை அட்டவணை)
+          ======================================================== */}
+          <div
+            className={`p-4 rounded-2xl border transition ${
+              loans.length > 0
+                ? 'bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/30 dark:from-indigo-950/30 dark:via-slate-800/60 dark:to-slate-900 border-indigo-200 dark:border-indigo-900/60 shadow-xs'
+                : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-800 opacity-60'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start space-x-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 text-white flex items-center justify-center shrink-0 shadow-sm shadow-indigo-600/20">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h4 className="font-black text-xs text-slate-900 dark:text-white">
+                      4. Repayment Schedule Statement
+                    </h4>
+                    <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950/60 px-2 py-0.2 rounded-full">
+                      தவணை அட்டவணை
+                    </span>
+                  </div>
+                  <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Download official day-by-day installment repayment schedule table with due dates, amounts, and signature columns.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10.5px]">
+                    <span className="text-slate-600 dark:text-slate-400">
+                      Target Loan: <strong className="text-slate-900 dark:text-white">{(activeData.filteredLoans[0] || loans[0])?.loanNo || 'N/A'}</strong>
+                    </span>
+                    <span>•</span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">
+                      {(activeData.filteredLoans[0] || loans[0])?.duration || 100} Installments
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <div className="mt-3 pt-2.5 border-t border-indigo-200/60 dark:border-indigo-900/40 flex items-center justify-between gap-2">
+              <span className="text-[10px] text-slate-400">
+                Official B/W print-ready schedule table
+              </span>
+              <button
+                type="button"
+                onClick={handleDownloadSchedule}
+                disabled={loans.length === 0 || generatingType !== null}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs shadow-md shadow-indigo-600/20 active:scale-95 transition disabled:opacity-40 flex items-center space-x-1.5"
+              >
+                {generatingType === 'schedule_pdf' ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Generating Schedule...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Repayment Schedule PDF</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

@@ -10,7 +10,8 @@ import WhatsAppReminderModal from '../components/common/WhatsAppReminderModal';
 import WhatsAppPaymentHistoryModal from '../components/common/WhatsAppPaymentHistoryModal';
 import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 import LoanApplicationFormModal from '../components/common/LoanApplicationFormModal';
-import { downloadLoanAgreementPDF } from '../utils/loanAgreementPdf';
+import EditLoanModal from '../components/common/EditLoanModal';
+import { downloadLoanAgreementPDF, downloadRepaymentSchedulePDF } from '../utils/loanAgreementPdf';
 import {
   ArrowLeft,
   CreditCard,
@@ -25,6 +26,9 @@ import {
   Share2,
   Smartphone,
   Download,
+  Pencil,
+  Trash2,
+  Calendar,
 } from 'lucide-react';
 
 export const LoanDetail = ({ loanId, onBack }) => {
@@ -40,6 +44,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const [showWhatsAppHub, setShowWhatsAppHub] = useState(false);
   const [showPaymentHistoryModal, setShowPaymentHistoryModal] = useState(false);
   const [showLoanFormModal, setShowLoanFormModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const fetchLoanData = async () => {
     try {
@@ -144,12 +149,53 @@ export const LoanDetail = ({ loanId, onBack }) => {
           </button>
 
           <button
+            onClick={() => setShowEditModal(true)}
+            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-md shadow-amber-500/20 active:scale-95 transition"
+            title="Edit Loan Terms, Principal, Duration & Details"
+          >
+            <Pencil className="w-4 h-4" />
+            <span>Edit Loan / திருத்து</span>
+          </button>
+
+          <button
+            onClick={async () => {
+              if (
+                window.confirm(
+                  `Are you sure you want to permanently delete Loan ${loan.loanNo}? This will remove the loan and its transaction records.`
+                )
+              ) {
+                try {
+                  await api.deleteLoan(loan._id);
+                  alert(`Loan ${loan.loanNo} successfully deleted.`);
+                  onBack();
+                } catch (err) {
+                  alert(err.message || 'Failed to delete loan');
+                }
+              }
+            }}
+            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold text-xs shadow-md shadow-red-500/20 active:scale-95 transition"
+            title="Permanently Delete This Loan Account"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Delete Loan / நீக்கு</span>
+          </button>
+
+          <button
             onClick={() => downloadLoanAgreementPDF(loan, customer)}
             className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-sky-500/20 active:scale-95 transition"
             title="Download Official Loan Application & Agreement PDF with Borrower Photo"
           >
             <Download className="w-4 h-4" />
             <span>Download Form PDF</span>
+          </button>
+
+          <button
+            onClick={() => downloadRepaymentSchedulePDF(loan, customer, payments)}
+            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-indigo-500/20 active:scale-95 transition"
+            title="Download Official Day-by-Day Repayment Schedule Statement PDF (தவணை அட்டவணை)"
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Repayment Schedule PDF</span>
           </button>
 
           <button
@@ -519,6 +565,20 @@ export const LoanDetail = ({ loanId, onBack }) => {
           isOpen={showLoanFormModal}
           prefillData={loan}
           onClose={() => setShowLoanFormModal(false)}
+        />
+      )}
+
+      {/* Edit Loan Modal */}
+      {showEditModal && (
+        <EditLoanModal
+          isOpen={showEditModal}
+          loan={loan}
+          customer={customer}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={(updatedLoan) => {
+            setLoan(updatedLoan);
+            setShowEditModal(false);
+          }}
         />
       )}
     </div>

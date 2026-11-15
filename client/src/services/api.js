@@ -768,6 +768,59 @@ export const api = {
     return { success: true, loan: newLoan };
   },
 
+  updateLoan: async (id, loanData) => {
+    const result = await safeFetchJson(`/api/loans/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(loanData),
+    });
+    if (result.ok) return result.data;
+
+    if (result.error && !result.isHtml) {
+      throw new Error(result.error);
+    }
+
+    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+    const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
+    const loanIndex = loans.findIndex((l) => String(l._id) === String(id));
+    if (loanIndex !== -1) {
+      const existing = loans[loanIndex];
+      const p = loanData.principal !== undefined ? Number(loanData.principal) : Number(existing.principal);
+      const c = loanData.chargeAmount !== undefined ? Number(loanData.chargeAmount) : Number(existing.chargeAmount || 0);
+      const it = loanData.interestType || existing.interestType || 'deduction';
+      const tot = loanData.totalPayable !== undefined ? Number(loanData.totalPayable) : (it === 'deduction' ? p : p + c);
+      const collected = Number(existing.totalCollected || 0);
+      const rem = Math.max(0, tot - collected);
+      const updated = {
+        ...existing,
+        ...loanData,
+        principal: p,
+        chargeAmount: c,
+        interestType: it,
+        disbursedAmount: it === 'deduction' ? Math.max(0, p - c) : p,
+        totalPayable: tot,
+        remainingBalance: rem,
+        balanceAmount: rem,
+        status: rem === 0 && collected > 0 ? 'completed' : (loanData.status || existing.status),
+        updatedAt: new Date().toISOString(),
+      };
+      loans[loanIndex] = updated;
+      setStored(STORAGE_KEYS.LOANS, loans);
+
+      if (loanData.borrowerPhoto) {
+        const custId = existing.customerId?._id || existing.customerId;
+        const custIdx = customers.findIndex((c) => String(c._id) === String(custId));
+        if (custIdx !== -1) {
+          customers[custIdx].photoUrl = loanData.borrowerPhoto;
+          setStored(STORAGE_KEYS.CUSTOMERS, customers);
+        }
+      }
+
+      return { success: true, loan: updated };
+    }
+    throw new Error('Loan not found in local store');
+  },
+
   updateLoanStatus: async (id, statusData) => {
     const result = await safeFetchJson(`/api/loans/${id}/status`, {
       method: 'PATCH',
@@ -783,6 +836,101 @@ export const api = {
       setStored(STORAGE_KEYS.LOANS, loans);
       return { success: true, loan: loans[index] };
     }
+    return { success: true };
+  },
+
+  deleteLoan: async (id) => {
+    const result = await safeFetchJson(`/api/loans/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (result.ok) return result.data;
+
+    let loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+    loans = loans.filter((l) => String(l._id) !== String(id));
+    setStored(STORAGE_KEYS.LOANS, loans);
+
+    let payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments);
+    payments = payments.filter((p) => String(p.loanId?._id || p.loanId) !== String(id));
+    setStored(STORAGE_KEYS.PAYMENTS, payments);
+
+    return { success: true };
+  },
+
+  declareLoanHoliday: async (id, holidayData) => {
+    const result = await safeFetchJson(`/api/loans/${id}/holiday`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(holidayData),
+    });
+    if (result.ok) return result.data;
+
+    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+    const index = loans.findIndex((l) => String(l._id) === String(id));
+    if (index !== -1) {
+      if (!Array.isArray(loans[index].holidays)) loans[index].holidays = [];
+      const item = {
+        date: holidayData.date || new Date().toISOString().split('T')[0],
+        installmentNo: holidayData.installmentNo,
+        type: holidayData.type || 'holiday',
+        reason: holidayData.reason || '',
+      };
+      const exIdx = loans[index].holidays.findIndex(
+        (h) => (holidayData.installmentNo && Number(h.installmentNo) === Number(holidayData.installmentNo)) ||
+               (h.date && h.date.split('T')[0] === item.date)
+      );
+      if (exIdx >= 0) loans[index].holidays[exIdx] = item;
+      else loans[index].holidays.push(item);
+
+      setStored(STORAGE_KEYS.LOANS, loans);
+      return { success: true, loan: loans[index] };
+    }
+    return { success: true };
+  },
+
+  removeLoanHoliday: async (id, holidayData) => {
+    const result = await safeFetchJson(`/api/loans/${id}/holiday`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+      body: JSON.stringify(holidayData),
+    });
+    if (result.ok) return result.data;
+
+    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+    const index = loans.findIndex((l) => String(l._id) === String(id));
+    if (index !== -1 && Array.isArray(loans[index].holidays)) {
+      loans[index].holidays = loans[index].holidays.filter(
+        (h) => !(holidayData.installmentNo && Number(h.installmentNo) === Number(holidayData.installmentNo)) &&
+               !(holidayData.date && h.date && h.date.split('T')[0] === holidayData.date.split('T')[0])
+      );
+      setStored(STORAGE_KEYS.LOANS, loans);
+      return { success: true, loan: loans[index] };
+    }
+    return { success: true };
+  },
+
+  declareGlobalHoliday: async (holidayData) => {
+    const result = await safeFetchJson('/api/settings/holiday', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(holidayData),
+    });
+    if (result.ok) return result.data;
+
+    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+    const dateStr = holidayData.date || new Date().toISOString().split('T')[0];
+    const item = {
+      date: dateStr,
+      type: holidayData.type || 'holiday',
+      reason: holidayData.reason || 'General Holiday',
+    };
+    loans.forEach((l) => {
+      if (!Array.isArray(l.holidays)) l.holidays = [];
+      if (!l.holidays.some((h) => h.date && h.date.split('T')[0] === dateStr)) {
+        l.holidays.push(item);
+      }
+    });
+    setStored(STORAGE_KEYS.LOANS, loans);
     return { success: true };
   },
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import api from '../../services/api';
 import { useDeviceMode } from '../../context/DeviceModeContext';
-import { X, UserPlus, Shield } from 'lucide-react';
+import { X, UserPlus, Shield, Banknote, Sparkles } from 'lucide-react';
 
 export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
   const isEdit = Boolean(customer);
@@ -19,11 +19,12 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
   const [guarantorAddress, setGuarantorAddress] = useState(customer?.guarantor?.address || '');
   const [guarantorRelationship, setGuarantorRelationship] = useState(customer?.guarantor?.relationship || '');
   const [notes, setNotes] = useState(customer?.notes || '');
+  const [issueLoanImmediately, setIssueLoanImmediately] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e, directIssue = false) => {
+    if (e && e.preventDefault) e.preventDefault();
     setError('');
 
     const payload = {
@@ -52,8 +53,9 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
         res = await api.createCustomer(payload);
       }
 
+      const shouldIssue = directIssue || issueLoanImmediately;
       if (onSuccess) {
-        onSuccess(res.customer);
+        onSuccess(res.customer, { issueLoan: shouldIssue });
       }
       onClose();
     } catch (err) {
@@ -229,14 +231,68 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
             />
           </div>
 
-          {/* Sticky footer action button */}
-          <div className="sticky bottom-0 pt-3 pb-1 bg-white dark:bg-slate-900">
+          {/* Quick Issue Loan Toggle (For New Customers) */}
+          {!isEdit && (
+            <div
+              onClick={() => setIssueLoanImmediately(!issueLoanImmediately)}
+              className={`p-3.5 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
+                issueLoanImmediately
+                  ? 'bg-sky-50 dark:bg-sky-950/50 border-sky-400 dark:border-sky-600 ring-2 ring-sky-400/20'
+                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center font-black ${
+                    issueLoanImmediately
+                      ? 'bg-sky-500 text-white'
+                      : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  <Banknote className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>Issue Loan Immediately / உடனே கடன் வழங்குக</span>
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Automatically opens loan issuance form after registering customer
+                  </div>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={issueLoanImmediately}
+                onChange={(e) => setIssueLoanImmediately(e.target.checked)}
+                className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="sticky bottom-0 pt-3 pb-1 bg-white dark:bg-slate-900 flex flex-col sm:flex-row gap-2">
+            {!isEdit && (
+              <button
+                type="button"
+                onClick={(e) => handleSubmit(e, true)}
+                disabled={submitting}
+                className="flex-1 min-h-[48px] rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-extrabold text-xs shadow-xl shadow-sky-500/25 transition active:scale-98 flex items-center justify-center space-x-2"
+              >
+                <Banknote className="w-4 h-4" />
+                <span>Save &amp; Issue Loan / கடன் வழங்குக</span>
+              </button>
+            )}
+
             <button
               type="submit"
               disabled={submitting}
-              className="w-full min-h-[48px] rounded-2xl bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-bold text-sm shadow-xl shadow-sky-500/25 transition active:scale-98 flex items-center justify-center"
+              className={`${
+                isEdit ? 'w-full' : 'sm:w-auto px-5'
+              } min-h-[48px] rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-xs shadow-md transition active:scale-98 flex items-center justify-center space-x-1.5`}
             >
-              {submitting ? 'Saving Customer...' : isEdit ? 'Update Customer' : 'Add Customer'}
+              <span>{submitting ? 'Saving Customer...' : isEdit ? 'Update Customer' : 'Save Customer Only'}</span>
             </button>
           </div>
         </form>

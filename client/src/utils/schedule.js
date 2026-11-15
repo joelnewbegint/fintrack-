@@ -185,22 +185,37 @@ export const generateLoanSchedule = (loan, loanPayments = []) => {
     let receiptNo = '';
     let isPaid = false;
 
+    // ONLY REAL RECORDED PAYMENTS - NEVER AUTO-GENERATE FAKE ENTRIES
     if (p) {
       paidAmount = Number(p.amount) || 0;
       paidDate = p.date || p.paymentDate;
       receiptNo = p.receiptNo || '';
       isPaid = paidAmount >= targetAmt;
       totalAllocated += paidAmount;
-    } else if (loan.status === 'completed' || totalAllocated + targetAmt <= Number(loan.totalCollected || 0)) {
-      paidAmount = targetAmt;
-      isPaid = true;
-      totalAllocated += targetAmt;
-      paidDate = currentDate.toISOString();
-      receiptNo = `AUTO-${i}`;
     }
 
-    const isOverdue = !isPaid && currentDate < now;
-    const status = isPaid ? 'paid' : paidAmount > 0 ? 'partial' : isOverdue ? 'overdue' : 'pending';
+    // Check if declared as Holiday or Missed Day
+    const dateStr = currentDate.toISOString().split('T')[0];
+    const holidayEntry = (loan.holidays || []).find(
+      (h) => Number(h.installmentNo) === i || (h.date && h.date.split('T')[0] === dateStr)
+    );
+
+    const isHoliday = holidayEntry?.type === 'holiday';
+    const isMissed = holidayEntry?.type === 'missed';
+    const isOverdue = !isPaid && !isHoliday && !isMissed && currentDate < now;
+
+    let status = 'pending';
+    if (isPaid) {
+      status = 'paid';
+    } else if (paidAmount > 0) {
+      status = 'partial';
+    } else if (isHoliday) {
+      status = 'holiday';
+    } else if (isMissed) {
+      status = 'missed';
+    } else if (isOverdue) {
+      status = 'overdue';
+    }
 
     schedule.push({
       installmentNo: i,
@@ -210,6 +225,7 @@ export const generateLoanSchedule = (loan, loanPayments = []) => {
       paidDate,
       receiptNo,
       status,
+      holidayReason: holidayEntry?.reason || '',
     });
   }
 

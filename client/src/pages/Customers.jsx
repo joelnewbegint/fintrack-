@@ -6,6 +6,7 @@ import { useDeviceMode } from '../context/DeviceModeContext';
 import { formatCurrency } from '../utils/currency';
 import { parseCustomerName } from '../utils/customerName';
 import CustomerModal from '../components/common/CustomerModal';
+import { LoanModal } from '../components/common/LoanModal';
 import {
   UserPlus,
   Search,
@@ -19,6 +20,7 @@ import {
   User,
   Smartphone,
   Download,
+  Banknote,
 } from 'lucide-react';
 import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 import StatementDownloadModal from '../components/common/StatementDownloadModal';
@@ -37,6 +39,7 @@ export const Customers = ({ onViewCustomer }) => {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
+  const [loanCustomerId, setLoanCustomerId] = useState(null);
   const [whatsappCustomer, setWhatsappCustomer] = useState(null);
   const [statementCustomerData, setStatementCustomerData] = useState(null);
   const [loadingStatementId, setLoadingStatementId] = useState(null);
@@ -225,6 +228,15 @@ export const Customers = ({ onViewCustomer }) => {
                   {isOwner && (
                     <>
                       <button
+                        onClick={() => setLoanCustomerId(c._id)}
+                        className="py-1 px-2.5 rounded-xl bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900/60 border border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300 font-extrabold text-[11px] flex items-center space-x-1 transition active:scale-95"
+                        title="Issue Loan to this Customer / கடன் வழங்குக"
+                      >
+                        <Banknote className="w-3.5 h-3.5" />
+                        <span>+ Loan</span>
+                      </button>
+
+                      <button
                         onClick={() => setEditingCustomer(c)}
                         className="p-2 rounded-xl text-slate-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition"
                         title="Edit Customer"
@@ -298,10 +310,25 @@ export const Customers = ({ onViewCustomer }) => {
             setShowAddModal(false);
             setEditingCustomer(null);
           }}
-          onSuccess={() => {
+          onSuccess={(savedCustomer, opts) => {
             fetchCustomers();
             setShowAddModal(false);
             setEditingCustomer(null);
+            if (opts?.issueLoan && savedCustomer?._id) {
+              setLoanCustomerId(savedCustomer._id);
+            }
+          }}
+        />
+      )}
+
+      {/* Direct Loan Creation Modal from Customer Page */}
+      {loanCustomerId && (
+        <LoanModal
+          customers={customers}
+          initialCustomerId={loanCustomerId}
+          onClose={() => setLoanCustomerId(null)}
+          onSuccess={(newLoan) => {
+            fetchCustomers();
           }}
         />
       )}

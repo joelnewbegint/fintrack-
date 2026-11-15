@@ -25,7 +25,7 @@ export const checkOverdueLoans = async () => {
       let loanPenalties = 0;
 
       for (const inst of loan.schedule) {
-        if (inst.status !== 'paid') {
+        if (inst.status !== 'paid' && inst.status !== 'holiday' && inst.status !== 'missed') {
           const dueDate = new Date(inst.dueDate);
           const graceDueDate = new Date(dueDate);
           graceDueDate.setDate(graceDueDate.getDate() + graceDays);

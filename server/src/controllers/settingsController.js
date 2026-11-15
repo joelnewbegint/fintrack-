@@ -86,3 +86,54 @@ export const clearAllData = async (req, res, next) => {
     next(error);
   }
 };
+
+export const declareGlobalHoliday = async (req, res, next) => {
+  try {
+    const { date, type = 'holiday', reason = 'General Holiday / விடுமுறை' } = req.body;
+    const dateStr = date ? new Date(date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+
+    let settings = await Settings.findOne({});
+    if (!settings) settings = await Settings.create({});
+
+    if (!Array.isArray(settings.holidays)) settings.holidays = [];
+
+    const existingIndex = settings.holidays.findIndex((h) => h.date === dateStr);
+    const item = { date: dateStr, type, reason, createdAt: new Date() };
+
+    if (existingIndex >= 0) {
+      settings.holidays[existingIndex] = item;
+    } else {
+      settings.holidays.push(item);
+    }
+    await settings.save();
+
+    // Also declare across all active loans for this date
+    const Loan = (await import('../models/Loan.js')).default;
+    const activeLoans = await Loan.find({ status: { $in: ['active', 'overdue'] } });
+    for (const loan of activeLoans) {
+      if (!Array.isArray(loan.holidays)) loan.holidays = [];
+      const hasH = loan.holidays.some((h) => h.date === dateStr);
+      if (!hasH) {
+        loan.holidays.push(item);
+        if (Array.isArray(loan.schedule)) {
+          loan.schedule.forEach((inst) => {
+            const instDate = inst.dueDate ? new Date(inst.dueDate).toISOString().split('T')[0] : '';
+            if (instDate === dateStr && inst.status !== 'paid') {
+              inst.status = type;
+              inst.holidayReason = reason;
+            }
+          });
+        }
+        await loan.save();
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Global ${type === 'missed' ? 'Missed Day' : 'Holiday'} recorded for ${dateStr}`,
+      settings,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

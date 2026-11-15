@@ -4,7 +4,7 @@ import api from '../../services/api';
 import { formatCurrency, formatDateForInput } from '../../utils/currency';
 import { parseCustomerName } from '../../utils/customerName';
 import { useDeviceMode } from '../../context/DeviceModeContext';
-import { X, Check, Banknote, QrCode, Search, User, CreditCard } from 'lucide-react';
+import { X, Check, Banknote, QrCode, Search, User, CreditCard, Coffee, AlertCircle } from 'lucide-react';
 
 export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
   const { isMobile } = useDeviceMode();
@@ -24,6 +24,9 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [entryMode, setEntryMode] = useState('payment'); // 'payment' | 'holiday'
+  const [holidayType, setHolidayType] = useState('holiday'); // 'holiday' | 'missed'
+  const [holidayReason, setHolidayReason] = useState('');
 
   // If no loan was pre-selected, fetch active loans
   useEffect(() => {
@@ -98,6 +101,34 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
       onClose();
     } catch (err) {
       setError(err.message || 'Payment recording failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleHolidaySubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!selectedLoan) {
+      setError('Please select a loan account first');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await api.declareLoanHoliday(selectedLoan.loanId || selectedLoan._id, {
+        date,
+        type: holidayType,
+        reason: holidayReason || (holidayType === 'missed' ? 'Missed Collection / தவறிய நாள்' : 'Holiday / விடுமுறை'),
+      });
+
+      if (onSuccess) {
+        onSuccess(res?.loan || selectedLoan);
+      }
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Failed to record holiday/missed day');
     } finally {
       setSubmitting(false);
     }
@@ -249,6 +280,118 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                 )}
               </div>
 
+              {/* Entry Mode Switcher: Payment vs Holiday / Missed */}
+              <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEntryMode('payment')}
+                  className={`py-2 px-3 rounded-xl font-black text-xs transition flex items-center justify-center space-x-1.5 ${
+                    entryMode === 'payment'
+                      ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Banknote className="w-3.5 h-3.5" />
+                  <span>Payment / வசூல்</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEntryMode('holiday')}
+                  className={`py-2 px-3 rounded-xl font-black text-xs transition flex items-center justify-center space-x-1.5 ${
+                    entryMode === 'holiday'
+                      ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Coffee className="w-3.5 h-3.5" />
+                  <span>Holiday / Missed</span>
+                </button>
+              </div>
+
+              {entryMode === 'holiday' ? (
+                /* Holiday / Missed Day Form */
+                <div className="space-y-4 pt-1 animate-fade-in">
+                  <div>
+                    <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
+                      Declaration Type / வகை
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setHolidayType('holiday')}
+                        className={`py-3 px-3 rounded-2xl border font-bold text-xs flex items-center justify-center space-x-1.5 transition ${
+                          holidayType === 'holiday'
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 shadow-sm'
+                            : 'glass text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Coffee className="w-4 h-4 text-purple-600" />
+                        <span>🏖️ Holiday / விடுமுறை</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHolidayType('missed')}
+                        className={`py-3 px-3 rounded-2xl border font-bold text-xs flex items-center justify-center space-x-1.5 transition ${
+                          holidayType === 'missed'
+                            ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 shadow-sm'
+                            : 'glass text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                        <span>⚠️ Missed / தவறிய நாள்</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">
+                      Date / தேதி
+                    </label>
+                    <input
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="w-full h-12 px-4 rounded-2xl glass border border-purple-200/80 dark:border-purple-850/60 text-slate-900 dark:text-white font-bold text-sm outline-none focus:ring-2 focus:ring-purple-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">
+                      Reason / குறிப்பு
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Sunday, Festival, Shop Closed, Borrower Not Available"
+                      value={holidayReason}
+                      onChange={(e) => setHolidayReason(e.target.value)}
+                      className="w-full h-12 px-4 rounded-2xl glass border border-purple-200/80 dark:border-purple-850/60 text-slate-900 dark:text-white font-bold text-sm outline-none focus:ring-2 focus:ring-purple-400"
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={handleHolidaySubmit}
+                      className="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 flex items-center justify-center space-x-2 disabled:opacity-50 active:scale-98 transition"
+                    >
+                      {submitting ? (
+                        <span>Saving Declaration...</span>
+                      ) : (
+                        <>
+                          <Check className="w-5 h-5 stroke-[3]" />
+                          <span>
+                            Confirm {holidayType === 'missed' ? 'Missed Day' : 'Holiday'} / உறுதிசெய்
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Payment Entry Form Fields */
+                <>
+
               {/* Amount Quick-Chips (Section G: ₹100, ₹200, ₹500, 1 Due, Full) */}
               <div>
                 <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
@@ -364,27 +507,31 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                   className="w-full h-12 px-4 rounded-2xl glass border border-sky-200/80 dark:border-sky-800/60 text-slate-900 dark:text-white font-bold text-sm outline-none focus:ring-2 focus:ring-sky-400"
                 />
               </div>
-            </div>
+            </>
+          )}
+        </div>
 
-            {/* Sticky Action Button at Bottom (Section G) */}
-            <div className="sticky bottom-0 pt-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-sky-100 dark:border-sky-900/60 shrink-0">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full btn-sky-primary min-h-[48px] py-3 text-sm font-black shadow-lg shadow-sky-500/25 flex items-center justify-center space-x-2 disabled:opacity-50 active:scale-98"
-              >
-                {submitting ? (
-                  <span>Recording Collection...</span>
-                ) : (
-                  <>
-                    <Check className="w-5 h-5 stroke-[3]" />
-                    <span>Confirm Payment / வசூல் உறுதிப்படுத்து</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
+        {/* Sticky Action Button at Bottom (Section G) */}
+        {entryMode === 'payment' && (
+          <div className="sticky bottom-0 pt-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-sky-100 dark:border-sky-900/60 shrink-0">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full btn-sky-primary min-h-[48px] py-3 text-sm font-black shadow-lg shadow-sky-500/25 flex items-center justify-center space-x-2 disabled:opacity-50 active:scale-98"
+            >
+              {submitting ? (
+                <span>Recording Collection...</span>
+              ) : (
+                <>
+                  <Check className="w-5 h-5 stroke-[3]" />
+                  <span>Confirm Payment / வசூல் உறுதிப்படுத்து</span>
+                </>
+              )}
+            </button>
+          </div>
         )}
+      </form>
+    )}
       </div>
     </div>
   );

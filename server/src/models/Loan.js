@@ -19,8 +19,12 @@ const installmentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'paid', 'partial', 'overdue'],
+    enum: ['pending', 'paid', 'partial', 'overdue', 'holiday', 'missed'],
     default: 'pending',
+  },
+  holidayReason: {
+    type: String,
+    default: '',
   },
   paidDate: {
     type: Date,
@@ -42,6 +46,18 @@ const loanSchema = new mongoose.Schema(
       ref: 'Customer',
       required: true,
       index: true,
+    },
+    customerName: {
+      type: String,
+      trim: true,
+    },
+    customerPhone: {
+      type: String,
+      trim: true,
+    },
+    customerArea: {
+      type: String,
+      trim: true,
     },
     principal: {
       type: Number,
@@ -121,6 +137,29 @@ const loanSchema = new mongoose.Schema(
       default: '',
     },
     schedule: [installmentSchema],
+    holidays: [
+      {
+        date: {
+          type: String, // 'YYYY-MM-DD'
+        },
+        installmentNo: {
+          type: Number,
+        },
+        type: {
+          type: String,
+          enum: ['holiday', 'missed'],
+          default: 'holiday',
+        },
+        reason: {
+          type: String,
+          default: '',
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     notes: {
       type: String,
       default: '',

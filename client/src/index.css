@@ -427,6 +427,28 @@ html[data-device="mobile"] .flex > div {
     color: black !important;
   }
 
+  /* Strict B/W Print Stylesheet for Loan Form & Agreement */
+  .print-bw-only {
+    color: #000000 !important;
+    background: #ffffff !important;
+    border-color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+  }
+
+  .print-bw-only * {
+    color: #000000 !important;
+    border-color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+
   .no-print {
     display: none !important;
   }

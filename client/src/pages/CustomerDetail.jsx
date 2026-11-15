@@ -16,6 +16,7 @@ import WhatsAppPaymentHistoryModal from '../components/common/WhatsAppPaymentHis
 import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 import CustomerStatementModal from '../components/common/CustomerStatementModal';
 import StatementDownloadModal from '../components/common/StatementDownloadModal';
+import EditLoanModal from '../components/common/EditLoanModal';
 import {
   ArrowLeft,
   Phone,
@@ -38,6 +39,11 @@ import {
   Layers,
   ChevronRight,
   TrendingDown,
+  Pencil,
+  Coffee,
+  AlertCircle,
+  X,
+  Trash2,
 } from 'lucide-react';
 
 export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
@@ -53,6 +59,12 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
   const [showWhatsAppHub, setShowWhatsAppHub] = useState(false);
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [editingLoan, setEditingLoan] = useState(null);
+  const [holidayModalTarget, setHolidayModalTarget] = useState(null); // { loan, installment }
+  const [holidayType, setHolidayType] = useState('holiday'); // 'holiday' | 'missed'
+  const [holidayReason, setHolidayReason] = useState('');
+  const [holidayDate, setHolidayDate] = useState('');
+  const [declaringHoliday, setDeclaringHoliday] = useState(false);
 
   // Profile View Controls
   const [activeTab, setActiveTab] = useState('ledger'); // 'ledger' | 'schedule'
@@ -83,6 +95,37 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
       fetchCustomerData();
     }
   }, [customerId]);
+
+  const handleDeclareHoliday = async (loanId, installmentNo, date, type, reason) => {
+    try {
+      setDeclaringHoliday(true);
+      await api.declareLoanHoliday(loanId, {
+        installmentNo,
+        date,
+        type: type || 'holiday',
+        reason: reason || (type === 'missed' ? 'Missed Collection / தவறிய நாள்' : 'Holiday / விடுமுறை'),
+      });
+      await fetchCustomerData();
+      setHolidayModalTarget(null);
+      setHolidayReason('');
+    } catch (err) {
+      alert('Failed to declare holiday/missed day: ' + err.message);
+    } finally {
+      setDeclaringHoliday(false);
+    }
+  };
+
+  const handleRemoveHoliday = async (loanId, installmentNo, date) => {
+    try {
+      setDeclaringHoliday(true);
+      await api.removeLoanHoliday(loanId, { installmentNo, date });
+      await fetchCustomerData();
+    } catch (err) {
+      alert('Failed to remove holiday/missed declaration: ' + err.message);
+    } finally {
+      setDeclaringHoliday(false);
+    }
+  };
 
   if (loading && !data) {
     return <div className="p-8 text-center text-xs text-slate-400">Loading customer ledger & schedules...</div>;
@@ -401,18 +444,53 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                     </p>
                   </div>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedLoanId(loan._id);
-                      setActiveTab('schedule');
-                    }}
-                    className="btn-sky-primary flex items-center space-x-1 py-1.5 px-3 text-xs font-bold shadow-sm active:scale-95"
-                    title="View full installment schedule"
-                  >
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>View Schedule</span>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingLoan(loan);
+                      }}
+                      className="p-1.5 px-2.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition shadow-xs active:scale-95 flex items-center space-x-1 text-xs font-bold"
+                      title="Edit Loan Terms / திருத்து"
+                    >
+                      <Pencil className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (
+                          window.confirm(
+                            `Are you sure you want to permanently delete Loan ${loan.loanNo}? This will remove the loan and its transaction records.`
+                          )
+                        ) {
+                          try {
+                            await api.deleteLoan(loan._id);
+                            fetchCustomerData();
+                          } catch (err) {
+                            alert(err.message || 'Failed to delete loan');
+                          }
+                        }
+                      }}
+                      className="p-1.5 px-2 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 transition shadow-xs active:scale-95 flex items-center space-x-1 text-xs font-bold"
+                      title="Delete Loan / நீக்கு"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      <span>Delete</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedLoanId(loan._id);
+                        setActiveTab('schedule');
+                      }}
+                      className="btn-sky-primary flex items-center space-x-1 py-1.5 px-3 text-xs font-bold shadow-sm active:scale-95"
+                      title="View full installment schedule"
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>View Schedule</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -586,9 +664,9 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
         {/* TAB 2: Detailed Installment Schedule for Selected Loan */}
         {activeTab === 'schedule' && (
           <div className="space-y-4">
-            {/* Loan Switcher Strip */}
+            {/* Loan Switcher Strip & Quick Holiday Action */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
                   Select Loan Account:
                 </span>
@@ -603,6 +681,24 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                     </option>
                   ))}
                 </select>
+
+                <button
+                  onClick={() => {
+                    setHolidayModalTarget({
+                      loanId: activeSelectedLoan?._id,
+                      installmentNo: '',
+                      date: new Date().toISOString().split('T')[0],
+                    });
+                    setHolidayType('holiday');
+                    setHolidayReason('Sunday / Holiday');
+                    setHolidayDate(new Date().toISOString().split('T')[0]);
+                  }}
+                  className="flex items-center space-x-1.5 h-9 px-3 rounded-xl border border-purple-300 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 hover:bg-purple-100 text-xs font-bold transition shadow-xs active:scale-95"
+                  title="Declare Holiday or Missed Collection Day"
+                >
+                  <Coffee className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Declare Holiday / Missed</span>
+                </button>
               </div>
 
               {activeSelectedLoan && (
@@ -653,7 +749,8 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                     <th className="py-2.5 px-3">Paid Date</th>
                     <th className="py-2.5 px-3">Receipt No</th>
                     <th className="py-2.5 px-3">Amount Paid</th>
-                    <th className="py-2.5 px-3 text-right">Status</th>
+                    <th className="py-2.5 px-3 text-center">Status</th>
+                    <th className="py-2.5 px-3 text-right">Declare / Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
@@ -661,7 +758,15 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                     <tr
                       key={inst.installmentNo}
                       className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 ${
-                        inst.status === 'paid' ? 'bg-emerald-50/20' : inst.status === 'overdue' ? 'bg-red-50/20' : ''
+                        inst.status === 'paid'
+                          ? 'bg-emerald-50/20'
+                          : inst.status === 'holiday'
+                          ? 'bg-purple-50/30'
+                          : inst.status === 'missed'
+                          ? 'bg-amber-50/30'
+                          : inst.status === 'overdue'
+                          ? 'bg-red-50/20'
+                          : ''
                       }`}
                     >
                       <td className="py-2 px-3 font-bold text-slate-500">#{inst.installmentNo}</td>
@@ -674,20 +779,88 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                       <td className="py-2 px-3 font-bold text-emerald-600">
                         {inst.paidAmount > 0 ? formatCurrency(inst.paidAmount) : '-'}
                       </td>
-                      <td className="py-2 px-3 text-right">
+                      <td className="py-2 px-3 text-center">
                         <span
                           className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
                             inst.status === 'paid'
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : inst.status === 'holiday'
+                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border border-purple-300 font-black'
+                              : inst.status === 'missed'
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 font-black'
                               : inst.status === 'partial'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                              ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
                               : inst.status === 'overdue'
                               ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
                               : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                           }`}
                         >
-                          {inst.status}
+                          {inst.status === 'holiday'
+                            ? '🏖️ Holiday'
+                            : inst.status === 'missed'
+                            ? '⚠️ Missed'
+                            : inst.status}
                         </span>
+                        {inst.holidayReason && (
+                          <span className="block text-[8px] text-slate-400 mt-0.5 truncate max-w-[100px] mx-auto">
+                            {inst.holidayReason}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        {inst.status === 'holiday' || inst.status === 'missed' ? (
+                          <button
+                            disabled={declaringHoliday}
+                            onClick={() =>
+                              handleRemoveHoliday(
+                                activeSelectedLoan._id,
+                                inst.installmentNo,
+                                inst.dueDate
+                              )
+                            }
+                            className="text-[10px] text-slate-500 hover:text-red-600 font-bold underline transition"
+                            title="Revert back to regular installment"
+                          >
+                            Revert
+                          </button>
+                        ) : inst.status !== 'paid' ? (
+                          <div className="flex items-center justify-end space-x-1">
+                            <button
+                              disabled={declaringHoliday}
+                              onClick={() =>
+                                handleDeclareHoliday(
+                                  activeSelectedLoan._id,
+                                  inst.installmentNo,
+                                  inst.dueDate,
+                                  'holiday',
+                                  'Holiday / விடுமுறை'
+                                )
+                              }
+                              className="px-2 py-0.5 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 hover:bg-purple-100 text-[10px] font-bold transition active:scale-95"
+                              title="Declare as Holiday (விடுமுறை)"
+                            >
+                              🏖️ Holiday
+                            </button>
+                            <button
+                              disabled={declaringHoliday}
+                              onClick={() =>
+                                handleDeclareHoliday(
+                                  activeSelectedLoan._id,
+                                  inst.installmentNo,
+                                  inst.dueDate,
+                                  'missed',
+                                  'Missed Collection / தவறிய நாள்'
+                                )
+                              }
+                              className="px-2 py-0.5 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 hover:bg-amber-100 text-[10px] font-bold transition active:scale-95"
+                              title="Declare as Missed Collection (தவறிய நாள்)"
+                            >
+                              ⚠️ Missed
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-slate-400">-</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -754,6 +927,140 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
           loans={loans}
           payments={payments}
           onOpenStatementSheet={() => setShowStatementModal(true)}
+        />
+      )}
+
+      {/* Declare Holiday or Missed Day Modal */}
+      {holidayModalTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 animate-scale-up">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center space-x-2">
+                <Coffee className="w-5 h-5 text-purple-600" />
+                <h3 className="font-black text-base text-slate-900 dark:text-white">
+                  Declare Holiday / Missed Day
+                </h3>
+              </div>
+              <button
+                onClick={() => setHolidayModalTarget(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-400 font-bold uppercase tracking-wider mb-1.5 text-[10px]">
+                  Declaration Type / வகை
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setHolidayType('holiday')}
+                    className={`py-2.5 px-3 rounded-2xl border font-bold flex items-center justify-center space-x-2 transition ${
+                      holidayType === 'holiday'
+                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 shadow-sm'
+                        : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>🏖️ Holiday / விடுமுறை</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHolidayType('missed')}
+                    className={`py-2.5 px-3 rounded-2xl border font-bold flex items-center justify-center space-x-2 transition ${
+                      holidayType === 'missed'
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 shadow-sm'
+                        : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>⚠️ Missed / தவறிய நாள்</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold uppercase tracking-wider mb-1.5 text-[10px]">
+                  Date / தேதி
+                </label>
+                <input
+                  type="date"
+                  value={holidayDate}
+                  onChange={(e) => setHolidayDate(e.target.value)}
+                  className="w-full h-11 px-3.5 rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold uppercase tracking-wider mb-1.5 text-[10px]">
+                  Installment Number (Optional / குறிப்பிட்ட தவணை எண்)
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 5 (Leave empty for date match)"
+                  value={holidayModalTarget.installmentNo || ''}
+                  onChange={(e) =>
+                    setHolidayModalTarget({ ...holidayModalTarget, installmentNo: e.target.value })
+                  }
+                  className="w-full h-11 px-3.5 rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold uppercase tracking-wider mb-1.5 text-[10px]">
+                  Reason / குறிப்பு
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sunday, Festival, Shop Closed, Customer Away"
+                  value={holidayReason}
+                  onChange={(e) => setHolidayReason(e.target.value)}
+                  className="w-full h-11 px-3.5 rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-400"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setHolidayModalTarget(null)}
+                  className="px-4 py-2.5 rounded-2xl border border-slate-300 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-100 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={declaringHoliday}
+                  onClick={() =>
+                    handleDeclareHoliday(
+                      holidayModalTarget.loanId,
+                      holidayModalTarget.installmentNo,
+                      holidayDate,
+                      holidayType,
+                      holidayReason
+                    )
+                  }
+                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black shadow-md hover:opacity-95 transition active:scale-95 disabled:opacity-50"
+                >
+                  {declaringHoliday ? 'Saving...' : 'Declare / அறிவிக்க'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Loan Modal */}
+      {editingLoan && (
+        <EditLoanModal
+          isOpen={Boolean(editingLoan)}
+          loan={editingLoan}
+          customer={customer}
+          onClose={() => setEditingLoan(null)}
+          onSuccess={() => {
+            fetchCustomerData();
+            setEditingLoan(null);
+          }}
         />
       )}
     </div>

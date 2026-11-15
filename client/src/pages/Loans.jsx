@@ -11,7 +11,8 @@ import ReceiptModal from '../components/common/ReceiptModal';
 import WhatsAppReminderModal from '../components/common/WhatsAppReminderModal';
 import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 import LoanApplicationFormModal from '../components/common/LoanApplicationFormModal';
-import { downloadLoanAgreementPDF } from '../utils/loanAgreementPdf';
+import EditLoanModal from '../components/common/EditLoanModal';
+import { downloadLoanAgreementPDF, downloadRepaymentSchedulePDF } from '../utils/loanAgreementPdf';
 import {
   Plus,
   Search,
@@ -27,6 +28,9 @@ import {
   Printer,
   Smartphone,
   Download,
+  Pencil,
+  Trash2,
+  Calendar,
 } from 'lucide-react';
 
 export const Loans = ({ initialType = 'all', onViewLoan }) => {
@@ -48,6 +52,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
   const [whatsappHubLoan, setWhatsappHubLoan] = useState(null);
   const [showFormModal, setShowFormModal] = useState(false);
   const [selectedFormLoan, setSelectedFormLoan] = useState(null);
+  const [editingLoan, setEditingLoan] = useState(null);
 
   const fetchLoans = async () => {
     try {
@@ -105,14 +110,21 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
         area: loan.customerArea || '',
       };
     }
-    if (loan.notes && customers.length > 0) {
-      const foundByNote = customers.find((c) => {
-        const simple = (c.name || '').toLowerCase().split('(')[0].trim();
-        return simple && loan.notes.toLowerCase().includes(simple);
-      });
-      if (foundByNote) return foundByNote;
+    if (loan.notes) {
+      const match = loan.notes.match(/ledger loan for\s+(.+)$/i);
+      if (match && match[1]) {
+        const extracted = match[1].trim();
+        return { name: extracted, phone: '', area: '' };
+      }
+      if (customers.length > 0) {
+        const foundByNote = customers.find((c) => {
+          const simple = (c.name || '').toLowerCase().split('(')[0].trim();
+          return simple && loan.notes.toLowerCase().includes(simple);
+        });
+        if (foundByNote) return foundByNote;
+      }
     }
-    return { name: loan.customerName || 'Borrower', phone: '', area: '' };
+    return { name: loan.customerName || 'Borrower / வாடிக்கையாளர்', phone: '', area: '' };
   };
 
   return (
@@ -292,7 +304,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                   </div>
 
                   {/* Mobile Direct Action Buttons (48px Touch Targets) */}
-                  <div className="grid grid-cols-4 gap-1.5 pt-1">
+                  <div className="grid grid-cols-5 gap-1 pt-1">
                     {loan.remainingBalance > 0 ? (
                       <button
                         onClick={() =>
@@ -304,40 +316,81 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                             dueAmount: loan.installmentAmount,
                           })
                         }
-                        className="btn-sky-primary min-h-[48px] py-2 text-xs font-black shadow-sm flex items-center justify-center space-x-1"
+                        className="btn-sky-primary min-h-[44px] py-1.5 text-[11px] font-black shadow-sm flex items-center justify-center space-x-1"
                       >
-                        <CreditCard className="w-3.5 h-3.5" />
+                        <CreditCard className="w-3 h-3" />
                         <span>Pay</span>
                       </button>
                     ) : (
-                      <div className="min-h-[48px] flex items-center justify-center text-xs font-bold text-emerald-600 bg-emerald-50 rounded-xl">
+                      <div className="min-h-[44px] flex items-center justify-center text-[10px] font-bold text-emerald-600 bg-emerald-50 rounded-xl">
                         Settled
                       </div>
                     )}
 
                     <button
                       onClick={() => setWhatsappHubLoan(loan)}
-                      className="btn-sky-secondary min-h-[48px] py-2 text-xs font-bold flex items-center justify-center space-x-1 border-emerald-300/80 text-emerald-700 dark:text-emerald-300"
+                      className="btn-sky-secondary min-h-[44px] py-1.5 text-[11px] font-bold flex items-center justify-center space-x-1 border-emerald-300/80 text-emerald-700 dark:text-emerald-300"
                       title={lang === 'ta' ? 'வாட்ஸ்அப் செய்தி அனுப்ப' : 'Send WhatsApp Message'}
                     >
-                      <Smartphone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                      <span className="hidden xs:inline">WhatsApp</span>
+                      <Smartphone className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                      <span className="hidden xs:inline">WA</span>
+                    </button>
+
+                    <button
+                      onClick={() => setEditingLoan(loan)}
+                      className="glass min-h-[44px] py-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-50 flex items-center justify-center space-x-0.5 border border-amber-200/60 dark:border-amber-800/60"
+                      title={lang === 'ta' ? 'கடனைத் திருத்து' : 'Edit Loan'}
+                    >
+                      <Pencil className="w-3 h-3 text-amber-500" />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        const borrowerName = cust.name || loan.customerName || 'Borrower';
+                        if (
+                          window.confirm(
+                            `Are you sure you want to permanently delete Loan ${loan.loanNo} (${borrowerName})?`
+                          )
+                        ) {
+                          try {
+                            await api.deleteLoan(loan._id);
+                            fetchLoans();
+                          } catch (err) {
+                            alert(err.message || 'Failed to delete loan');
+                          }
+                        }
+                      }}
+                      className="glass min-h-[44px] py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 flex items-center justify-center space-x-0.5 border border-red-200/60 dark:border-red-900/60"
+                      title={lang === 'ta' ? 'கடனை நீக்கு' : 'Delete Loan'}
+                    >
+                      <Trash2 className="w-3 h-3 text-red-500" />
+                      <span>Del</span>
                     </button>
 
                     <button
                       onClick={() => downloadLoanAgreementPDF(loan, cust)}
-                      className="glass min-h-[48px] py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-sky-50 flex items-center justify-center space-x-1"
+                      className="glass min-h-[44px] py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-sky-50 flex items-center justify-center space-x-0.5"
                       title="Download Loan Agreement PDF / கடன் படிவம்"
                     >
-                      <Download className="w-3.5 h-3.5 text-sky-500" />
+                      <Download className="w-3 h-3 text-sky-500" />
                       <span>PDF</span>
                     </button>
 
                     <button
-                      onClick={() => onViewLoan && onViewLoan(loan._id)}
-                      className="glass min-h-[48px] py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-sky-50 flex items-center justify-center space-x-1"
+                      onClick={() => downloadRepaymentSchedulePDF(loan, cust)}
+                      className="glass min-h-[44px] py-1.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 flex items-center justify-center space-x-0.5"
+                      title="Download Repayment Schedule PDF / தவணை அட்டவணை"
                     >
-                      <Eye className="w-3.5 h-3.5 text-sky-500" />
+                      <Calendar className="w-3 h-3 text-indigo-500" />
+                      <span>Sched</span>
+                    </button>
+
+                    <button
+                      onClick={() => onViewLoan && onViewLoan(loan._id)}
+                      className="glass min-h-[44px] py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-sky-50 flex items-center justify-center space-x-0.5"
+                    >
+                      <Eye className="w-3 h-3 text-sky-500" />
                       <span>Ledger</span>
                     </button>
                   </div>
@@ -394,7 +447,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
 
                         <td className="py-3.5 px-4">
                           <div className="font-bold text-slate-800 dark:text-slate-200">
-                            {cust.name || 'Unknown'}
+                            {cust.name || loan.customerName || 'Borrower / வாடிக்கையாளர்'}
                           </div>
                           <div className="text-[11px] text-slate-500 font-mono">
                             {cust.phone} {cust.area ? `• ${cust.area}` : ''}
@@ -492,11 +545,27 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                             </button>
 
                             <button
+                              onClick={() => setEditingLoan(loan)}
+                              className="p-1.5 rounded-xl glass hover:bg-amber-50 text-slate-600 hover:text-amber-600 dark:text-slate-300 transition"
+                              title={lang === 'ta' ? 'கடனைத் திருத்து' : 'Edit Loan'}
+                            >
+                              <Pencil className="w-3.5 h-3.5 text-amber-500" />
+                            </button>
+
+                            <button
                               onClick={() => downloadLoanAgreementPDF(loan, cust)}
                               className="p-1.5 rounded-xl glass hover:bg-sky-50 text-slate-600 hover:text-sky-600 dark:text-slate-300 transition"
                               title="Download Loan Application PDF / கடன் படிவம்"
                             >
                               <Download className="w-3.5 h-3.5 text-sky-500" />
+                            </button>
+
+                            <button
+                              onClick={() => downloadRepaymentSchedulePDF(loan, cust)}
+                              className="p-1.5 rounded-xl glass hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 dark:text-slate-300 transition"
+                              title="Download Repayment Schedule PDF / தவணை அட்டவணை"
+                            >
+                              <Calendar className="w-3.5 h-3.5 text-indigo-500" />
                             </button>
 
                             <button
@@ -516,6 +585,28 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                               title="View Ledger / தவணை விவரம்"
                             >
                               <Eye className="w-4 h-4 text-sky-500" />
+                            </button>
+
+                            <button
+                              onClick={async () => {
+                                const borrowerName = cust.name || loan.customerName || 'Borrower';
+                                if (
+                                  window.confirm(
+                                    `Are you sure you want to permanently delete Loan ${loan.loanNo} (${borrowerName})?`
+                                  )
+                                ) {
+                                  try {
+                                    await api.deleteLoan(loan._id);
+                                    fetchLoans();
+                                  } catch (err) {
+                                    alert(err.message || 'Failed to delete loan');
+                                  }
+                                }
+                              }}
+                              className="p-1.5 rounded-xl glass hover:bg-red-50 text-slate-400 hover:text-red-600 dark:hover:bg-red-950/40 transition"
+                              title={lang === 'ta' ? 'கடனை நீக்கு' : 'Delete Loan'}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
                             </button>
                           </div>
                         </td>
@@ -590,6 +681,22 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
           setSelectedFormLoan(null);
         }}
       />
+
+      {/* Edit Loan Modal */}
+      {editingLoan && (
+        <EditLoanModal
+          isOpen={Boolean(editingLoan)}
+          loan={editingLoan}
+          customer={editingLoan.customerId}
+          onClose={() => setEditingLoan(null)}
+          onSuccess={(updatedLoan) => {
+            setLoans((prev) =>
+              prev.map((l) => (l._id === updatedLoan._id ? updatedLoan : l))
+            );
+            setEditingLoan(null);
+          }}
+        />
+      )}
     </div>
   );
 };
