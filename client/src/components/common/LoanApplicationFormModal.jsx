@@ -87,6 +87,19 @@ const formatDateDisplay = (dateVal) => {
   return String(dateVal);
 };
 
+// Mask Aadhaar or ID number to show only last 4 digits (e.g. XXXX XXXX 4582)
+const maskIdNumber = (val) => {
+  if (!val) return '';
+  const clean = String(val).trim();
+  if (clean.length === 12 && /^\d+$/.test(clean)) {
+    return `XXXX XXXX ${clean.slice(-4)}`;
+  }
+  if (clean.length === 4 && /^\d+$/.test(clean)) {
+    return `XXXX XXXX ${clean}`;
+  }
+  return clean;
+};
+
 // Map real incoming loan/customer data safely into standard form schema (Strict Zero Dump Fallback)
 const mapIncomingData = (data) => {
   if (!data) return BLANK_FORM_DATA;
@@ -169,8 +182,8 @@ const mapIncomingData = (data) => {
     witness2Address: data.witness2Address || (data.witness2?.address || ''),
     place: cust.area || data.place || data.customerArea || data.area || '',
     approvedBy: data.approvedBy || '',
-    disbursedOn: toDateString(data.disbursedOn || data.disbursedAt || rawStart),
-    receiptNo: data.receiptNo || (loanNo ? 'REC-' + loanNo.split('-').pop() : ''),
+    disbursedOn: data.disbursedOn || data.disbursedAt ? toDateString(data.disbursedOn || data.disbursedAt) : '',
+    receiptNo: data.receiptNo || '',
   };
 };
 
@@ -370,32 +383,35 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
 
   if (!isOpen) return null;
 
-  // Bilingual Checkbox component
+  // Bilingual Checkbox component - Renders tick ONLY when checked; empty string otherwise
   const renderCheckbox = (isChecked, label) => (
     <span className="inline-flex items-center space-x-1 mr-2 text-[7px] print:text-[7px] font-semibold text-slate-800 shrink-0">
       <span
-        className={`inline-flex items-center justify-center w-3 h-3 border border-[#7f8da8] rounded-[2px] text-[7.5px] font-black leading-none ${
-          isChecked ? 'bg-[#10295c] text-white border-[#10295c]' : 'bg-white text-transparent'
+        className={`inline-flex items-center justify-center w-3 h-3 border rounded-[2px] text-[7.5px] font-black leading-none ${
+          isChecked
+            ? 'bg-[#10295c] text-white border-[#10295c]'
+            : 'bg-white text-transparent border-[#7f8da8]'
         }`}
       >
-        ✓
+        {isChecked ? '✓' : ''}
       </span>
       <span className="text-slate-800 leading-none">{label}</span>
     </span>
   );
 
-  const isHomeOwn = !isBlankMode && (formData.residenceType || '').toLowerCase().includes('own');
-  const isHomeRent = !isBlankMode && (formData.residenceType || '').toLowerCase().includes('rent');
+  const residenceStr = (formData.residenceType || '').toLowerCase().trim();
+  const isHomeOwn = !isBlankMode && residenceStr.includes('own');
+  const isHomeRent = !isBlankMode && residenceStr.includes('rent');
 
-  const idTypeStr = (formData.idType || '').toLowerCase();
+  const idTypeStr = (formData.idType || '').toLowerCase().trim();
   const isIdAadhaar = !isBlankMode && (idTypeStr.includes('aadhaar') || idTypeStr.includes('adhar'));
   const isIdVoter = !isBlankMode && (idTypeStr.includes('voter') || idTypeStr.includes('epic'));
   const isIdRation = !isBlankMode && idTypeStr.includes('ration');
 
-  const schemeStr = (formData.scheme || '').toLowerCase();
-  const isDaily = !isBlankMode && (schemeStr.includes('daily') || (!schemeStr && formData.loanAmount));
-  const isWeekly = !isBlankMode && schemeStr.includes('weekly');
-  const isMonthly = !isBlankMode && schemeStr.includes('monthly');
+  const schemeStr = (formData.scheme || '').toLowerCase().trim();
+  const isWeekly = !isBlankMode && (schemeStr.includes('week') || schemeStr === 'w');
+  const isMonthly = !isBlankMode && (schemeStr.includes('month') || schemeStr === 'm');
+  const isDaily = !isBlankMode && !isWeekly && !isMonthly && (schemeStr.includes('dail') || schemeStr === 'd' || (!schemeStr && Boolean(formData.loanAmount)));
 
   const modalContent = (
     <div
@@ -741,7 +757,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   அடையாள எண் / ID No:
                 </span>
                 <span className="text-[8px] font-mono font-bold text-[#0d1b3e] truncate">
-                  {isBlankMode ? '' : formData.idNumber}
+                  {isBlankMode ? '' : maskIdNumber(formData.idNumber)}
                 </span>
               </div>
             </div>
@@ -872,7 +888,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   <div className="col-span-12 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
                     <span className="text-[6px] font-bold text-[#10295c] uppercase">ஆதார் எண் / Aadhaar No:</span>
                     <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
-                      {isBlankMode ? '' : formData.witness1Aadhaar}
+                      {isBlankMode ? '' : maskIdNumber(formData.witness1Aadhaar)}
                     </span>
                   </div>
 
@@ -883,16 +899,10 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                     </span>
                   </div>
 
-                  {/* Witness 1 Signature Cell */}
-                  <div className="col-span-12 bg-[#fffdf7] p-1 border-t border-[#7f8da8] min-h-[24px] print:min-h-[26px] flex flex-col justify-between text-center">
-                    <div className="flex-1 flex items-center justify-center">
-                      {!isBlankMode && formData.witness1Name && (
-                        <span className="font-serif italic font-bold text-[8.5px] text-[#10295c]">
-                          {formData.witness1Name.split(' ')[0]}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[6px] font-black text-[#10295c] border-t border-dotted border-[#7f8da8] pt-0.5">
+                  {/* Witness 1 Signature Cell - Empty Signing Space for Manual Signature */}
+                  <div className="col-span-12 bg-[#fffdf7] p-1 border-t border-[#7f8da8] flex flex-col justify-between text-center min-h-[46px] print:min-h-[50px]">
+                    <div className="h-[34px] print:h-[38px] w-full" />
+                    <span className="text-[6px] font-black text-[#10295c] border-t border-dashed border-[#7f8da8] pt-0.5">
                       சாட்சி 1 கையொப்பம் / Signature of Witness 1
                     </span>
                   </div>
@@ -935,7 +945,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   <div className="col-span-12 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
                     <span className="text-[6px] font-bold text-[#10295c] uppercase">ஆதார் எண் / Aadhaar No:</span>
                     <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
-                      {isBlankMode ? '' : formData.witness2Aadhaar}
+                      {isBlankMode ? '' : maskIdNumber(formData.witness2Aadhaar)}
                     </span>
                   </div>
 
@@ -946,16 +956,10 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                     </span>
                   </div>
 
-                  {/* Witness 2 Signature Cell */}
-                  <div className="col-span-12 bg-[#fffdf7] p-1 border-t border-[#7f8da8] min-h-[24px] print:min-h-[26px] flex flex-col justify-between text-center">
-                    <div className="flex-1 flex items-center justify-center">
-                      {!isBlankMode && formData.witness2Name && (
-                        <span className="font-serif italic font-bold text-[8.5px] text-[#10295c]">
-                          {formData.witness2Name.split(' ')[0]}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[6px] font-black text-[#10295c] border-t border-dotted border-[#7f8da8] pt-0.5">
+                  {/* Witness 2 Signature Cell - Empty Signing Space for Manual Signature */}
+                  <div className="col-span-12 bg-[#fffdf7] p-1 border-t border-[#7f8da8] flex flex-col justify-between text-center min-h-[46px] print:min-h-[50px]">
+                    <div className="h-[34px] print:h-[38px] w-full" />
+                    <span className="text-[6px] font-black text-[#10295c] border-t border-dashed border-[#7f8da8] pt-0.5">
                       சாட்சி 2 கையொப்பம் / Signature of Witness 2
                     </span>
                   </div>
@@ -994,25 +998,19 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
 
             <div className="border border-[#7f8da8] bg-[#7f8da8] grid grid-cols-12 gap-[1px]">
               {/* Borrower Signature Cell */}
-              <div className="col-span-6 bg-white p-1 flex flex-col justify-between min-h-[30px] print:min-h-[34px]">
+              <div className="col-span-6 bg-white p-1 flex flex-col justify-between min-h-[46px] print:min-h-[50px]">
                 <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   கடன் பெறுபவர் கையொப்பம் / Borrower Signature:
                 </span>
-                <div className="flex-1 flex items-center justify-center">
-                  {!isBlankMode && formData.customerName && (
-                    <span className="font-serif italic font-black text-[11px] text-[#10295c] tracking-wide">
-                      {formData.customerName}
-                    </span>
-                  )}
-                </div>
-                <div className="border-t border-dotted border-[#7f8da8] pt-0.5 flex justify-between items-center text-[6px] text-slate-500">
+                <div className="h-[34px] print:h-[38px] w-full" />
+                <div className="border-t border-dashed border-[#7f8da8] pt-0.5 flex justify-between items-center text-[6px] text-slate-500">
                   <span className="font-bold text-[#0d1b3e]">கடன் பெறுபவரின் கையொப்பம்</span>
                   <span>(Applicant Sign)</span>
                 </div>
               </div>
 
               {/* Place & Date Cell */}
-              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[30px] print:min-h-[34px]">
+              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[46px] print:min-h-[50px]">
                 <div className="space-y-0.5">
                   <div className="text-[6.5px]">
                     <span className="font-bold text-[#10295c]">இடம் / Place: </span>
@@ -1023,24 +1021,18 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                     <span className="font-mono font-bold text-[#0d1b3e]">{isBlankMode ? '' : formatDateDisplay(formData.date)}</span>
                   </div>
                 </div>
-                <div className="border-t border-dotted border-[#7f8da8] pt-0.5 text-[5.5px] text-slate-500 text-center">
+                <div className="border-t border-dashed border-[#7f8da8] pt-0.5 text-[5.5px] text-slate-500 text-center">
                   இடம் மற்றும் தேதி பதிவு
                 </div>
               </div>
 
               {/* Verification & Officer Sign */}
-              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[30px] print:min-h-[34px] text-center">
+              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[46px] print:min-h-[50px] text-center">
                 <span className="text-[6.5px] font-bold text-[#10295c] uppercase text-left">
                   கள அலுவலர் / நிர்வாகி:
                 </span>
-                <div className="flex-1 flex items-center justify-center">
-                  {!isBlankMode && (
-                    <span className="font-serif italic font-bold text-[8.5px] text-[#10295c]">
-                      VK Banker's &amp; Finance
-                    </span>
-                  )}
-                </div>
-                <div className="border-t border-dotted border-[#7f8da8] pt-0.5 text-[6px] text-[#10295c] font-bold">
+                <div className="h-[34px] print:h-[38px] w-full" />
+                <div className="border-t border-dashed border-[#7f8da8] pt-0.5 text-[6px] text-[#10295c] font-bold">
                   சரிபார்ப்பு / Authorized Signatory
                 </div>
               </div>
