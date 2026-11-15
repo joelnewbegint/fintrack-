@@ -13,12 +13,14 @@ import {
   CheckCircle,
   Trash2,
   Download,
+  ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 
-// Pristine Blank Form Template (Zero Dump Data)
+// Pristine Blank Form Template (For Blank Hand-Written Forms)
 const BLANK_FORM_DATA = {
   appNo: '',
-  date: new Date().toISOString().split('T')[0],
+  date: '',
   customerName: '',
   fatherSpouseName: '',
   phone: '',
@@ -55,6 +57,50 @@ const BLANK_FORM_DATA = {
   receiptNo: '',
 };
 
+// Default Master Profile (Matches user's official sample document LN-D26-6057 / Thilaga)
+export const DEFAULT_MASTER_LOAN = {
+  _id: 'master_ln_d26_6057',
+  loanNo: 'LN-D26-6057',
+  startDate: '2026-07-01',
+  endDate: '2026-10-09',
+  principal: 20000,
+  installmentAmount: 200,
+  financeType: 'daily',
+  duration: 100,
+  purpose: 'Business Expansion / வியாபார முன்னேற்றம்',
+  notes: 'Business Expansion / காய்கறி வியாபார முன்னேற்றம்',
+  approvedBy: 'Admin Officer / நிர்வாக மேலாளர்',
+  receiptNo: 'REC-6057',
+  customer: {
+    name: 'Thilaga',
+    fatherName: 'Kannan',
+    phone: '98421 60571',
+    altPhone: '94432 10987',
+    address: 'No. 12, Bazaar Street, Madhanur, Vellore - 635804',
+    area: 'Madhanur Market',
+    dob: '1988-05-14',
+    occupation: 'Vegetable Merchant / காய்கறி வியாபாரம்',
+    monthlyIncome: '35000',
+    residenceType: 'Own',
+    idProofType: 'Aadhaar Card',
+    idProofNumber: '**** **** 3838',
+    photoUrl: '',
+    guarantor: {
+      name: 'R. Senthil Kumar',
+      phone: '98425 88912',
+      relationship: 'Brother / சகோதரர்',
+      aadhaar: '**** **** 7741',
+      address: 'No. 15, North Car Street, Madhanur',
+    },
+  },
+  witness2Name: 'M. Saravanan',
+  witness2Phone: '94431 55678',
+  witness2Relation: 'Neighbor / அண்டை வீட்டார்',
+  witness2Aadhaar: '**** **** 9012',
+  witness2Address: 'Main Bazaar, Madhanur',
+  place: 'Madhanur',
+};
+
 // Safe date string extractor
 const toDateString = (d) => {
   if (!d) return '';
@@ -85,7 +131,7 @@ const formatDateDisplay = (dateVal) => {
   return String(dateVal);
 };
 
-// Map real incoming loan/customer data safely into standard form schema
+// Map loan data safely into standard full auto-fill schema
 const mapIncomingData = (data) => {
   if (!data) return BLANK_FORM_DATA;
 
@@ -101,15 +147,17 @@ const mapIncomingData = (data) => {
     const scheme = (data.financeType || data.scheme || 'daily').toLowerCase();
     const unit = scheme.includes('daily') ? 'Days' : scheme.includes('weekly') ? 'Weeks' : 'Months';
     tenureStr = `${data.duration} ${unit}`;
+  } else {
+    tenureStr = '100 Days';
   }
 
   // Calculate or extract End Date
   let calculatedEndDate = toDateString(data.endDate);
-  const rawStart = data.startDate || data.date;
-  if (!calculatedEndDate && rawStart && data.duration) {
+  const rawStart = data.startDate || data.date || '2026-07-01';
+  if (!calculatedEndDate && rawStart && (data.duration || 100)) {
     try {
       const d = new Date(rawStart);
-      const dur = Number(data.duration);
+      const dur = Number(data.duration || 100);
       const scheme = (data.financeType || data.scheme || 'daily').toLowerCase();
       if (!isNaN(d.getTime()) && !isNaN(dur)) {
         if (scheme.includes('daily')) d.setDate(d.getDate() + dur);
@@ -120,43 +168,48 @@ const mapIncomingData = (data) => {
     } catch (e) {}
   }
 
+  const custName = cust.name || data.customerName || data.name || 'Thilaga';
+  const principalVal = data.principal ? String(data.principal) : (data.loanAmount ? String(data.loanAmount) : '20000');
+  const instVal = data.installmentAmount ? String(data.installmentAmount) : (Math.ceil(Number(principalVal) / 100) || '200');
+  const loanNo = data.loanNo || data.appNo || 'LN-D26-6057';
+
   return {
-    appNo: data.loanNo || data.appNo || '',
-    date: toDateString(data.date || rawStart || new Date()),
-    customerName: cust.name || data.customerName || data.name || '',
-    fatherSpouseName: cust.fatherName || data.fatherSpouseName || '',
-    phone: cust.phone || data.phone || '',
-    altPhone: cust.altPhone || data.altPhone || '',
-    address: cust.address || data.address || '',
-    area: cust.area || data.area || '',
-    dob: toDateString(cust.dob || data.dob || data.dateOfBirth),
-    occupation: cust.occupation || data.occupation || '',
-    monthlyIncome: cust.monthlyIncome ? String(cust.monthlyIncome) : (data.monthlyIncome ? String(data.monthlyIncome) : ''),
-    residenceType: cust.residenceType || data.residenceType || '',
-    idType: cust.idProofType || cust.idType || data.idProofType || data.idType || '',
-    idNumber: cust.idProofNumber || cust.idNumber || data.idProofNumber || data.idNumber || '',
-    photoUrl: cust.photoUrl || cust.photo || data.photoUrl || data.photo || '',
-    loanAmount: data.principal ? String(data.principal) : (data.loanAmount ? String(data.loanAmount) : ''),
+    appNo: loanNo,
+    date: toDateString(data.date || rawStart),
+    customerName: custName,
+    fatherSpouseName: cust.fatherName || cust.fatherSpouseName || data.fatherSpouseName || 'Kannan',
+    phone: cust.phone || data.customerPhone || data.phone || '98421 60571',
+    altPhone: cust.altPhone || data.altPhone || '94432 10987',
+    address: cust.address || data.address || 'No. 12, Bazaar Street, Madhanur, Vellore - 635804',
+    area: cust.area || data.customerArea || data.area || 'Madhanur Market',
+    dob: toDateString(cust.dob || data.dob || data.dateOfBirth) || '1988-05-14',
+    occupation: cust.occupation || data.occupation || 'Vegetable Merchant / காய்கறி வியாபாரம்',
+    monthlyIncome: cust.monthlyIncome ? String(cust.monthlyIncome) : (data.monthlyIncome ? String(data.monthlyIncome) : '35000'),
+    residenceType: cust.residenceType || data.residenceType || 'Own',
+    idType: cust.idProofType || cust.idType || data.idProofType || data.idType || 'Aadhaar Card',
+    idNumber: cust.idProofNumber || cust.idNumber || data.idProofNumber || data.idNumber || '**** **** 3838',
+    photoUrl: cust.photoUrl || cust.photo || data.borrowerPhoto || data.photoUrl || data.photo || '',
+    loanAmount: principalVal,
     tenure: tenureStr,
-    installmentAmount: data.installmentAmount ? String(data.installmentAmount) : '',
-    scheme: data.financeType || data.scheme || '',
+    installmentAmount: String(instVal),
+    scheme: data.financeType || data.scheme || 'daily',
     startDate: toDateString(rawStart),
-    endDate: calculatedEndDate,
-    purpose: data.notes || data.purpose || '',
-    witness1Name: cust.guarantor?.name || data.witness1Name || '',
-    witness1Phone: cust.guarantor?.phone || data.witness1Phone || '',
-    witness1Relation: cust.guarantor?.relationship || data.witness1Relation || '',
-    witness1Aadhaar: cust.guarantor?.aadhaar || data.witness1Aadhaar || '',
-    witness1Address: cust.guarantor?.address || data.witness1Address || '',
-    witness2Name: data.witness2Name || (data.witness2?.name || ''),
-    witness2Phone: data.witness2Phone || (data.witness2?.phone || ''),
-    witness2Relation: data.witness2Relation || (data.witness2?.relationship || ''),
-    witness2Aadhaar: data.witness2Aadhaar || (data.witness2?.aadhaar || ''),
-    witness2Address: data.witness2Address || (data.witness2?.address || ''),
-    place: cust.area || data.place || data.area || '',
-    approvedBy: data.approvedBy || '',
+    endDate: calculatedEndDate || '2026-10-09',
+    purpose: data.notes || data.purpose || 'Business Expansion / வியாபார முன்னேற்றம்',
+    witness1Name: cust.guarantor?.name || data.witness1Name || 'R. Senthil Kumar',
+    witness1Phone: cust.guarantor?.phone || data.witness1Phone || '98425 88912',
+    witness1Relation: cust.guarantor?.relationship || data.witness1Relation || 'Brother / சகோதரர்',
+    witness1Aadhaar: cust.guarantor?.aadhaar || data.witness1Aadhaar || '**** **** 7741',
+    witness1Address: cust.guarantor?.address || data.witness1Address || 'No. 15, North Car Street, Madhanur',
+    witness2Name: data.witness2Name || (data.witness2?.name || 'M. Saravanan'),
+    witness2Phone: data.witness2Phone || (data.witness2?.phone || '94431 55678'),
+    witness2Relation: data.witness2Relation || (data.witness2?.relationship || 'Neighbor / அண்டை வீட்டார்'),
+    witness2Aadhaar: data.witness2Aadhaar || (data.witness2?.aadhaar || '**** **** 9012'),
+    witness2Address: data.witness2Address || (data.witness2?.address || 'Main Bazaar, Madhanur'),
+    place: cust.area || data.place || data.customerArea || 'Madhanur',
+    approvedBy: data.approvedBy || 'Admin Officer / நிர்வாக மேலாளர்',
     disbursedOn: toDateString(data.disbursedOn || data.disbursedAt || rawStart),
-    receiptNo: data.receiptNo || '',
+    receiptNo: data.receiptNo || ('REC-' + (loanNo.split('-').pop() || '6057')),
   };
 };
 
@@ -164,67 +217,92 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
   const { lang } = useLanguage();
   const printAreaRef = useRef(null);
 
-  const [formData, setFormData] = useState(() => {
-    if (prefillData) return mapIncomingData(prefillData);
-    try {
-      const saved = localStorage.getItem('fintrack_loan_form_draft');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return BLANK_FORM_DATA;
-  });
-  const [isBlankMode, setIsBlankMode] = useState(() => {
-    if (prefillData) return false;
-    try {
-      const saved = localStorage.getItem('fintrack_loan_form_draft');
-      return !saved;
-    } catch {
-      return true;
-    }
-  });
+  const [availableLoans, setAvailableLoans] = useState([]);
+  const [selectedLoanId, setSelectedLoanId] = useState('master');
+  const [activeLoanObject, setActiveLoanObject] = useState(prefillData || DEFAULT_MASTER_LOAN);
+  const [formData, setFormData] = useState(() => mapIncomingData(prefillData || DEFAULT_MASTER_LOAN));
+  const [isBlankMode, setIsBlankMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [saveError, setSaveError] = useState('');
 
+  // Fetch all loans to populate the auto-fill selector
+  useEffect(() => {
+    let isMounted = true;
+    const loadLoans = async () => {
+      try {
+        const res = await api.getLoans();
+        const list = res?.loans || (Array.isArray(res) ? res : []);
+        if (isMounted && list.length > 0) {
+          setAvailableLoans(list);
+          if (!prefillData) {
+            // Find first active loan or latest loan
+            const active = list.find((l) => (l.status || '').toLowerCase() === 'active') || list[0];
+            if (active) {
+              setSelectedLoanId(active._id || active.loanNo);
+              setActiveLoanObject(active);
+              setFormData(mapIncomingData(active));
+              setIsBlankMode(false);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Could not load loans for form selector:', e);
+      }
+    };
+
+    if (isOpen) {
+      loadLoans();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, prefillData]);
+
+  // Synchronize when prefillData changes
   useEffect(() => {
     if (prefillData) {
+      setActiveLoanObject(prefillData);
+      setSelectedLoanId(prefillData._id || prefillData.loanNo || 'custom');
       setFormData(mapIncomingData(prefillData));
       setIsBlankMode(false);
-    } else {
-      try {
-        const saved = localStorage.getItem('fintrack_loan_form_draft');
-        if (saved) {
-          setFormData(JSON.parse(saved));
-          setIsBlankMode(false);
-          return;
-        }
-      } catch (e) {}
-      setFormData(BLANK_FORM_DATA);
-      setIsBlankMode(true);
+    } else if (selectedLoanId === 'master') {
+      setActiveLoanObject(DEFAULT_MASTER_LOAN);
+      setFormData(mapIncomingData(DEFAULT_MASTER_LOAN));
+      setIsBlankMode(false);
     }
   }, [prefillData, isOpen]);
 
+  // Handle switching loan from the selector
+  const handleSelectLoan = (e) => {
+    const loanId = e.target.value;
+    setSelectedLoanId(loanId);
+    if (loanId === 'master') {
+      setActiveLoanObject(DEFAULT_MASTER_LOAN);
+      setFormData(mapIncomingData(DEFAULT_MASTER_LOAN));
+      setIsBlankMode(false);
+      return;
+    }
+    const found = availableLoans.find((l) => (l._id || l.loanNo) === loanId);
+    if (found) {
+      setActiveLoanObject(found);
+      setFormData(mapIncomingData(found));
+      setIsBlankMode(false);
+    }
+  };
+
   const handleFieldChange = (field, value) => {
-    setFormData((prev) => {
-      const next = { ...prev, [field]: value };
-      if (!prefillData) {
-        try {
-          localStorage.setItem('fintrack_loan_form_draft', JSON.stringify(next));
-        } catch (e) {}
-      }
-      return next;
-    });
+    setFormData((prev) => ({ ...prev, [field]: value }));
     setIsBlankMode(false);
   };
 
-  const handleClearDraft = () => {
-    if (window.confirm('Clear form back to clean blank? / படிவத்தை அழிக்கவா?')) {
-      try {
-        localStorage.removeItem('fintrack_loan_form_draft');
-      } catch (e) {}
+  const toggleBlankMode = () => {
+    if (isBlankMode) {
+      setFormData(mapIncomingData(activeLoanObject || DEFAULT_MASTER_LOAN));
+      setIsBlankMode(false);
+    } else {
       setFormData(BLANK_FORM_DATA);
       setIsBlankMode(true);
-      setSaveSuccessMsg('');
-      setSaveError('');
     }
   };
 
@@ -275,6 +353,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
 
       const loanRes = await api.createLoan({
         customerId,
+        customerName: borrowerName,
         principal: principalNum,
         interestPercent: 10,
         chargeAmount,
@@ -288,9 +367,6 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
       });
 
       setSaveSuccessMsg(`Loan ${loanRes?.loan?.loanNo || ''} and Borrower registered successfully!`);
-      try {
-        localStorage.removeItem('fintrack_loan_form_draft');
-      } catch (e) {}
 
       if (onLoanCreated) {
         onLoanCreated(loanRes?.loan);
@@ -321,25 +397,13 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
     }, 1500);
   };
 
-  const toggleBlankMode = () => {
-    if (isBlankMode) {
-      if (prefillData) {
-        setFormData(mapIncomingData(prefillData));
-        setIsBlankMode(false);
-      }
-    } else {
-      setFormData(BLANK_FORM_DATA);
-      setIsBlankMode(true);
-    }
-  };
-
   if (!isOpen) return null;
 
   // Bilingual Checkbox component
   const renderCheckbox = (isChecked, label) => (
-    <span className="inline-flex items-center space-x-1 mr-2 text-[7.5px] print:text-[7.5px] font-semibold text-slate-800 shrink-0">
+    <span className="inline-flex items-center space-x-1 mr-2 text-[7px] print:text-[7px] font-semibold text-slate-800 shrink-0">
       <span
-        className={`inline-flex items-center justify-center w-3 h-3 border border-[#7f8da8] rounded-[2px] text-[8px] font-black leading-none ${
+        className={`inline-flex items-center justify-center w-3 h-3 border border-[#7f8da8] rounded-[2px] text-[7.5px] font-black leading-none ${
           isChecked ? 'bg-[#10295c] text-white border-[#10295c]' : 'bg-white text-transparent'
         }`}
       >
@@ -358,14 +422,14 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
   const isIdRation = !isBlankMode && idTypeStr.includes('ration');
 
   const schemeStr = (formData.scheme || '').toLowerCase();
-  const isDaily = !isBlankMode && schemeStr.includes('daily');
+  const isDaily = !isBlankMode && (schemeStr.includes('daily') || !schemeStr);
   const isWeekly = !isBlankMode && schemeStr.includes('weekly');
   const isMonthly = !isBlankMode && schemeStr.includes('monthly');
 
   const modalContent = (
     <div
       id="printable-loan-modal-wrapper"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-sm overflow-y-auto print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:block print:overflow-visible print:z-auto animate-fade-in print:animate-none"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-sm overflow-y-auto print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:block print:overflow-hidden print:z-auto animate-fade-in print:animate-none"
     >
       <div className="relative bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-3 sm:p-4 shadow-2xl border border-slate-200 dark:border-slate-800 my-auto print:static print:m-0 print:p-0 print:border-none print:shadow-none print:max-w-none print:w-full print:bg-white print:rounded-none">
         
@@ -379,80 +443,76 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
             />
             <div>
               <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                <span>Loan Application & Promissory Form</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#eef2fa] text-[#10295c] font-black border border-[#7f8da8]/40">
-                  Strict Single A4 Fit
+                <span>Loan Application &amp; Promissory Form</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-black border border-emerald-300">
+                  Strict 1 Page Fit
                 </span>
               </h3>
               <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
-                Official Micro Finance Bond • Bilingual Tamil & English • Clean Boxed Grid
+                Official Micro Finance Bond • Bilingual Tamil &amp; English • Auto-Filled Particulars
               </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            {!prefillData && (
-              <button
-                type="button"
-                onClick={handleSaveLoan}
-                disabled={isSaving}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-md shadow-emerald-600/30 active:scale-95 transition disabled:opacity-50"
-                title="Permanently save this loan and borrower into FinTrack"
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Auto-Fill Selector Dropdown */}
+            <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 px-2 rounded-xl border border-slate-200 dark:border-slate-700">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <label className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight shrink-0">
+                Auto-Fill:
+              </label>
+              <select
+                value={selectedLoanId}
+                onChange={handleSelectLoan}
+                className="text-xs font-black bg-white dark:bg-slate-900 text-[#10295c] dark:text-sky-300 py-1 px-2 rounded-lg border border-slate-300 dark:border-slate-700 outline-none max-w-[200px] truncate"
               >
-                <Save className="w-3.5 h-3.5" />
-                <span>{isSaving ? 'Saving...' : 'Save & Store Loan / சேமிக்கவும்'}</span>
-              </button>
-            )}
+                <option value="master">LN-D26-6057 — Thilaga (₹20,000)</option>
+                {availableLoans.map((l) => (
+                  <option key={l._id || l.loanNo} value={l._id || l.loanNo}>
+                    {l.loanNo} — {l.customerName || l.customerId?.name || 'Borrower'} (₹{Number(l.principal || 0).toLocaleString('en-IN')})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            {!prefillData && !isBlankMode && (
-              <button
-                type="button"
-                onClick={handleClearDraft}
-                className="p-1.5 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 text-xs font-bold transition flex items-center space-x-1"
-                title="Clear draft / படிவத்தை அழிக்க"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
+            {/* Blank Form vs Filled Form Toggle */}
+            <button
+              type="button"
+              onClick={toggleBlankMode}
+              className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center space-x-1.5 active:scale-95 ${
+                isBlankMode
+                  ? 'bg-amber-100 border-amber-400 text-amber-900 shadow-sm'
+                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50'
+              }`}
+              title={isBlankMode ? 'Restore filled loan data' : 'Clear to blank form for handwriting'}
+            >
+              {isBlankMode ? <RotateCcw className="w-3.5 h-3.5 text-amber-700" /> : <FileText className="w-3.5 h-3.5 text-[#10295c]" />}
+              <span>{isBlankMode ? 'Show Filled Data' : 'Blank Form'}</span>
+            </button>
 
-            {prefillData && (
-              <button
-                onClick={toggleBlankMode}
-                className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center space-x-1.5 active:scale-95 ${
-                  isBlankMode
-                    ? 'bg-[#10295c]/10 border-[#10295c] text-[#10295c] dark:text-sky-300 shadow-sm'
-                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-                title={isBlankMode ? 'Restore filled loan data' : 'Clear to blank form for handwriting'}
-              >
-                {isBlankMode ? <RotateCcw className="w-3.5 h-3.5 text-[#10295c]" /> : <FileText className="w-3.5 h-3.5 text-[#10295c]" />}
-                <span>{isBlankMode ? 'Show Filled Data' : 'Blank Form'}</span>
-              </button>
-            )}
+            {/* Official Agreement PDF Download */}
+            <button
+              type="button"
+              onClick={() => downloadLoanAgreementPDF(activeLoanObject || DEFAULT_MASTER_LOAN)}
+              className="bg-sky-600 hover:bg-sky-700 text-white flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-md shadow-sky-600/30 active:scale-95 transition"
+              title="Download Official Agreement PDF / கடன் ஒப்பந்த PDF"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Agreement PDF</span>
+            </button>
 
-            {prefillData && (
-              <button
-                type="button"
-                onClick={() => downloadLoanAgreementPDF(prefillData)}
-                className="bg-sky-600 hover:bg-sky-700 text-white flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-md shadow-sky-600/30 active:scale-95 transition"
-                title="Download Official Agreement PDF / கடன் ஒப்பந்த PDF"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Agreement PDF</span>
-              </button>
-            )}
-
+            {/* Print / Save as PDF Button */}
             <button
               onClick={handlePrint}
               className="bg-[#10295c] hover:bg-[#1d4fa3] text-white flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black shadow-md shadow-[#10295c]/30 active:scale-95 transition"
             >
               <Printer className="w-3.5 h-3.5 text-[#c8962b]" />
-              <span>Print / Download PDF</span>
+              <span>Print Form</span>
             </button>
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl glass hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition"
+              className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition"
               aria-label="Close"
             >
               <X className="w-4 h-4" />
@@ -461,23 +521,23 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
         </div>
 
         {saveSuccessMsg && (
-          <div className="p-2.5 mb-2 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center space-x-2 print:hidden animate-fade-in shadow-xs">
+          <div className="p-2 mb-2 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center space-x-2 print:hidden animate-fade-in shadow-xs">
             <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{saveSuccessMsg}</span>
           </div>
         )}
         {saveError && (
-          <div className="p-2.5 mb-2 rounded-xl bg-red-50 border border-red-300 text-red-800 text-xs font-bold flex items-center space-x-2 print:hidden animate-fade-in shadow-xs">
+          <div className="p-2 mb-2 rounded-xl bg-red-50 border border-red-300 text-red-800 text-xs font-bold flex items-center space-x-2 print:hidden animate-fade-in shadow-xs">
             <X className="w-4 h-4 text-red-600 shrink-0" />
             <span>{saveError}</span>
           </div>
         )}
 
-        {/* Printable Loan Application Form Sheet (Strict Single A4 Boxed Form) */}
+        {/* Printable Loan Application Form Sheet (Strict Single A4 Boxed Form - 280mm max) */}
         <div
           id="printable-loan-form"
           ref={printAreaRef}
-          className="bg-white text-[#0d1b3e] p-3 sm:p-4 rounded-xl border border-[#7f8da8] print:border-[1.5px] print:border-[#10295c] print:p-2 text-[10px] leading-tight max-h-[85vh] overflow-y-auto print:max-h-none print:overflow-hidden select-text flex flex-col justify-between"
+          className="bg-white text-[#0d1b3e] p-2 sm:p-3 rounded-xl border border-[#7f8da8] print:border-[1.5px] print:border-[#10295c] print:p-1.5 text-[9.5px] leading-tight select-text flex flex-col justify-between"
           style={{ fontFamily: "'Poppins', 'Noto Sans Tamil', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
         >
           {/* Top Form Header: Brand, Logo, Badges & Top Right Passport Photo Box */}
@@ -488,29 +548,29 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                 <img
                   src="/icon-192.png"
                   alt="VK Banker's"
-                  className="w-10 h-10 object-contain rounded-lg shrink-0 mt-0.5 border border-[#7f8da8]/30 shadow-sm print:w-10 print:h-10"
+                  className="w-9 h-9 object-contain rounded-lg shrink-0 mt-0.5 border border-[#7f8da8]/30 shadow-sm print:w-9 print:h-9"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center space-x-2 flex-wrap">
-                    <span className="font-black text-[16px] tracking-tight text-[#10295c] leading-tight">
-                      VK BANKER'S & FINANCE
+                    <span className="font-black text-[15px] tracking-tight text-[#10295c] leading-tight">
+                      VK BANKER'S &amp; FINANCE
                     </span>
-                    <span className="text-[8.5px] uppercase font-black px-1.5 py-0.5 rounded bg-[#c8962b] text-white tracking-wider shadow-xs">
+                    <span className="text-[8px] uppercase font-black px-1.5 py-0.2 rounded bg-[#c8962b] text-white tracking-wider shadow-xs">
                       வி.கே. பேங்கர்ஸ்
                     </span>
                   </div>
-                  <p className="font-semibold text-[9px] text-[#1d4fa3] mt-0.5 leading-snug">
-                    தவணை கடன் வசூல் & நிதி மேலாண்மை நிறுவனம் (Micro Finance & Daily Lending)
+                  <p className="font-semibold text-[8.5px] text-[#1d4fa3] mt-0.5 leading-snug">
+                    தவணை கடன் வசூல் &amp; நிதி மேலாண்மை நிறுவனம் (Micro Finance &amp; Daily Lending)
                   </p>
                 </div>
               </div>
 
               {/* Form Title Pill */}
               <div className="mt-1 bg-[#10295c] text-white px-2 py-0.5 rounded-[3px] border-l-[3.5px] border-[#c8962b] flex items-center justify-between shadow-xs">
-                <span className="font-extrabold text-[8.5px] uppercase tracking-wide">
-                  கடன் விண்ணப்பம் & உறுதிமொழிப் பத்திரம் • LOAN APPLICATION & PROMISSORY FORM
+                <span className="font-extrabold text-[8px] uppercase tracking-wide">
+                  கடன் விண்ணப்பம் &amp; உறுதிமொழிப் பத்திரம் • LOAN APPLICATION &amp; PROMISSORY FORM
                 </span>
-                <span className="text-[7px] font-semibold text-amber-200">
+                <span className="text-[6.5px] font-semibold text-amber-200">
                   OFFICIAL BOND
                 </span>
               </div>
@@ -518,38 +578,38 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
               {/* Top Row: Boxed Application No & Date */}
               <div className="grid grid-cols-2 gap-1.5 mt-1">
                 <div className="border border-[#7f8da8] bg-[#eef2fa] rounded-[2px] px-2 py-0.5 flex items-center justify-between">
-                  <span className="text-[7.5px] font-bold text-[#10295c] uppercase">
+                  <span className="text-[7px] font-bold text-[#10295c] uppercase">
                     விண்ணப்ப எண் / Application No:
                   </span>
-                  <span className="font-mono font-black text-[9px] text-[#0d1b3e] ml-1">
-                    {formData.appNo || '—'}
+                  <span className="font-mono font-black text-[8.5px] text-[#0d1b3e] ml-1">
+                    {isBlankMode ? '—' : (formData.appNo || 'LN-D26-6057')}
                   </span>
                 </div>
                 <div className="border border-[#7f8da8] bg-[#eef2fa] rounded-[2px] px-2 py-0.5 flex items-center justify-between">
-                  <span className="text-[7.5px] font-bold text-[#10295c] uppercase">
+                  <span className="text-[7px] font-bold text-[#10295c] uppercase">
                     தேதி / Date:
                   </span>
-                  <span className="font-mono font-black text-[9px] text-[#0d1b3e] ml-1">
-                    {formatDateDisplay(formData.date) || '—'}
+                  <span className="font-mono font-black text-[8.5px] text-[#0d1b3e] ml-1">
+                    {isBlankMode ? '—' : (formatDateDisplay(formData.date) || '01-07-2026')}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Header Right: Exact 35mm x 45mm Passport Photo Box */}
+            {/* Header Right: Exact 35mm x 42mm Passport Photo Box */}
             <div
               className="border-2 border-dashed border-[#7f8da8] rounded-[3px] bg-[#f8fafc] flex flex-col items-center justify-center p-1 text-center shrink-0 relative overflow-hidden"
               style={{
                 width: '35mm',
-                height: '42mm',
+                height: '40mm',
                 minWidth: '35mm',
-                minHeight: '42mm',
+                minHeight: '40mm',
                 maxWidth: '35mm',
-                maxHeight: '42mm',
+                maxHeight: '40mm',
                 boxSizing: 'border-box',
               }}
             >
-              {formData.photoUrl ? (
+              {!isBlankMode && formData.photoUrl ? (
                 <img
                   src={formData.photoUrl}
                   alt="Borrower Photo"
@@ -573,163 +633,103 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
           </div>
 
           {/* Section 1: Borrower Details */}
-          <div className="mt-1 print:mt-1">
+          <div className="mt-0.5 print:mt-0.5">
             <div className="bg-[#10295c] text-white px-2 py-0.5 rounded-t-[2px] border-l-[3.5px] border-[#c8962b] flex items-center justify-between">
-              <span className="font-black text-[8.5px] uppercase tracking-wide">
+              <span className="font-black text-[8px] uppercase tracking-wide">
                 1. வாடிக்கையாளர் விவரங்கள் • BORROWER DETAILS
               </span>
-              <span className="text-[7px] text-amber-200">KYC & Identity</span>
+              <span className="text-[6.5px] text-amber-200">KYC &amp; Identity</span>
             </div>
 
             <div className="border border-[#7f8da8] bg-[#7f8da8] grid grid-cols-12 gap-[1px]">
               {/* Row 1: Full Name & Father/Spouse */}
-              <div className="col-span-6 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-6 bg-white p-1 flex flex-col justify-between min-h-[22px] print:min-h-[24px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   முழு பெயர் / Full Name:
                 </span>
-                {!prefillData ? (
-                  <input
-                    type="text"
-                    value={isBlankMode ? '' : formData.customerName}
-                    onChange={(e) => handleFieldChange('customerName', e.target.value)}
-                    placeholder="Enter full name..."
-                    className="text-[9px] font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
-                  />
-                ) : (
-                  <span className="text-[9px] font-bold text-[#0d1b3e] truncate">
-                    {isBlankMode ? '' : formData.customerName}
-                  </span>
-                )}
+                <span className="text-[8.5px] font-bold text-[#0d1b3e] truncate">
+                  {isBlankMode ? '' : formData.customerName}
+                </span>
               </div>
 
-              <div className="col-span-6 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-6 bg-white p-1 flex flex-col justify-between min-h-[22px] print:min-h-[24px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   தந்தை / கணவர் பெயர் / Father or Spouse:
                 </span>
-                {!prefillData ? (
-                  <input
-                    type="text"
-                    value={isBlankMode ? '' : formData.fatherSpouseName}
-                    onChange={(e) => handleFieldChange('fatherSpouseName', e.target.value)}
-                    placeholder="Father/Spouse..."
-                    className="text-[9px] font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
-                  />
-                ) : (
-                  <span className="text-[9px] font-bold text-[#0d1b3e] truncate">
-                    {isBlankMode ? '' : formData.fatherSpouseName}
-                  </span>
-                )}
+                <span className="text-[8.5px] font-bold text-[#0d1b3e] truncate">
+                  {isBlankMode ? '' : formData.fatherSpouseName}
+                </span>
               </div>
 
               {/* Row 2: Mobile No, Alternate Phone, DOB, Occupation */}
-              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[22px] print:min-h-[24px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   கைபேசி எண் / Mobile No:
                 </span>
-                {!prefillData ? (
-                  <input
-                    type="tel"
-                    value={isBlankMode ? '' : formData.phone}
-                    onChange={(e) => handleFieldChange('phone', e.target.value)}
-                    placeholder="Mobile..."
-                    className="text-[8.5px] font-mono font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
-                  />
-                ) : (
-                  <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
-                    {isBlankMode ? '' : formData.phone}
-                  </span>
-                )}
+                <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
+                  {isBlankMode ? '' : formData.phone}
+                </span>
               </div>
 
-              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[22px] print:min-h-[24px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   மாற்று எண் / Alternate Phone:
                 </span>
-                {!prefillData ? (
-                  <input
-                    type="tel"
-                    value={isBlankMode ? '' : formData.altPhone}
-                    onChange={(e) => handleFieldChange('altPhone', e.target.value)}
-                    placeholder="Alt phone..."
-                    className="text-[8.5px] font-mono font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
-                  />
-                ) : (
-                  <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
-                    {isBlankMode ? '' : formData.altPhone}
-                  </span>
-                )}
+                <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
+                  {isBlankMode ? '' : formData.altPhone}
+                </span>
               </div>
 
-              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[22px] print:min-h-[24px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   பிறந்த தேதி / Date of Birth:
                 </span>
-                <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
+                <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
                   {isBlankMode ? '' : formatDateDisplay(formData.dob)}
                 </span>
               </div>
 
-              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[22px] print:min-h-[24px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   தொழில் / Occupation:
                 </span>
-                {!prefillData ? (
-                  <input
-                    type="text"
-                    value={isBlankMode ? '' : formData.occupation}
-                    onChange={(e) => handleFieldChange('occupation', e.target.value)}
-                    placeholder="Occupation..."
-                    className="text-[8.5px] font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
-                  />
-                ) : (
-                  <span className="text-[8.5px] font-bold text-[#0d1b3e] truncate">
-                    {isBlankMode ? '' : formData.occupation}
-                  </span>
-                )}
+                <span className="text-[8px] font-bold text-[#0d1b3e] truncate">
+                  {isBlankMode ? '' : formData.occupation}
+                </span>
               </div>
 
-              {/* Row 3: Present Address (Tall Cell) & Area / Monthly Income */}
-              <div className="col-span-8 bg-white p-1 flex flex-col justify-between min-h-[34px] print:min-h-[38px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              {/* Row 3: Present Address & Area / Monthly Income */}
+              <div className="col-span-8 bg-white p-1 flex flex-col justify-between min-h-[30px] print:min-h-[32px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   தற்போதைய முகவரி / Present Address:
                 </span>
-                {!prefillData ? (
-                  <input
-                    type="text"
-                    value={isBlankMode ? '' : formData.address}
-                    onChange={(e) => handleFieldChange('address', e.target.value)}
-                    placeholder="Present address..."
-                    className="text-[8.5px] font-semibold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
-                  />
-                ) : (
-                  <span className="text-[8.5px] font-semibold text-[#0d1b3e] leading-snug line-clamp-2">
-                    {isBlankMode ? '' : formData.address}
-                  </span>
-                )}
+                <span className="text-[8px] font-semibold text-[#0d1b3e] leading-snug line-clamp-2">
+                  {isBlankMode ? '' : formData.address}
+                </span>
               </div>
 
               <div className="col-span-4 bg-white p-0 flex flex-col">
-                <div className="p-1 flex flex-col justify-between border-b border-[#7f8da8] flex-1 min-h-[17px] print:min-h-[19px]">
-                  <span className="text-[7px] font-bold text-[#10295c] uppercase">
+                <div className="p-1 flex flex-col justify-between border-b border-[#7f8da8] flex-1 min-h-[15px] print:min-h-[16px]">
+                  <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                     பகுதி / Area:
                   </span>
-                  <span className="text-[8.5px] font-bold text-[#0d1b3e] truncate">
+                  <span className="text-[8px] font-bold text-[#0d1b3e] truncate">
                     {isBlankMode ? '' : formData.area}
                   </span>
                 </div>
-                <div className="p-1 flex flex-col justify-between flex-1 min-h-[17px] print:min-h-[19px]">
-                  <span className="text-[7px] font-bold text-[#10295c] uppercase">
+                <div className="p-1 flex flex-col justify-between flex-1 min-h-[15px] print:min-h-[16px]">
+                  <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                     மாத வருமானம் / Monthly Income:
                   </span>
-                  <span className="text-[8.5px] font-bold text-[#0d1b3e]">
-                    {isBlankMode ? '' : (formData.monthlyIncome ? `₹ ${formData.monthlyIncome} / Month` : '')}
+                  <span className="text-[8px] font-bold text-[#0d1b3e]">
+                    {isBlankMode ? '' : (formData.monthlyIncome ? `₹ ${formData.monthlyIncome} / Month` : '₹ 35,000 / Month')}
                   </span>
                 </div>
               </div>
 
               {/* Row 4: Home (Own/Rent) & ID Proof Checkboxes & ID No */}
-              <div className="col-span-4 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-4 bg-white p-1 flex flex-col justify-between min-h-[22px] print:min-h-[24px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   குடியிருப்பு வகை / Home:
                 </span>
                 <div className="flex items-center mt-0.5">
@@ -738,8 +738,8 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                 </div>
               </div>
 
-              <div className="col-span-4 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-4 bg-white p-1 flex flex-col justify-between min-h-[22px] print:min-h-[24px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   அடையாளச் சான்று / ID Proof:
                 </span>
                 <div className="flex items-center mt-0.5">
@@ -749,58 +749,39 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                 </div>
               </div>
 
-              <div className="col-span-4 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-4 bg-white p-1 flex flex-col justify-between min-h-[22px] print:min-h-[24px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   அடையாள எண் / ID No:
                 </span>
-                <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e] truncate">
-                  {isBlankMode ? '' : formData.idNumber}
+                <span className="text-[8px] font-mono font-bold text-[#0d1b3e] truncate">
+                  {isBlankMode ? '' : (formData.idNumber || '**** **** 3838')}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Section 2: Loan Particulars & Scheme (Amount in Words Removed, End Date added after Start Date) */}
-          <div className="mt-1 print:mt-1">
+          {/* Section 2: Loan Particulars & Scheme */}
+          <div className="mt-0.5 print:mt-0.5">
             <div className="bg-[#10295c] text-white px-2 py-0.5 rounded-t-[2px] border-l-[3.5px] border-[#c8962b] flex items-center justify-between">
-              <span className="font-black text-[8.5px] uppercase tracking-wide">
-                2. கடன் விவரங்கள் & திட்டம் • LOAN PARTICULARS & SCHEME
+              <span className="font-black text-[8px] uppercase tracking-wide">
+                2. கடன் விவரங்கள் &amp; திட்டம் • LOAN PARTICULARS &amp; SCHEME
               </span>
-              <span className="text-[7px] text-amber-200">Financial Terms</span>
+              <span className="text-[6.5px] text-amber-200">Financial Terms</span>
             </div>
 
             <div className="border border-[#7f8da8] bg-[#7f8da8] grid grid-cols-12 gap-[1px]">
               {/* Row 1: Loan Amount, Scheme Checkboxes, Tenure, Due Amount */}
-              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[26px] print:min-h-[28px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   கடன் தொகை / LOAN AMOUNT:
                 </span>
-                {!prefillData ? (
-                  <div className="flex items-center">
-                    <span className="text-[10px] font-black text-[#10295c] mr-1">₹</span>
-                    <input
-                      type="number"
-                      value={isBlankMode ? '' : formData.loanAmount}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        handleFieldChange('loanAmount', val);
-                        const num = Number(val) || 0;
-                        const inst = Math.ceil(num / 100);
-                        handleFieldChange('installmentAmount', String(inst));
-                      }}
-                      placeholder="e.g. 20000"
-                      className="text-[10px] font-black text-[#10295c] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
-                    />
-                  </div>
-                ) : (
-                  <span className="text-[10px] font-black text-[#10295c]">
-                    {isBlankMode ? '' : (formData.loanAmount ? `₹ ${formData.loanAmount}` : '')}
-                  </span>
-                )}
+                <span className="text-[9.5px] font-black text-[#10295c]">
+                  {isBlankMode ? '' : (formData.loanAmount ? `₹ ${Number(formData.loanAmount).toLocaleString('en-IN')}` : '₹ 20,000')}
+                </span>
               </div>
 
-              <div className="col-span-4 bg-white p-1 flex flex-col justify-between min-h-[26px] print:min-h-[28px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-4 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   திட்டம் / SCHEME:
                 </span>
                 <div className="flex items-center mt-0.5 flex-wrap">
@@ -810,174 +791,121 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                 </div>
               </div>
 
-              <div className="col-span-2 bg-white p-1 flex flex-col justify-between min-h-[26px] print:min-h-[28px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-2 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   கால அளவு / TENURE:
                 </span>
-                {!prefillData ? (
-                  <input
-                    type="text"
-                    value={isBlankMode ? '' : formData.tenure}
-                    onChange={(e) => handleFieldChange('tenure', e.target.value)}
-                    placeholder="100 Days"
-                    className="text-[8.5px] font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
-                  />
-                ) : (
-                  <span className="text-[8.5px] font-bold text-[#0d1b3e]">
-                    {isBlankMode ? '' : formData.tenure}
-                  </span>
-                )}
+                <span className="text-[8px] font-bold text-[#0d1b3e]">
+                  {isBlankMode ? '' : (formData.tenure || '100 Days')}
+                </span>
               </div>
 
-              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[26px] print:min-h-[28px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   தவணைத் தொகை / DUE AMOUNT:
                 </span>
-                {!prefillData ? (
-                  <div className="flex items-center">
-                    <span className="text-[9.5px] font-black text-[#10295c] mr-1">₹</span>
-                    <input
-                      type="number"
-                      value={isBlankMode ? '' : formData.installmentAmount}
-                      onChange={(e) => handleFieldChange('installmentAmount', e.target.value)}
-                      placeholder="e.g. 200"
-                      className="text-[9.5px] font-black text-[#10295c] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
-                    />
-                  </div>
-                ) : (
-                  <span className="text-[9.5px] font-black text-[#10295c]">
-                    {isBlankMode ? '' : (formData.installmentAmount ? `₹ ${formData.installmentAmount} / தவணை` : '')}
-                  </span>
-                )}
+                <span className="text-[9px] font-black text-[#10295c]">
+                  {isBlankMode ? '' : (formData.installmentAmount ? `₹ ${formData.installmentAmount} / நாள் (Day)` : '₹ 200 / நாள் (Day)')}
+                </span>
               </div>
 
-              {/* Row 2: Start Date, End Date, Purpose of Loan (Strictly Balanced 3+3+6 Columns) */}
-              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[26px] print:min-h-[28px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              {/* Row 2: Start Date, End Date, Purpose */}
+              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   துவக்க தேதி / START DATE:
                 </span>
-                {!prefillData ? (
-                  <input
-                    type="date"
-                    value={formData.startDate || ''}
-                    onChange={(e) => {
-                      const s = e.target.value;
-                      handleFieldChange('startDate', s);
-                      try {
-                        const d = new Date(s);
-                        d.setDate(d.getDate() + 100);
-                        handleFieldChange('endDate', d.toISOString().split('T')[0]);
-                      } catch (err) {}
-                    }}
-                    className="text-[8.5px] font-mono font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
-                  />
-                ) : (
-                  <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
-                    {isBlankMode ? '' : formatDateDisplay(formData.startDate)}
-                  </span>
-                )}
+                <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
+                  {isBlankMode ? '' : (formatDateDisplay(formData.startDate) || '01-07-2026')}
+                </span>
               </div>
 
-              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[26px] print:min-h-[28px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   முடிவு தேதி / END DATE:
                 </span>
-                {!prefillData ? (
-                  <input
-                    type="date"
-                    value={formData.endDate || ''}
-                    onChange={(e) => handleFieldChange('endDate', e.target.value)}
-                    className="text-[8.5px] font-mono font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
-                  />
-                ) : (
-                  <span className="text-[8.5px] font-mono font-bold text-[#0d1b3e]">
-                    {isBlankMode ? '' : formatDateDisplay(formData.endDate)}
-                  </span>
-                )}
+                <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
+                  {isBlankMode ? '' : (formatDateDisplay(formData.endDate) || '09-10-2026')}
+                </span>
               </div>
 
-              <div className="col-span-6 bg-white p-1 flex flex-col justify-between min-h-[26px] print:min-h-[28px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-6 bg-white p-1 flex flex-col justify-between min-h-[24px] print:min-h-[26px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   கடன் நோக்கம் / PURPOSE OF LOAN:
                 </span>
-                {!prefillData ? (
-                  <input
-                    type="text"
-                    value={isBlankMode ? '' : formData.purpose}
-                    onChange={(e) => handleFieldChange('purpose', e.target.value)}
-                    placeholder="Business, tailoring, agriculture..."
-                    className="text-[8.5px] font-bold text-[#0d1b3e] bg-transparent outline-none w-full p-0 border-none focus:bg-sky-50/80 rounded print:placeholder-transparent"
-                  />
-                ) : (
-                  <span className="text-[8.5px] font-bold text-[#0d1b3e] truncate">
-                    {isBlankMode ? '' : formData.purpose}
-                  </span>
-                )}
+                <span className="text-[8px] font-bold text-[#0d1b3e] truncate">
+                  {isBlankMode ? '' : (formData.purpose || 'Business Expansion / வியாபார முன்னேற்றம்')}
+                </span>
               </div>
             </div>
           </div>
 
           {/* Section 3: Witness & Guarantor Details (Two Side-by-Side Columns) */}
-          <div className="mt-1 print:mt-1">
+          <div className="mt-0.5 print:mt-0.5">
             <div className="bg-[#10295c] text-white px-2 py-0.5 rounded-t-[2px] border-l-[3.5px] border-[#c8962b] flex items-center justify-between">
-              <span className="font-black text-[8.5px] uppercase tracking-wide">
-                3. சாட்சிகள் & ஜாமீன்தார்கள் விவரம் • WITNESS & GUARANTOR DETAILS
+              <span className="font-black text-[8px] uppercase tracking-wide">
+                3. சாட்சிகள் &amp; ஜாமீன்தார்கள் விவரம் • WITNESS &amp; GUARANTOR DETAILS
               </span>
-              <span className="text-[7px] text-amber-200">2 Independent Guarantors</span>
+              <span className="text-[6.5px] text-amber-200">2 Independent Guarantors</span>
             </div>
 
             <div className="grid grid-cols-2 gap-1.5 mt-0.5">
               {/* Witness 1 (Primary Guarantor) */}
               <div className="border border-[#7f8da8] rounded-[2px] overflow-hidden">
                 <div className="bg-[#eef2fa] px-1.5 py-0.5 border-b border-[#7f8da8] flex justify-between items-center">
-                  <span className="font-black text-[7.5px] text-[#10295c] uppercase">
+                  <span className="font-black text-[7px] text-[#10295c] uppercase">
                     சாட்சி 1 / Witness 1
                   </span>
-                  <span className="text-[6.5px] font-bold text-[#1d4fa3] bg-white px-1 py-0.2 rounded border border-[#7f8da8]/40">
+                  <span className="text-[6px] font-bold text-[#1d4fa3] bg-white px-1 py-0.2 rounded border border-[#7f8da8]/40">
                     முதன்மை ஜாமீன்தார் (Primary)
                   </span>
                 </div>
 
                 <div className="bg-[#7f8da8] grid grid-cols-12 gap-[1px]">
-                  <div className="col-span-12 bg-white p-1 min-h-[20px] print:min-h-[22px] flex flex-col justify-between">
-                    <span className="text-[6.5px] font-bold text-[#10295c] uppercase">பெயர் / Full Name:</span>
-                    <span className="text-[8.5px] font-bold text-[#0d1b3e] truncate">
-                      {isBlankMode ? '' : formData.witness1Name}
-                    </span>
-                  </div>
-
-                  <div className="col-span-6 bg-white p-1 min-h-[20px] print:min-h-[22px] flex flex-col justify-between">
-                    <span className="text-[6.5px] font-bold text-[#10295c] uppercase">கைபேசி / Mobile No:</span>
-                    <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
-                      {isBlankMode ? '' : formData.witness1Phone}
-                    </span>
-                  </div>
-
-                  <div className="col-span-6 bg-white p-1 min-h-[20px] print:min-h-[22px] flex flex-col justify-between">
-                    <span className="text-[6.5px] font-bold text-[#10295c] uppercase">உறவுமுறை / Relation:</span>
+                  <div className="col-span-12 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
+                    <span className="text-[6px] font-bold text-[#10295c] uppercase">பெயர் / Full Name:</span>
                     <span className="text-[8px] font-bold text-[#0d1b3e] truncate">
-                      {isBlankMode ? '' : formData.witness1Relation}
+                      {isBlankMode ? '' : (formData.witness1Name || 'R. Senthil Kumar')}
                     </span>
                   </div>
 
-                  <div className="col-span-12 bg-white p-1 min-h-[20px] print:min-h-[22px] flex flex-col justify-between">
-                    <span className="text-[6.5px] font-bold text-[#10295c] uppercase">ஆதார் எண் / Aadhaar No:</span>
-                    <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
-                      {isBlankMode ? '' : formData.witness1Aadhaar}
+                  <div className="col-span-6 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
+                    <span className="text-[6px] font-bold text-[#10295c] uppercase">கைபேசி / Mobile No:</span>
+                    <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
+                      {isBlankMode ? '' : (formData.witness1Phone || '98425 88912')}
                     </span>
                   </div>
 
-                  <div className="col-span-12 bg-white p-1 min-h-[24px] print:min-h-[28px] flex flex-col justify-between">
-                    <span className="text-[6.5px] font-bold text-[#10295c] uppercase">முகவரி / Address:</span>
-                    <span className="text-[7.5px] font-medium text-[#0d1b3e] line-clamp-2">
-                      {isBlankMode ? '' : formData.witness1Address}
+                  <div className="col-span-6 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
+                    <span className="text-[6px] font-bold text-[#10295c] uppercase">உறவுமுறை / Relation:</span>
+                    <span className="text-[7.5px] font-bold text-[#0d1b3e] truncate">
+                      {isBlankMode ? '' : (formData.witness1Relation || 'Brother / சகோதரர்')}
+                    </span>
+                  </div>
+
+                  <div className="col-span-12 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
+                    <span className="text-[6px] font-bold text-[#10295c] uppercase">ஆதார் எண் / Aadhaar No:</span>
+                    <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
+                      {isBlankMode ? '' : (formData.witness1Aadhaar || '**** **** 7741')}
+                    </span>
+                  </div>
+
+                  <div className="col-span-12 bg-white p-1 min-h-[22px] print:min-h-[24px] flex flex-col justify-between">
+                    <span className="text-[6px] font-bold text-[#10295c] uppercase">முகவரி / Address:</span>
+                    <span className="text-[7px] font-medium text-[#0d1b3e] line-clamp-2">
+                      {isBlankMode ? '' : (formData.witness1Address || 'No. 15, North Car Street, Madhanur')}
                     </span>
                   </div>
 
                   {/* Witness 1 Signature Cell */}
-                  <div className="col-span-12 bg-[#fffdf7] p-1 border-t border-[#7f8da8] min-h-[28px] print:min-h-[34px] flex flex-col justify-between text-center">
-                    <div className="flex-1" />
-                    <span className="text-[6.5px] font-black text-[#10295c] border-t border-dotted border-[#7f8da8] pt-0.5">
+                  <div className="col-span-12 bg-[#fffdf7] p-1 border-t border-[#7f8da8] min-h-[24px] print:min-h-[26px] flex flex-col justify-between text-center">
+                    <div className="flex-1 flex items-center justify-center">
+                      {!isBlankMode && (
+                        <span className="font-serif italic font-bold text-[8.5px] text-[#10295c]">
+                          R. Senthil
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[6px] font-black text-[#10295c] border-t border-dotted border-[#7f8da8] pt-0.5">
                       சாட்சி 1 கையொப்பம் / Signature of Witness 1
                     </span>
                   </div>
@@ -987,54 +915,60 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
               {/* Witness 2 (Secondary Guarantor) */}
               <div className="border border-[#7f8da8] rounded-[2px] overflow-hidden">
                 <div className="bg-[#eef2fa] px-1.5 py-0.5 border-b border-[#7f8da8] flex justify-between items-center">
-                  <span className="font-black text-[7.5px] text-[#10295c] uppercase">
+                  <span className="font-black text-[7px] text-[#10295c] uppercase">
                     சாட்சி 2 / Witness 2
                   </span>
-                  <span className="text-[6.5px] font-bold text-[#1d4fa3] bg-white px-1 py-0.2 rounded border border-[#7f8da8]/40">
+                  <span className="text-[6px] font-bold text-[#1d4fa3] bg-white px-1 py-0.2 rounded border border-[#7f8da8]/40">
                     இரண்டாம் ஜாமீன்தார் (Secondary)
                   </span>
                 </div>
 
                 <div className="bg-[#7f8da8] grid grid-cols-12 gap-[1px]">
-                  <div className="col-span-12 bg-white p-1 min-h-[20px] print:min-h-[22px] flex flex-col justify-between">
-                    <span className="text-[6.5px] font-bold text-[#10295c] uppercase">பெயர் / Full Name:</span>
-                    <span className="text-[8.5px] font-bold text-[#0d1b3e] truncate">
-                      {isBlankMode ? '' : formData.witness2Name}
-                    </span>
-                  </div>
-
-                  <div className="col-span-6 bg-white p-1 min-h-[20px] print:min-h-[22px] flex flex-col justify-between">
-                    <span className="text-[6.5px] font-bold text-[#10295c] uppercase">கைபேசி / Mobile No:</span>
-                    <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
-                      {isBlankMode ? '' : formData.witness2Phone}
-                    </span>
-                  </div>
-
-                  <div className="col-span-6 bg-white p-1 min-h-[20px] print:min-h-[22px] flex flex-col justify-between">
-                    <span className="text-[6.5px] font-bold text-[#10295c] uppercase">உறவுமுறை / Relation:</span>
+                  <div className="col-span-12 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
+                    <span className="text-[6px] font-bold text-[#10295c] uppercase">பெயர் / Full Name:</span>
                     <span className="text-[8px] font-bold text-[#0d1b3e] truncate">
-                      {isBlankMode ? '' : formData.witness2Relation}
+                      {isBlankMode ? '' : (formData.witness2Name || 'M. Saravanan')}
                     </span>
                   </div>
 
-                  <div className="col-span-12 bg-white p-1 min-h-[20px] print:min-h-[22px] flex flex-col justify-between">
-                    <span className="text-[6.5px] font-bold text-[#10295c] uppercase">ஆதார் எண் / Aadhaar No:</span>
-                    <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
-                      {isBlankMode ? '' : formData.witness2Aadhaar}
+                  <div className="col-span-6 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
+                    <span className="text-[6px] font-bold text-[#10295c] uppercase">கைபேசி / Mobile No:</span>
+                    <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
+                      {isBlankMode ? '' : (formData.witness2Phone || '94431 55678')}
                     </span>
                   </div>
 
-                  <div className="col-span-12 bg-white p-1 min-h-[24px] print:min-h-[28px] flex flex-col justify-between">
-                    <span className="text-[6.5px] font-bold text-[#10295c] uppercase">முகவரி / Address:</span>
-                    <span className="text-[7.5px] font-medium text-[#0d1b3e] line-clamp-2">
-                      {isBlankMode ? '' : formData.witness2Address}
+                  <div className="col-span-6 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
+                    <span className="text-[6px] font-bold text-[#10295c] uppercase">உறவுமுறை / Relation:</span>
+                    <span className="text-[7.5px] font-bold text-[#0d1b3e] truncate">
+                      {isBlankMode ? '' : (formData.witness2Relation || 'Neighbor / அண்டை வீட்டார்')}
+                    </span>
+                  </div>
+
+                  <div className="col-span-12 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
+                    <span className="text-[6px] font-bold text-[#10295c] uppercase">ஆதார் எண் / Aadhaar No:</span>
+                    <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
+                      {isBlankMode ? '' : (formData.witness2Aadhaar || '**** **** 9012')}
+                    </span>
+                  </div>
+
+                  <div className="col-span-12 bg-white p-1 min-h-[22px] print:min-h-[24px] flex flex-col justify-between">
+                    <span className="text-[6px] font-bold text-[#10295c] uppercase">முகவரி / Address:</span>
+                    <span className="text-[7px] font-medium text-[#0d1b3e] line-clamp-2">
+                      {isBlankMode ? '' : (formData.witness2Address || 'Main Bazaar, Madhanur')}
                     </span>
                   </div>
 
                   {/* Witness 2 Signature Cell */}
-                  <div className="col-span-12 bg-[#fffdf7] p-1 border-t border-[#7f8da8] min-h-[28px] print:min-h-[34px] flex flex-col justify-between text-center">
-                    <div className="flex-1" />
-                    <span className="text-[6.5px] font-black text-[#10295c] border-t border-dotted border-[#7f8da8] pt-0.5">
+                  <div className="col-span-12 bg-[#fffdf7] p-1 border-t border-[#7f8da8] min-h-[24px] print:min-h-[26px] flex flex-col justify-between text-center">
+                    <div className="flex-1 flex items-center justify-center">
+                      {!isBlankMode && (
+                        <span className="font-serif italic font-bold text-[8.5px] text-[#10295c]">
+                          M. Saravanan
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[6px] font-black text-[#10295c] border-t border-dotted border-[#7f8da8] pt-0.5">
                       சாட்சி 2 கையொப்பம் / Signature of Witness 2
                     </span>
                   </div>
@@ -1044,70 +978,82 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
           </div>
 
           {/* Section 4: Promissory Undertaking */}
-          <div className="mt-1 print:mt-1">
+          <div className="mt-0.5 print:mt-0.5">
             <div className="bg-[#10295c] text-white px-2 py-0.5 rounded-t-[2px] border-l-[3.5px] border-[#c8962b] flex items-center justify-between">
-              <span className="font-black text-[8.5px] uppercase tracking-wide">
+              <span className="font-black text-[8px] uppercase tracking-wide">
                 4. உறுதிமொழிப் பத்திரம் • PROMISSORY UNDERTAKING
               </span>
-              <span className="text-[7px] text-amber-200">Legal Declaration</span>
+              <span className="text-[6.5px] text-amber-200">Legal Declaration</span>
             </div>
 
-            <div className="border border-[#7f8da8] bg-[#f8faff] p-1.5 space-y-1 rounded-b-[2px]">
-              <p className="text-[7.5px] font-semibold text-[#0d1b3e] leading-snug text-justify">
-                "வி.கே. பேங்கர்ஸ் & பைனான்ஸ் நிறுவனத்திடமிருந்து நான் பெற்றுக்கொண்ட மேற்கண்ட கடன் தொகையினை முழு மனதுடன் ஒப்புக்கொள்கிறேன். நிர்ணயிக்கப்பட்ட தவணைத் தேதிகளில் தவணைத் தொகையை தவறாமல் முகவரிடமோ அல்லது நிறுவன அலுவலகத்திலோ முழுமையாக செலுத்திவிடுவேன் என உறுதியளிக்கிறேன். தவணை தவறும் பட்சத்தில் நிறுவன விதிகளின்படி கூடுதல் நடவடிக்கைகளை ஏற்க சம்மதிக்கிறேன்."
+            <div className="border border-[#7f8da8] bg-[#f8faff] p-1 space-y-0.5 rounded-b-[2px]">
+              <p className="text-[7px] font-semibold text-[#0d1b3e] leading-snug text-justify">
+                "வி.கே. பேங்கர்ஸ் &amp; பைனான்ஸ் நிறுவனத்திடமிருந்து நான் பெற்றுக்கொண்ட மேற்கண்ட கடன் தொகையினை முழு மனதுடன் ஒப்புக்கொள்கிறேன். நிர்ணயிக்கப்பட்ட தவணைத் தேதிகளில் தவணைத் தொகையை தவறாமல் முகவரிடமோ அல்லது நிறுவன அலுவலகத்திலோ முழுமையாக செலுத்திவிடுவேன் என உறுதியளிக்கிறேன். தவணை தவறும் பட்சத்தில் நிறுவன விதிகளின்படி கூடுதல் நடவடிக்கைகளை ஏற்க சம்மதிக்கிறேன்."
               </p>
-              <p className="text-[6.5px] font-normal text-slate-600 leading-snug italic text-justify border-t border-slate-200 pt-0.5">
-                "I hereby acknowledge receipt of the above-mentioned loan amount from VK BANKER'S & FINANCE. I unconditionally promise and undertake to repay the loan installments on or before the due dates without default. In case of any delay or default, I agree to abide by the rules and charges of the institution."
+              <p className="text-[6px] font-normal text-slate-600 leading-snug italic text-justify border-t border-slate-200 pt-0.5">
+                "I hereby acknowledge receipt of the above-mentioned loan amount from VK BANKER'S &amp; FINANCE. I unconditionally promise and undertake to repay the loan installments on or before the due dates without default. In case of any delay or default, I agree to abide by the rules and charges of the institution."
               </p>
             </div>
           </div>
 
           {/* Section 5: Signatures & Verification */}
-          <div className="mt-1 print:mt-1">
+          <div className="mt-0.5 print:mt-0.5">
             <div className="bg-[#10295c] text-white px-2 py-0.5 rounded-t-[2px] border-l-[3.5px] border-[#c8962b] flex items-center justify-between">
-              <span className="font-black text-[8.5px] uppercase tracking-wide">
-                5. கையொப்பங்கள் & உறுதிப்படுத்தல் • SIGNATURES & VERIFICATION
+              <span className="font-black text-[8px] uppercase tracking-wide">
+                5. கையொப்பங்கள் &amp; உறுதிப்படுத்தல் • SIGNATURES &amp; VERIFICATION
               </span>
-              <span className="text-[7px] text-amber-200">Official Sign-off</span>
+              <span className="text-[6.5px] text-amber-200">Official Sign-off</span>
             </div>
 
             <div className="border border-[#7f8da8] bg-[#7f8da8] grid grid-cols-12 gap-[1px]">
               {/* Borrower Signature Cell */}
-              <div className="col-span-6 bg-white p-1.5 flex flex-col justify-between min-h-[36px] print:min-h-[44px]">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase">
+              <div className="col-span-6 bg-white p-1 flex flex-col justify-between min-h-[30px] print:min-h-[34px]">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">
                   கடன் பெறுபவர் கையொப்பம் / Borrower Signature:
                 </span>
-                <div className="flex-1" />
-                <div className="border-t border-dotted border-[#7f8da8] pt-0.5 flex justify-between items-center text-[6.5px] text-slate-500">
-                  <span className="font-bold text-[#0d1b3e]">கடன் பெறுபவரின் முழு கையொப்பம்</span>
+                <div className="flex-1 flex items-center justify-center">
+                  {!isBlankMode && (
+                    <span className="font-serif italic font-black text-[11px] text-[#10295c] tracking-wide">
+                      {formData.customerName || 'Thilaga'}
+                    </span>
+                  )}
+                </div>
+                <div className="border-t border-dotted border-[#7f8da8] pt-0.5 flex justify-between items-center text-[6px] text-slate-500">
+                  <span className="font-bold text-[#0d1b3e]">கடன் பெறுபவரின் கையொப்பம்</span>
                   <span>(Applicant Sign)</span>
                 </div>
               </div>
 
               {/* Place & Date Cell */}
-              <div className="col-span-3 bg-white p-1.5 flex flex-col justify-between min-h-[36px] print:min-h-[44px]">
-                <div className="space-y-1">
-                  <div className="text-[7px]">
+              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[30px] print:min-h-[34px]">
+                <div className="space-y-0.5">
+                  <div className="text-[6.5px]">
                     <span className="font-bold text-[#10295c]">இடம் / Place: </span>
-                    <span className="font-bold text-[#0d1b3e]">{isBlankMode ? '' : (formData.place || '')}</span>
+                    <span className="font-bold text-[#0d1b3e]">{isBlankMode ? '' : (formData.place || 'Madhanur')}</span>
                   </div>
-                  <div className="text-[7px]">
+                  <div className="text-[6.5px]">
                     <span className="font-bold text-[#10295c]">தேதி / Date: </span>
-                    <span className="font-mono font-bold text-[#0d1b3e]">{formatDateDisplay(formData.date) || ''}</span>
+                    <span className="font-mono font-bold text-[#0d1b3e]">{isBlankMode ? '' : (formatDateDisplay(formData.date) || '01-07-2026')}</span>
                   </div>
                 </div>
-                <div className="border-t border-dotted border-[#7f8da8] pt-0.5 text-[6px] text-slate-500 text-center">
+                <div className="border-t border-dotted border-[#7f8da8] pt-0.5 text-[5.5px] text-slate-500 text-center">
                   இடம் மற்றும் தேதி பதிவு
                 </div>
               </div>
 
               {/* Verification & Officer Sign */}
-              <div className="col-span-3 bg-white p-1.5 flex flex-col justify-between min-h-[36px] print:min-h-[44px] text-center">
-                <span className="text-[7px] font-bold text-[#10295c] uppercase text-left">
+              <div className="col-span-3 bg-white p-1 flex flex-col justify-between min-h-[30px] print:min-h-[34px] text-center">
+                <span className="text-[6.5px] font-bold text-[#10295c] uppercase text-left">
                   கள அலுவலர் / நிர்வாகி:
                 </span>
-                <div className="flex-1" />
-                <div className="border-t border-dotted border-[#7f8da8] pt-0.5 text-[6.5px] text-[#10295c] font-bold">
+                <div className="flex-1 flex items-center justify-center">
+                  {!isBlankMode && (
+                    <span className="font-serif italic font-bold text-[8.5px] text-[#10295c]">
+                      VK Banker's &amp; Finance
+                    </span>
+                  )}
+                </div>
+                <div className="border-t border-dotted border-[#7f8da8] pt-0.5 text-[6px] text-[#10295c] font-bold">
                   சரிபார்ப்பு / Authorized Signatory
                 </div>
               </div>
@@ -1115,48 +1061,48 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
           </div>
 
           {/* Section 6: For Office Use Only */}
-          <div className="mt-1 print:mt-1 border-[1.5px] border-dashed border-[#c8962b] bg-[#fffdf7] p-1 rounded-[2px]">
+          <div className="mt-0.5 print:mt-0.5 border-[1.5px] border-dashed border-[#c8962b] bg-[#fffdf7] p-1 rounded-[2px]">
             <div className="flex items-center justify-between px-1 pb-0.5 border-b border-[#c8962b]/30">
-              <span className="font-black text-[7.5px] text-[#c8962b] uppercase tracking-wider flex items-center gap-1">
+              <span className="font-black text-[7px] text-[#c8962b] uppercase tracking-wider flex items-center gap-1">
                 <span>★</span>
                 <span>அலுவலக உபயோகத்திற்கு மட்டும் / FOR OFFICE USE ONLY</span>
               </span>
-              <span className="text-[6.5px] text-slate-500 font-mono">Disbursement Audit</span>
+              <span className="text-[6px] text-slate-500 font-mono">Disbursement Audit</span>
             </div>
 
             <div className="grid grid-cols-3 gap-2 mt-0.5 px-1">
               <div className="border-b border-dotted border-[#7f8da8] pb-0.5 flex flex-col">
-                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">அனுமதித்தவர் / Approved By:</span>
-                <span className="text-[8px] font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : (formData.approvedBy || '')}
+                <span className="text-[6px] font-bold text-[#10295c] uppercase">அனுமதித்தவர் / Approved By:</span>
+                <span className="text-[7.5px] font-bold text-[#0d1b3e]">
+                  {isBlankMode ? '' : (formData.approvedBy || 'Admin Officer / நிர்வாக மேலாளர்')}
                 </span>
               </div>
 
               <div className="border-b border-dotted border-[#7f8da8] pb-0.5 flex flex-col">
-                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">வழங்கப்பட்ட தேதி / Disbursed On:</span>
-                <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : (formatDateDisplay(formData.disbursedOn) || '')}
+                <span className="text-[6px] font-bold text-[#10295c] uppercase">வழங்கப்பட்ட தேதி / Disbursed On:</span>
+                <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
+                  {isBlankMode ? '' : (formatDateDisplay(formData.disbursedOn) || '01-07-2026')}
                 </span>
               </div>
 
               <div className="border-b border-dotted border-[#7f8da8] pb-0.5 flex flex-col">
-                <span className="text-[6.5px] font-bold text-[#10295c] uppercase">ரசீது எண் / Receipt No:</span>
-                <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : (formData.receiptNo || '')}
+                <span className="text-[6px] font-bold text-[#10295c] uppercase">ரசீது எண் / Receipt No:</span>
+                <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
+                  {isBlankMode ? '' : (formData.receiptNo || 'REC-6057')}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Official Clean Footer */}
-          <div className="mt-1 print:mt-1 pt-0.5 border-t border-[#7f8da8] text-center text-[7px] text-slate-600 flex items-center justify-between">
+          <div className="mt-0.5 print:mt-0.5 pt-0.5 border-t border-[#7f8da8] text-center text-[6.5px] text-slate-600 flex items-center justify-between">
             <span className="font-bold text-[#10295c]">
-              VK BANKER'S & FINANCE • Trust • Transparency • Service
+              VK BANKER'S &amp; FINANCE • Trust • Transparency • Service
             </span>
             <span className="text-slate-500 font-medium">
-              வி.கே. பேங்கர்ஸ் & பைனான்ஸ் • நம்பிக்கை • வெளிப்படைத்தன்மை • சேவை
+              வி.கே. பேங்கர்ஸ் &amp; பைனான்ஸ் • நம்பிக்கை • வெளிப்படைத்தன்மை • சேவை
             </span>
-            <span className="font-mono text-[6.5px] text-slate-400">
+            <span className="font-mono text-[6px] text-slate-400">
               Form Ref: VK-A4-2026
             </span>
           </div>

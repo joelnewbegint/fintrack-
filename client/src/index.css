@@ -349,7 +349,7 @@ html[data-device="mobile"] .flex > div {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 5mm 6mm;
+    margin: 4mm 5mm !important;
   }
   html, body {
     background: #ffffff !important;
@@ -358,7 +358,7 @@ html[data-device="mobile"] .flex > div {
     height: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -380,8 +380,10 @@ html[data-device="mobile"] .flex > div {
     padding: 0 !important;
     background: #ffffff !important;
     visibility: visible !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     box-sizing: border-box !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
   #printable-loan-modal-wrapper * {
@@ -394,10 +396,10 @@ html[data-device="mobile"] .flex > div {
     justify-content: space-between !important;
     width: 100% !important;
     max-width: 100% !important;
-    height: 285mm !important;
-    max-height: 285mm !important;
+    height: 280mm !important;
+    max-height: 280mm !important;
     box-sizing: border-box !important;
-    padding: 2mm 3mm !important;
+    padding: 1.5mm 2.5mm !important;
     margin: 0 auto !important;
     background: #ffffff !important;
     color: #0d1b3e !important;
@@ -442,11 +444,6 @@ html[data-device="mobile"] .flex > div {
     border-color: #000000 !important;
     box-shadow: none !important;
     text-shadow: none !important;
-  }
-
-  @page {
-    size: A4 portrait;
-    margin: 15mm;
   }
 
   .no-print {
