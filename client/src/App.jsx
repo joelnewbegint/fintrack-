@@ -56,6 +56,27 @@ export function App() {
   const [customers, setCustomers] = useState([]);
   const [activeLoans, setActiveLoans] = useState([]);
 
+  // Sidebar Minimization State (Persisted in localStorage)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem('fintrack_sidebar_collapsed');
+      if (saved !== null) return JSON.parse(saved);
+      return false;
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('fintrack_sidebar_collapsed', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
   // Fetch customers for the quick loan modal
   const fetchModalData = async () => {
     try {
@@ -114,6 +135,12 @@ export function App() {
       } else if ((e.key === 'i' || e.key === 'I') && isOwner) {
         e.preventDefault();
         setShowGlobalInvestmentModal(true);
+      } else if ((e.key === 'm' || e.key === 'M' || e.key === '[') && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        toggleSidebar();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        toggleSidebar();
       } else if (e.key === '/') {
         e.preventDefault();
         const searchInput = document.querySelector('input[type="text"]');
@@ -172,6 +199,8 @@ export function App() {
           setShowWhatsAppHub(true);
         }}
         unreadNotificationsCount={notificationCount}
+        isSidebarCollapsed={isSidebarCollapsed}
+        onToggleSidebar={toggleSidebar}
       />
 
       <div
@@ -193,6 +222,8 @@ export function App() {
             setShowWhatsAppHub(true);
           }}
           unreadNotificationsCount={notificationCount}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapsed={toggleSidebar}
         />
 
         {/* Main Content Area */}

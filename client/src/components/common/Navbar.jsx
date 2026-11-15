@@ -20,6 +20,8 @@ import {
   Download,
   FileText,
   Smartphone,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 
 export const Navbar = ({
@@ -31,6 +33,8 @@ export const Navbar = ({
   onOpenLoanForm,
   onOpenWhatsAppHub,
   unreadNotificationsCount = 0,
+  isSidebarCollapsed = false,
+  onToggleSidebar,
 }) => {
   const { user, logout, isOwner } = useAuth();
   const { lang, toggleLanguage, t } = useLanguage();
@@ -127,8 +131,8 @@ export const Navbar = ({
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/60 dark:border-sky-800/40 transition-colors">
       <div className={`mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 ${isTablet ? 'max-w-6xl' : 'w-full max-w-[1720px] 2xl:max-w-[1920px]'}`}>
-        {/* Brand / Logo */}
-        <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
+        {/* Brand / Logo + Navigation Minimizer Toggle */}
+        <div className="flex items-center space-x-2 sm:space-x-2.5 shrink-0">
           {onToggleMobileMenu && (
             <button
               onClick={onToggleMobileMenu}
@@ -136,6 +140,26 @@ export const Navbar = ({
               aria-label="Open menu"
             >
               <Menu className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+            </button>
+          )}
+
+          {/* Desktop & Tablet Navigation Minimizer Button */}
+          {onToggleSidebar && (
+            <button
+              onClick={onToggleSidebar}
+              className="hidden md:flex p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/60 border border-transparent hover:border-sky-200/80 dark:hover:border-sky-800/80 transition active:scale-95 shadow-xs"
+              title={
+                isSidebarCollapsed
+                  ? 'Expand Navigation (M) / வழிசெலுத்தல் விரிவாக்கு'
+                  : 'Minimize Navigation (M) / வழிசெலுத்தல் சுருக்கு'
+              }
+              aria-label="Toggle Navigation"
+            >
+              {isSidebarCollapsed ? (
+                <PanelLeftOpen className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+              ) : (
+                <PanelLeftClose className="w-5 h-5" />
+              )}
             </button>
           )}
 
