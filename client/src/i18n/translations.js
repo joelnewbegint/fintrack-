@@ -97,6 +97,7 @@ export const translations = {
     // Customers
     customerDirectory: 'Customer Directory',
     newCustomer: 'New Customer',
+    addCustomer: 'New Customer',
     name: 'Name',
     phone: 'Phone',
     area: 'Area',
@@ -239,6 +240,7 @@ export const translations = {
     // Customers
     customerDirectory: 'வாடிக்கையாளர் பட்டியல்',
     newCustomer: 'புதிய வாடிக்கையாளர்',
+    addCustomer: 'புதிய வாடிக்கையாளர்',
     name: 'பெயர்',
     phone: 'தொலைபேசி எண்',
     area: 'பகுதி / ஊர்',

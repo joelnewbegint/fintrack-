@@ -312,8 +312,8 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/80 backdrop-blur-md animate-fade-in max-w-[540px] sm:max-w-2xl mx-auto left-0 right-0">
-      <div className="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[94vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl w-full max-w-xl sm:max-w-2xl p-4 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[92vh] flex flex-col overflow-hidden my-auto">
         {/* Mobile Drag Indicator */}
         <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto mb-2 sm:hidden" />
 
