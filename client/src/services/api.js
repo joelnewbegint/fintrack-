@@ -22,20 +22,17 @@ const STORAGE_KEYS = {
  * Completely purges all customer records, loans, repayment ledgers, expenses, and investments
  * across all mobile phones, laptops, and tablets to provide a 100% clean, brand new system.
  */
-export const resetToCleanSite = () => {
+export const resetToCleanSite = (force = false) => {
   if (typeof window === 'undefined' || !window.localStorage) return;
   try {
-    const isClean = localStorage.getItem('fintrack_clean_fresh_site_v2');
-    if (isClean !== 'true') {
-      localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(initialSettings));
-
-      // Clear any legacy migration keys
+    const isClean = localStorage.getItem('fintrack_clean_fresh_site_v4');
+    if (force || isClean !== 'true') {
+      // Clear legacy flags and drafts
       [
+        'fintrack_clean_fresh_site_v1',
+        'fintrack_clean_fresh_site_v2',
+        'fintrack_clean_fresh_site_v3',
+        'fintrack_loan_form_draft',
         'fintrack_real_dataset_v1',
         'fintrack_real_dataset_v2',
         'fintrack_real_dataset_v3',
@@ -43,11 +40,42 @@ export const resetToCleanSite = () => {
         'fintrack_real_dataset_v5',
         'fintrack_real_dataset_v6',
         'fintrack_real_dataset_v7',
-        'fintrack_clean_fresh_site_v1',
       ].forEach((key) => localStorage.removeItem(key));
 
-      localStorage.setItem('fintrack_clean_fresh_site_v2', 'true');
-      console.log('✨ FinTrack: Successfully initialized 100% fresh, clean new site!');
+      // Sanitize stored collections: remove any legacy mock/dump loan items
+      const DUMP_SUBSTRINGS = ['loan_tn_', 'Subramanian', 'RS Hotal', 'Ambur', 'CTM Road'];
+
+      const sanitizeCollection = (key) => {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return [];
+          const list = JSON.parse(raw);
+          if (!Array.isArray(list)) return [];
+          return list.filter((item) => {
+            const str = JSON.stringify(item);
+            return !DUMP_SUBSTRINGS.some((d) => str.includes(d));
+          });
+        } catch {
+          return [];
+        }
+      };
+
+      if (force) {
+        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify([]));
+        localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify([]));
+        localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify([]));
+        localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify([]));
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify([]));
+      } else {
+        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(sanitizeCollection(STORAGE_KEYS.CUSTOMERS)));
+        localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(sanitizeCollection(STORAGE_KEYS.LOANS)));
+        localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(sanitizeCollection(STORAGE_KEYS.PAYMENTS)));
+        localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify(sanitizeCollection(STORAGE_KEYS.INVESTMENTS)));
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(sanitizeCollection(STORAGE_KEYS.EXPENSES)));
+      }
+
+      localStorage.setItem('fintrack_clean_fresh_site_v4', 'true');
+      console.log('✨ FinTrack v4: Successfully cleaned all dump data across storage!');
     }
   } catch (err) {
     console.warn('Fresh site reset notice:', err);
@@ -57,11 +85,11 @@ export const resetToCleanSite = () => {
 resetToCleanSite();
 
 export const cleanseDumpData = () => {
-  resetToCleanSite();
+  resetToCleanSite(true);
 };
 
 export const initRealDataset = () => {
-  resetToCleanSite();
+  resetToCleanSite(false);
 };
 
 const getStored = (key, fallback = []) => {
@@ -1519,6 +1547,13 @@ export const api = {
       localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify([]));
       localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify([]));
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify([]));
+      localStorage.removeItem('fintrack_loan_form_draft');
+    }
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      try {
+        const names = await caches.keys();
+        await Promise.all(names.map((n) => caches.delete(n)));
+      } catch (e) {}
     }
     try {
       await safeFetchJson('/api/settings/clear-all-data', {

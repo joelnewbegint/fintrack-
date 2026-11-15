@@ -17,10 +17,10 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-// Pristine Blank Form Template (For Blank Hand-Written Forms)
+// Pristine Blank Form Template (Strict Zero Dump Data)
 const BLANK_FORM_DATA = {
   appNo: '',
-  date: '',
+  date: new Date().toISOString().split('T')[0],
   customerName: '',
   fatherSpouseName: '',
   phone: '',
@@ -57,50 +57,6 @@ const BLANK_FORM_DATA = {
   receiptNo: '',
 };
 
-// Default Master Profile (Matches user's official sample document LN-D26-6057 / Thilaga)
-export const DEFAULT_MASTER_LOAN = {
-  _id: 'master_ln_d26_6057',
-  loanNo: 'LN-D26-6057',
-  startDate: '2026-07-01',
-  endDate: '2026-10-09',
-  principal: 20000,
-  installmentAmount: 200,
-  financeType: 'daily',
-  duration: 100,
-  purpose: 'Business Expansion / வியாபார முன்னேற்றம்',
-  notes: 'Business Expansion / காய்கறி வியாபார முன்னேற்றம்',
-  approvedBy: 'Admin Officer / நிர்வாக மேலாளர்',
-  receiptNo: 'REC-6057',
-  customer: {
-    name: 'Thilaga',
-    fatherName: 'Kannan',
-    phone: '98421 60571',
-    altPhone: '94432 10987',
-    address: 'No. 12, Bazaar Street, Madhanur, Vellore - 635804',
-    area: 'Madhanur Market',
-    dob: '1988-05-14',
-    occupation: 'Vegetable Merchant / காய்கறி வியாபாரம்',
-    monthlyIncome: '35000',
-    residenceType: 'Own',
-    idProofType: 'Aadhaar Card',
-    idProofNumber: '**** **** 3838',
-    photoUrl: '',
-    guarantor: {
-      name: 'R. Senthil Kumar',
-      phone: '98425 88912',
-      relationship: 'Brother / சகோதரர்',
-      aadhaar: '**** **** 7741',
-      address: 'No. 15, North Car Street, Madhanur',
-    },
-  },
-  witness2Name: 'M. Saravanan',
-  witness2Phone: '94431 55678',
-  witness2Relation: 'Neighbor / அண்டை வீட்டார்',
-  witness2Aadhaar: '**** **** 9012',
-  witness2Address: 'Main Bazaar, Madhanur',
-  place: 'Madhanur',
-};
-
 // Safe date string extractor
 const toDateString = (d) => {
   if (!d) return '';
@@ -131,13 +87,16 @@ const formatDateDisplay = (dateVal) => {
   return String(dateVal);
 };
 
-// Map loan data safely into standard full auto-fill schema
+// Map real incoming loan/customer data safely into standard form schema (Strict Zero Dump Fallback)
 const mapIncomingData = (data) => {
   if (!data) return BLANK_FORM_DATA;
 
-  const cust = data.customerId && typeof data.customerId === 'object'
-    ? data.customerId
-    : (data.customer && typeof data.customer === 'object' ? data.customer : {});
+  const cust =
+    data.customerId && typeof data.customerId === 'object'
+      ? data.customerId
+      : data.customer && typeof data.customer === 'object'
+      ? data.customer
+      : {};
 
   // Determine tenure display string
   let tenureStr = '';
@@ -147,17 +106,15 @@ const mapIncomingData = (data) => {
     const scheme = (data.financeType || data.scheme || 'daily').toLowerCase();
     const unit = scheme.includes('daily') ? 'Days' : scheme.includes('weekly') ? 'Weeks' : 'Months';
     tenureStr = `${data.duration} ${unit}`;
-  } else {
-    tenureStr = '100 Days';
   }
 
   // Calculate or extract End Date
   let calculatedEndDate = toDateString(data.endDate);
-  const rawStart = data.startDate || data.date || '2026-07-01';
-  if (!calculatedEndDate && rawStart && (data.duration || 100)) {
+  const rawStart = data.startDate || data.date;
+  if (!calculatedEndDate && rawStart && data.duration) {
     try {
       const d = new Date(rawStart);
-      const dur = Number(data.duration || 100);
+      const dur = Number(data.duration);
       const scheme = (data.financeType || data.scheme || 'daily').toLowerCase();
       if (!isNaN(d.getTime()) && !isNaN(dur)) {
         if (scheme.includes('daily')) d.setDate(d.getDate() + dur);
@@ -168,48 +125,52 @@ const mapIncomingData = (data) => {
     } catch (e) {}
   }
 
-  const custName = cust.name || data.customerName || data.name || 'Thilaga';
-  const principalVal = data.principal ? String(data.principal) : (data.loanAmount ? String(data.loanAmount) : '20000');
-  const instVal = data.installmentAmount ? String(data.installmentAmount) : (Math.ceil(Number(principalVal) / 100) || '200');
-  const loanNo = data.loanNo || data.appNo || 'LN-D26-6057';
+  const custName = cust.name || data.customerName || data.name || '';
+  const principalVal = data.principal ? String(data.principal) : data.loanAmount ? String(data.loanAmount) : '';
+  const instVal = data.installmentAmount
+    ? String(data.installmentAmount)
+    : principalVal && data.duration
+    ? String(Math.ceil(Number(principalVal) / Number(data.duration)))
+    : '';
+  const loanNo = data.loanNo || data.appNo || '';
 
   return {
     appNo: loanNo,
-    date: toDateString(data.date || rawStart),
+    date: toDateString(data.date || rawStart || data.createdAt || new Date()),
     customerName: custName,
-    fatherSpouseName: cust.fatherName || cust.fatherSpouseName || data.fatherSpouseName || 'Kannan',
-    phone: cust.phone || data.customerPhone || data.phone || '98421 60571',
-    altPhone: cust.altPhone || data.altPhone || '94432 10987',
-    address: cust.address || data.address || 'No. 12, Bazaar Street, Madhanur, Vellore - 635804',
-    area: cust.area || data.customerArea || data.area || 'Madhanur Market',
-    dob: toDateString(cust.dob || data.dob || data.dateOfBirth) || '1988-05-14',
-    occupation: cust.occupation || data.occupation || 'Vegetable Merchant / காய்கறி வியாபாரம்',
-    monthlyIncome: cust.monthlyIncome ? String(cust.monthlyIncome) : (data.monthlyIncome ? String(data.monthlyIncome) : '35000'),
-    residenceType: cust.residenceType || data.residenceType || 'Own',
-    idType: cust.idProofType || cust.idType || data.idProofType || data.idType || 'Aadhaar Card',
-    idNumber: cust.idProofNumber || cust.idNumber || data.idProofNumber || data.idNumber || '**** **** 3838',
+    fatherSpouseName: cust.fatherName || cust.fatherSpouseName || cust.spouseName || data.fatherSpouseName || '',
+    phone: cust.phone || data.customerPhone || data.phone || '',
+    altPhone: cust.altPhone || data.altPhone || '',
+    address: cust.address || data.address || '',
+    area: cust.area || data.customerArea || data.area || '',
+    dob: toDateString(cust.dob || data.dob || data.dateOfBirth) || '',
+    occupation: cust.occupation || data.occupation || '',
+    monthlyIncome: cust.monthlyIncome ? String(cust.monthlyIncome) : data.monthlyIncome ? String(data.monthlyIncome) : '',
+    residenceType: cust.residenceType || data.residenceType || '',
+    idType: cust.idProofType || cust.idType || data.idProofType || data.idType || 'Aadhaar',
+    idNumber: cust.idProofNumber || cust.idNumber || data.idProofNumber || data.idNumber || '',
     photoUrl: cust.photoUrl || cust.photo || data.borrowerPhoto || data.photoUrl || data.photo || '',
     loanAmount: principalVal,
     tenure: tenureStr,
     installmentAmount: String(instVal),
-    scheme: data.financeType || data.scheme || 'daily',
+    scheme: data.financeType || data.scheme || '',
     startDate: toDateString(rawStart),
-    endDate: calculatedEndDate || '2026-10-09',
-    purpose: data.notes || data.purpose || 'Business Expansion / வியாபார முன்னேற்றம்',
-    witness1Name: cust.guarantor?.name || data.witness1Name || 'R. Senthil Kumar',
-    witness1Phone: cust.guarantor?.phone || data.witness1Phone || '98425 88912',
-    witness1Relation: cust.guarantor?.relationship || data.witness1Relation || 'Brother / சகோதரர்',
-    witness1Aadhaar: cust.guarantor?.aadhaar || data.witness1Aadhaar || '**** **** 7741',
-    witness1Address: cust.guarantor?.address || data.witness1Address || 'No. 15, North Car Street, Madhanur',
-    witness2Name: data.witness2Name || (data.witness2?.name || 'M. Saravanan'),
-    witness2Phone: data.witness2Phone || (data.witness2?.phone || '94431 55678'),
-    witness2Relation: data.witness2Relation || (data.witness2?.relationship || 'Neighbor / அண்டை வீட்டார்'),
-    witness2Aadhaar: data.witness2Aadhaar || (data.witness2?.aadhaar || '**** **** 9012'),
-    witness2Address: data.witness2Address || (data.witness2?.address || 'Main Bazaar, Madhanur'),
-    place: cust.area || data.place || data.customerArea || 'Madhanur',
-    approvedBy: data.approvedBy || 'Admin Officer / நிர்வாக மேலாளர்',
+    endDate: calculatedEndDate || '',
+    purpose: data.notes || data.purpose || '',
+    witness1Name: cust.guarantor?.name || data.witness1Name || '',
+    witness1Phone: cust.guarantor?.phone || data.witness1Phone || '',
+    witness1Relation: cust.guarantor?.relationship || data.witness1Relation || '',
+    witness1Aadhaar: cust.guarantor?.aadhaar || data.witness1Aadhaar || '',
+    witness1Address: cust.guarantor?.address || data.witness1Address || '',
+    witness2Name: data.witness2Name || (data.witness2?.name || ''),
+    witness2Phone: data.witness2Phone || (data.witness2?.phone || ''),
+    witness2Relation: data.witness2Relation || (data.witness2?.relationship || ''),
+    witness2Aadhaar: data.witness2Aadhaar || (data.witness2?.aadhaar || ''),
+    witness2Address: data.witness2Address || (data.witness2?.address || ''),
+    place: cust.area || data.place || data.customerArea || data.area || '',
+    approvedBy: data.approvedBy || '',
     disbursedOn: toDateString(data.disbursedOn || data.disbursedAt || rawStart),
-    receiptNo: data.receiptNo || ('REC-' + (loanNo.split('-').pop() || '6057')),
+    receiptNo: data.receiptNo || (loanNo ? 'REC-' + loanNo.split('-').pop() : ''),
   };
 };
 
@@ -218,32 +179,29 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
   const printAreaRef = useRef(null);
 
   const [availableLoans, setAvailableLoans] = useState([]);
-  const [selectedLoanId, setSelectedLoanId] = useState('master');
-  const [activeLoanObject, setActiveLoanObject] = useState(prefillData || DEFAULT_MASTER_LOAN);
-  const [formData, setFormData] = useState(() => mapIncomingData(prefillData || DEFAULT_MASTER_LOAN));
-  const [isBlankMode, setIsBlankMode] = useState(false);
+  const [selectedLoanId, setSelectedLoanId] = useState(prefillData?._id || prefillData?.loanNo || '');
+  const [activeLoanObject, setActiveLoanObject] = useState(prefillData || null);
+  const [formData, setFormData] = useState(() => (prefillData ? mapIncomingData(prefillData) : BLANK_FORM_DATA));
+  const [isBlankMode, setIsBlankMode] = useState(!prefillData);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [saveError, setSaveError] = useState('');
 
-  // Fetch all loans to populate the auto-fill selector
+  // Fetch real loans from backend/storage to populate selector
   useEffect(() => {
     let isMounted = true;
     const loadLoans = async () => {
       try {
         const res = await api.getLoans();
         const list = res?.loans || (Array.isArray(res) ? res : []);
-        if (isMounted && list.length > 0) {
+        if (isMounted) {
           setAvailableLoans(list);
-          if (!prefillData) {
-            // Find first active loan or latest loan
-            const active = list.find((l) => (l.status || '').toLowerCase() === 'active') || list[0];
-            if (active) {
-              setSelectedLoanId(active._id || active.loanNo);
-              setActiveLoanObject(active);
-              setFormData(mapIncomingData(active));
-              setIsBlankMode(false);
-            }
+          // If prefillData wasn't passed and a loan was previously selected or active
+          if (prefillData) {
+            setSelectedLoanId(prefillData._id || prefillData.loanNo || '');
+            setActiveLoanObject(prefillData);
+            setFormData(mapIncomingData(prefillData));
+            setIsBlankMode(false);
           }
         }
       } catch (e) {
@@ -263,13 +221,13 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
   useEffect(() => {
     if (prefillData) {
       setActiveLoanObject(prefillData);
-      setSelectedLoanId(prefillData._id || prefillData.loanNo || 'custom');
+      setSelectedLoanId(prefillData._id || prefillData.loanNo || '');
       setFormData(mapIncomingData(prefillData));
       setIsBlankMode(false);
-    } else if (selectedLoanId === 'master') {
-      setActiveLoanObject(DEFAULT_MASTER_LOAN);
-      setFormData(mapIncomingData(DEFAULT_MASTER_LOAN));
-      setIsBlankMode(false);
+    } else if (!selectedLoanId) {
+      setActiveLoanObject(null);
+      setFormData(BLANK_FORM_DATA);
+      setIsBlankMode(true);
     }
   }, [prefillData, isOpen]);
 
@@ -277,10 +235,10 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
   const handleSelectLoan = (e) => {
     const loanId = e.target.value;
     setSelectedLoanId(loanId);
-    if (loanId === 'master') {
-      setActiveLoanObject(DEFAULT_MASTER_LOAN);
-      setFormData(mapIncomingData(DEFAULT_MASTER_LOAN));
-      setIsBlankMode(false);
+    if (!loanId) {
+      setActiveLoanObject(null);
+      setFormData(BLANK_FORM_DATA);
+      setIsBlankMode(true);
       return;
     }
     const found = availableLoans.find((l) => (l._id || l.loanNo) === loanId);
@@ -298,11 +256,24 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
 
   const toggleBlankMode = () => {
     if (isBlankMode) {
-      setFormData(mapIncomingData(activeLoanObject || DEFAULT_MASTER_LOAN));
-      setIsBlankMode(false);
+      if (activeLoanObject) {
+        setFormData(mapIncomingData(activeLoanObject));
+        setIsBlankMode(false);
+      }
     } else {
       setFormData(BLANK_FORM_DATA);
       setIsBlankMode(true);
+    }
+  };
+
+  const handleClearDraft = () => {
+    if (window.confirm('Clear form to blank? / படிவத்தை அழிக்கவா?')) {
+      setSelectedLoanId('');
+      setActiveLoanObject(null);
+      setFormData(BLANK_FORM_DATA);
+      setIsBlankMode(true);
+      setSaveSuccessMsg('');
+      setSaveError('');
     }
   };
 
@@ -422,7 +393,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
   const isIdRation = !isBlankMode && idTypeStr.includes('ration');
 
   const schemeStr = (formData.scheme || '').toLowerCase();
-  const isDaily = !isBlankMode && (schemeStr.includes('daily') || !schemeStr);
+  const isDaily = !isBlankMode && (schemeStr.includes('daily') || (!schemeStr && formData.loanAmount));
   const isWeekly = !isBlankMode && schemeStr.includes('weekly');
   const isMonthly = !isBlankMode && schemeStr.includes('monthly');
 
@@ -432,7 +403,6 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-sm overflow-y-auto print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:block print:overflow-hidden print:z-auto animate-fade-in print:animate-none"
     >
       <div className="relative bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-3 sm:p-4 shadow-2xl border border-slate-200 dark:border-slate-800 my-auto print:static print:m-0 print:p-0 print:border-none print:shadow-none print:max-w-none print:w-full print:bg-white print:rounded-none">
-        
         {/* Screen Action Bar (Hidden in Print) */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 mb-2.5 border-b border-slate-200 dark:border-slate-800 print:hidden">
           <div className="flex items-center space-x-2.5">
@@ -449,24 +419,24 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                 </span>
               </h3>
               <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
-                Official Micro Finance Bond • Bilingual Tamil &amp; English • Auto-Filled Particulars
+                Official Micro Finance Bond • Bilingual Tamil &amp; English • Zero Dump Data
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Auto-Fill Selector Dropdown */}
+            {/* Auto-Fill Selector Dropdown with Real Loans Only */}
             <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 px-2 rounded-xl border border-slate-200 dark:border-slate-700">
               <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
               <label className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight shrink-0">
-                Auto-Fill:
+                Select Loan:
               </label>
               <select
                 value={selectedLoanId}
                 onChange={handleSelectLoan}
-                className="text-xs font-black bg-white dark:bg-slate-900 text-[#10295c] dark:text-sky-300 py-1 px-2 rounded-lg border border-slate-300 dark:border-slate-700 outline-none max-w-[200px] truncate"
+                className="text-xs font-black bg-white dark:bg-slate-900 text-[#10295c] dark:text-sky-300 py-1 px-2 rounded-lg border border-slate-300 dark:border-slate-700 outline-none max-w-[220px] truncate"
               >
-                <option value="master">LN-D26-6057 — Thilaga (₹20,000)</option>
+                <option value="">-- Clean Blank Form / வெற்றுப் படிவம் --</option>
                 {availableLoans.map((l) => (
                   <option key={l._id || l.loanNo} value={l._id || l.loanNo}>
                     {l.loanNo} — {l.customerName || l.customerId?.name || 'Borrower'} (₹{Number(l.principal || 0).toLocaleString('en-IN')})
@@ -475,31 +445,48 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
               </select>
             </div>
 
+            {/* Clear Form / Reset */}
+            {!isBlankMode && (
+              <button
+                type="button"
+                onClick={handleClearDraft}
+                className="px-2 py-1.5 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 text-xs font-bold transition flex items-center space-x-1 active:scale-95"
+                title="Clear to blank form / வெற்றுப் படிவமாக்க"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear Form</span>
+              </button>
+            )}
+
             {/* Blank Form vs Filled Form Toggle */}
-            <button
-              type="button"
-              onClick={toggleBlankMode}
-              className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center space-x-1.5 active:scale-95 ${
-                isBlankMode
-                  ? 'bg-amber-100 border-amber-400 text-amber-900 shadow-sm'
-                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50'
-              }`}
-              title={isBlankMode ? 'Restore filled loan data' : 'Clear to blank form for handwriting'}
-            >
-              {isBlankMode ? <RotateCcw className="w-3.5 h-3.5 text-amber-700" /> : <FileText className="w-3.5 h-3.5 text-[#10295c]" />}
-              <span>{isBlankMode ? 'Show Filled Data' : 'Blank Form'}</span>
-            </button>
+            {activeLoanObject && (
+              <button
+                type="button"
+                onClick={toggleBlankMode}
+                className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center space-x-1.5 active:scale-95 ${
+                  isBlankMode
+                    ? 'bg-amber-100 border-amber-400 text-amber-900 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50'
+                }`}
+                title={isBlankMode ? 'Restore filled loan data' : 'Clear to blank form for handwriting'}
+              >
+                {isBlankMode ? <RotateCcw className="w-3.5 h-3.5 text-amber-700" /> : <FileText className="w-3.5 h-3.5 text-[#10295c]" />}
+                <span>{isBlankMode ? 'Show Filled Data' : 'Blank Form'}</span>
+              </button>
+            )}
 
             {/* Official Agreement PDF Download */}
-            <button
-              type="button"
-              onClick={() => downloadLoanAgreementPDF(activeLoanObject || DEFAULT_MASTER_LOAN)}
-              className="bg-sky-600 hover:bg-sky-700 text-white flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-md shadow-sky-600/30 active:scale-95 transition"
-              title="Download Official Agreement PDF / கடன் ஒப்பந்த PDF"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Agreement PDF</span>
-            </button>
+            {activeLoanObject && (
+              <button
+                type="button"
+                onClick={() => downloadLoanAgreementPDF(activeLoanObject)}
+                className="bg-sky-600 hover:bg-sky-700 text-white flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-md shadow-sky-600/30 active:scale-95 transition"
+                title="Download Official Agreement PDF / கடன் ஒப்பந்த PDF"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Agreement PDF</span>
+              </button>
+            )}
 
             {/* Print / Save as PDF Button */}
             <button
@@ -582,7 +569,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                     விண்ணப்ப எண் / Application No:
                   </span>
                   <span className="font-mono font-black text-[8.5px] text-[#0d1b3e] ml-1">
-                    {isBlankMode ? '—' : (formData.appNo || 'LN-D26-6057')}
+                    {isBlankMode ? '—' : formData.appNo || '—'}
                   </span>
                 </div>
                 <div className="border border-[#7f8da8] bg-[#eef2fa] rounded-[2px] px-2 py-0.5 flex items-center justify-between">
@@ -590,13 +577,13 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                     தேதி / Date:
                   </span>
                   <span className="font-mono font-black text-[8.5px] text-[#0d1b3e] ml-1">
-                    {isBlankMode ? '—' : (formatDateDisplay(formData.date) || '01-07-2026')}
+                    {isBlankMode ? '—' : formatDateDisplay(formData.date) || '—'}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Header Right: Exact 35mm x 42mm Passport Photo Box */}
+            {/* Header Right: Exact 35mm x 40mm Passport Photo Box */}
             <div
               className="border-2 border-dashed border-[#7f8da8] rounded-[3px] bg-[#f8fafc] flex flex-col items-center justify-center p-1 text-center shrink-0 relative overflow-hidden"
               style={{
@@ -722,7 +709,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                     மாத வருமானம் / Monthly Income:
                   </span>
                   <span className="text-[8px] font-bold text-[#0d1b3e]">
-                    {isBlankMode ? '' : (formData.monthlyIncome ? `₹ ${formData.monthlyIncome} / Month` : '₹ 35,000 / Month')}
+                    {isBlankMode ? '' : formData.monthlyIncome ? `₹ ${formData.monthlyIncome} / Month` : ''}
                   </span>
                 </div>
               </div>
@@ -754,7 +741,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   அடையாள எண் / ID No:
                 </span>
                 <span className="text-[8px] font-mono font-bold text-[#0d1b3e] truncate">
-                  {isBlankMode ? '' : (formData.idNumber || '**** **** 3838')}
+                  {isBlankMode ? '' : formData.idNumber}
                 </span>
               </div>
             </div>
@@ -776,7 +763,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   கடன் தொகை / LOAN AMOUNT:
                 </span>
                 <span className="text-[9.5px] font-black text-[#10295c]">
-                  {isBlankMode ? '' : (formData.loanAmount ? `₹ ${Number(formData.loanAmount).toLocaleString('en-IN')}` : '₹ 20,000')}
+                  {isBlankMode ? '' : formData.loanAmount ? `₹ ${Number(formData.loanAmount).toLocaleString('en-IN')}` : ''}
                 </span>
               </div>
 
@@ -796,7 +783,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   கால அளவு / TENURE:
                 </span>
                 <span className="text-[8px] font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : (formData.tenure || '100 Days')}
+                  {isBlankMode ? '' : formData.tenure}
                 </span>
               </div>
 
@@ -805,7 +792,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   தவணைத் தொகை / DUE AMOUNT:
                 </span>
                 <span className="text-[9px] font-black text-[#10295c]">
-                  {isBlankMode ? '' : (formData.installmentAmount ? `₹ ${formData.installmentAmount} / நாள் (Day)` : '₹ 200 / நாள் (Day)')}
+                  {isBlankMode ? '' : formData.installmentAmount ? `₹ ${formData.installmentAmount} / தவணை` : ''}
                 </span>
               </div>
 
@@ -815,7 +802,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   துவக்க தேதி / START DATE:
                 </span>
                 <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : (formatDateDisplay(formData.startDate) || '01-07-2026')}
+                  {isBlankMode ? '' : formatDateDisplay(formData.startDate)}
                 </span>
               </div>
 
@@ -824,7 +811,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   முடிவு தேதி / END DATE:
                 </span>
                 <span className="text-[8px] font-mono font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : (formatDateDisplay(formData.endDate) || '09-10-2026')}
+                  {isBlankMode ? '' : formatDateDisplay(formData.endDate)}
                 </span>
               </div>
 
@@ -833,7 +820,7 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   கடன் நோக்கம் / PURPOSE OF LOAN:
                 </span>
                 <span className="text-[8px] font-bold text-[#0d1b3e] truncate">
-                  {isBlankMode ? '' : (formData.purpose || 'Business Expansion / வியாபார முன்னேற்றம்')}
+                  {isBlankMode ? '' : formData.purpose}
                 </span>
               </div>
             </div>
@@ -864,44 +851,44 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   <div className="col-span-12 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
                     <span className="text-[6px] font-bold text-[#10295c] uppercase">பெயர் / Full Name:</span>
                     <span className="text-[8px] font-bold text-[#0d1b3e] truncate">
-                      {isBlankMode ? '' : (formData.witness1Name || 'R. Senthil Kumar')}
+                      {isBlankMode ? '' : formData.witness1Name}
                     </span>
                   </div>
 
                   <div className="col-span-6 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
                     <span className="text-[6px] font-bold text-[#10295c] uppercase">கைபேசி / Mobile No:</span>
                     <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
-                      {isBlankMode ? '' : (formData.witness1Phone || '98425 88912')}
+                      {isBlankMode ? '' : formData.witness1Phone}
                     </span>
                   </div>
 
                   <div className="col-span-6 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
                     <span className="text-[6px] font-bold text-[#10295c] uppercase">உறவுமுறை / Relation:</span>
                     <span className="text-[7.5px] font-bold text-[#0d1b3e] truncate">
-                      {isBlankMode ? '' : (formData.witness1Relation || 'Brother / சகோதரர்')}
+                      {isBlankMode ? '' : formData.witness1Relation}
                     </span>
                   </div>
 
                   <div className="col-span-12 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
                     <span className="text-[6px] font-bold text-[#10295c] uppercase">ஆதார் எண் / Aadhaar No:</span>
                     <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
-                      {isBlankMode ? '' : (formData.witness1Aadhaar || '**** **** 7741')}
+                      {isBlankMode ? '' : formData.witness1Aadhaar}
                     </span>
                   </div>
 
                   <div className="col-span-12 bg-white p-1 min-h-[22px] print:min-h-[24px] flex flex-col justify-between">
                     <span className="text-[6px] font-bold text-[#10295c] uppercase">முகவரி / Address:</span>
                     <span className="text-[7px] font-medium text-[#0d1b3e] line-clamp-2">
-                      {isBlankMode ? '' : (formData.witness1Address || 'No. 15, North Car Street, Madhanur')}
+                      {isBlankMode ? '' : formData.witness1Address}
                     </span>
                   </div>
 
                   {/* Witness 1 Signature Cell */}
                   <div className="col-span-12 bg-[#fffdf7] p-1 border-t border-[#7f8da8] min-h-[24px] print:min-h-[26px] flex flex-col justify-between text-center">
                     <div className="flex-1 flex items-center justify-center">
-                      {!isBlankMode && (
+                      {!isBlankMode && formData.witness1Name && (
                         <span className="font-serif italic font-bold text-[8.5px] text-[#10295c]">
-                          R. Senthil
+                          {formData.witness1Name.split(' ')[0]}
                         </span>
                       )}
                     </div>
@@ -927,44 +914,44 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   <div className="col-span-12 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
                     <span className="text-[6px] font-bold text-[#10295c] uppercase">பெயர் / Full Name:</span>
                     <span className="text-[8px] font-bold text-[#0d1b3e] truncate">
-                      {isBlankMode ? '' : (formData.witness2Name || 'M. Saravanan')}
+                      {isBlankMode ? '' : formData.witness2Name}
                     </span>
                   </div>
 
                   <div className="col-span-6 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
                     <span className="text-[6px] font-bold text-[#10295c] uppercase">கைபேசி / Mobile No:</span>
                     <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
-                      {isBlankMode ? '' : (formData.witness2Phone || '94431 55678')}
+                      {isBlankMode ? '' : formData.witness2Phone}
                     </span>
                   </div>
 
                   <div className="col-span-6 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
                     <span className="text-[6px] font-bold text-[#10295c] uppercase">உறவுமுறை / Relation:</span>
                     <span className="text-[7.5px] font-bold text-[#0d1b3e] truncate">
-                      {isBlankMode ? '' : (formData.witness2Relation || 'Neighbor / அண்டை வீட்டார்')}
+                      {isBlankMode ? '' : formData.witness2Relation}
                     </span>
                   </div>
 
                   <div className="col-span-12 bg-white p-1 min-h-[18px] print:min-h-[20px] flex flex-col justify-between">
                     <span className="text-[6px] font-bold text-[#10295c] uppercase">ஆதார் எண் / Aadhaar No:</span>
                     <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
-                      {isBlankMode ? '' : (formData.witness2Aadhaar || '**** **** 9012')}
+                      {isBlankMode ? '' : formData.witness2Aadhaar}
                     </span>
                   </div>
 
                   <div className="col-span-12 bg-white p-1 min-h-[22px] print:min-h-[24px] flex flex-col justify-between">
                     <span className="text-[6px] font-bold text-[#10295c] uppercase">முகவரி / Address:</span>
                     <span className="text-[7px] font-medium text-[#0d1b3e] line-clamp-2">
-                      {isBlankMode ? '' : (formData.witness2Address || 'Main Bazaar, Madhanur')}
+                      {isBlankMode ? '' : formData.witness2Address}
                     </span>
                   </div>
 
                   {/* Witness 2 Signature Cell */}
                   <div className="col-span-12 bg-[#fffdf7] p-1 border-t border-[#7f8da8] min-h-[24px] print:min-h-[26px] flex flex-col justify-between text-center">
                     <div className="flex-1 flex items-center justify-center">
-                      {!isBlankMode && (
+                      {!isBlankMode && formData.witness2Name && (
                         <span className="font-serif italic font-bold text-[8.5px] text-[#10295c]">
-                          M. Saravanan
+                          {formData.witness2Name.split(' ')[0]}
                         </span>
                       )}
                     </div>
@@ -1012,9 +999,9 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                   கடன் பெறுபவர் கையொப்பம் / Borrower Signature:
                 </span>
                 <div className="flex-1 flex items-center justify-center">
-                  {!isBlankMode && (
+                  {!isBlankMode && formData.customerName && (
                     <span className="font-serif italic font-black text-[11px] text-[#10295c] tracking-wide">
-                      {formData.customerName || 'Thilaga'}
+                      {formData.customerName}
                     </span>
                   )}
                 </div>
@@ -1029,11 +1016,11 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
                 <div className="space-y-0.5">
                   <div className="text-[6.5px]">
                     <span className="font-bold text-[#10295c]">இடம் / Place: </span>
-                    <span className="font-bold text-[#0d1b3e]">{isBlankMode ? '' : (formData.place || 'Madhanur')}</span>
+                    <span className="font-bold text-[#0d1b3e]">{isBlankMode ? '' : formData.place}</span>
                   </div>
                   <div className="text-[6.5px]">
                     <span className="font-bold text-[#10295c]">தேதி / Date: </span>
-                    <span className="font-mono font-bold text-[#0d1b3e]">{isBlankMode ? '' : (formatDateDisplay(formData.date) || '01-07-2026')}</span>
+                    <span className="font-mono font-bold text-[#0d1b3e]">{isBlankMode ? '' : formatDateDisplay(formData.date)}</span>
                   </div>
                 </div>
                 <div className="border-t border-dotted border-[#7f8da8] pt-0.5 text-[5.5px] text-slate-500 text-center">
@@ -1074,21 +1061,21 @@ export const LoanApplicationFormModal = ({ isOpen, onClose, prefillData = null, 
               <div className="border-b border-dotted border-[#7f8da8] pb-0.5 flex flex-col">
                 <span className="text-[6px] font-bold text-[#10295c] uppercase">அனுமதித்தவர் / Approved By:</span>
                 <span className="text-[7.5px] font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : (formData.approvedBy || 'Admin Officer / நிர்வாக மேலாளர்')}
+                  {isBlankMode ? '' : formData.approvedBy}
                 </span>
               </div>
 
               <div className="border-b border-dotted border-[#7f8da8] pb-0.5 flex flex-col">
                 <span className="text-[6px] font-bold text-[#10295c] uppercase">வழங்கப்பட்ட தேதி / Disbursed On:</span>
                 <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : (formatDateDisplay(formData.disbursedOn) || '01-07-2026')}
+                  {isBlankMode ? '' : formatDateDisplay(formData.disbursedOn)}
                 </span>
               </div>
 
               <div className="border-b border-dotted border-[#7f8da8] pb-0.5 flex flex-col">
                 <span className="text-[6px] font-bold text-[#10295c] uppercase">ரசீது எண் / Receipt No:</span>
                 <span className="text-[7.5px] font-mono font-bold text-[#0d1b3e]">
-                  {isBlankMode ? '' : (formData.receiptNo || 'REC-6057')}
+                  {isBlankMode ? '' : formData.receiptNo}
                 </span>
               </div>
             </div>
