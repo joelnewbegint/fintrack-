@@ -312,9 +312,7 @@ export const Customers = ({ onViewCustomer }) => {
           }}
           onSuccess={(savedCustomer, opts) => {
             fetchCustomers();
-            setShowAddModal(false);
-            setEditingCustomer(null);
-            if (opts?.issueLoan && savedCustomer?._id) {
+            if (opts?.issueLoan && !opts?.loan && savedCustomer?._id) {
               setLoanCustomerId(savedCustomer._id);
             }
           }}
