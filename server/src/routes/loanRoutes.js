@@ -19,7 +19,7 @@ const loanSchema = z.object({
   body: z.object({
     customerId: z.string().min(1, 'Customer ID is required'),
     principal: z.number().min(100, 'Principal must be at least 100'),
-    interestPercent: z.number().min(0, 'Interest cannot be negative'),
+    interestPercent: z.number().min(0, 'Interest cannot be negative').optional(),
     chargeAmount: z.number().optional(),
     interestType: z.enum(['deduction', 'addon']).optional(),
     totalPayable: z.number().optional(),

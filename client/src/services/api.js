@@ -804,10 +804,19 @@ export const api = {
   },
 
   createLoan: async (loanData) => {
+    const payload = {
+      ...loanData,
+      interestPercent:
+        loanData.interestPercent !== undefined
+          ? Number(loanData.interestPercent)
+          : loanData.principal && loanData.chargeAmount
+          ? Number(((Number(loanData.chargeAmount) / Number(loanData.principal)) * 100).toFixed(2))
+          : 0,
+    };
     const result = await safeFetchJson('/api/loans', {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify(loanData),
+      body: JSON.stringify(payload),
     });
 
     const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
