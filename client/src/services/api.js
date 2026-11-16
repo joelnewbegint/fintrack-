@@ -1645,6 +1645,10 @@ export const api = {
 
   getSyncStatus,
   flushOfflineQueue: () => flushOfflineQueue(safeFetchJson, getHeaders),
+  cleanseDumpData: () => {},
+  getLocalCounts,
+  getApiBaseUrl,
+  setApiBaseUrl,
 };
 
 if (typeof window !== 'undefined') {
