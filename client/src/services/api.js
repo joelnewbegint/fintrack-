@@ -7,8 +7,8 @@ import {
   initialInvestments,
   initialExpenses,
 } from './mockData';
-import { addToSyncQueue } from './offlineQueue';
-import { initSyncManager, getSyncStatus, flushOfflineQueue } from './syncManager';
+import { addToSyncQueue, clearSyncQueue as clearIdbSyncQueue } from './offlineQueue';
+import { initSyncManager, getSyncStatus, flushOfflineQueue, clearStuckSyncQueue } from './syncManager';
 
 // Local Storage helpers for offline / static mode (Firebase Hosting, Vercel, etc.)
 const STORAGE_KEYS = {
@@ -1870,7 +1870,8 @@ export const api = {
   },
 
   getSyncStatus,
-  flushOfflineQueue: () => flushOfflineQueue(safeFetchJson, getHeaders),
+  flushOfflineQueue: (forceClear = false) => flushOfflineQueue(safeFetchJson, getHeaders, forceClear),
+  clearSyncQueue: clearStuckSyncQueue,
   cleanseDumpData: () => {},
   getLocalCounts,
   getApiBaseUrl,

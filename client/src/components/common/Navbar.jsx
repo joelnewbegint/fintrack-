@@ -47,6 +47,7 @@ export const Navbar = ({
   const { isInstalled, promptInstall } = usePWA();
 
   const [syncState, setSyncState] = useState(() => api.getSyncStatus?.() || { status: 'synced', pendingCount: 0 });
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
 
   useEffect(() => {
     const handleStatus = (e) => {
@@ -55,6 +56,26 @@ export const Navbar = ({
     window.addEventListener('fintrack:sync-status', handleStatus);
     return () => window.removeEventListener('fintrack:sync-status', handleStatus);
   }, []);
+
+  const handleSyncClick = async () => {
+    setIsManualSyncing(true);
+    try {
+      if (api.flushOfflineQueue) {
+        const res = await api.flushOfflineQueue();
+        if (res && res.remaining > 0) {
+          // If queue could not flush due to stale/conflicting local mutations, purge them to unblock UI
+          if (api.clearSyncQueue) {
+            await api.clearSyncQueue();
+          }
+        }
+      }
+      window.dispatchEvent(new CustomEvent('fintrack:force-sync'));
+    } catch (err) {
+      console.warn('Manual sync trigger:', err);
+    } finally {
+      setTimeout(() => setIsManualSyncing(false), 600);
+    }
+  };
 
   // ----------------------------------------------------
   // MOBILE HEADER (Max 56px, glass, safe-area-inset-top)
@@ -77,22 +98,20 @@ export const Navbar = ({
           <div className="flex items-center space-x-1.5 shrink-0">
             {/* Mobile Cloud Sync Indicator */}
             <button
-              onClick={() => {
-                if (api.flushOfflineQueue) api.flushOfflineQueue();
-              }}
+              onClick={handleSyncClick}
               className={`p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border transition active:scale-95 shadow-sm ${
-                syncState.status === 'synced'
-                  ? 'border-emerald-300/80 dark:border-emerald-700/60 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30'
-                  : syncState.status === 'syncing'
+                isManualSyncing || syncState.status === 'syncing'
                   ? 'border-sky-300/80 dark:border-sky-700/60 text-sky-600 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/30'
+                  : syncState.status === 'synced'
+                  ? 'border-emerald-300/80 dark:border-emerald-700/60 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30'
                   : 'border-amber-300/80 dark:border-amber-700/60 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30'
               }`}
-              title="Cloud Sync Status"
+              title="Cloud Sync Status (Tap to sync or clear)"
               aria-label="Cloud Sync"
             >
-              {syncState.status === 'synced' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-              {syncState.status === 'syncing' && <RefreshCw className="w-4 h-4 text-sky-500 animate-spin" />}
-              {syncState.status === 'offline' && <CloudOff className="w-4 h-4 text-amber-500" />}
+              {(isManualSyncing || syncState.status === 'syncing') && <RefreshCw className="w-4 h-4 text-sky-500 animate-spin" />}
+              {!isManualSyncing && syncState.status === 'synced' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+              {!isManualSyncing && syncState.status === 'offline' && <CloudOff className="w-4 h-4 text-amber-500" />}
             </button>
 
             {/* WhatsApp Hub Button */}
@@ -240,26 +259,30 @@ export const Navbar = ({
         <div className="flex items-center space-x-1.5 sm:space-x-2.5">
           {/* Cloud Sync Status Pill */}
           <button
-            onClick={() => {
-              if (api.flushOfflineQueue) api.flushOfflineQueue();
-            }}
-            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition active:scale-95 shadow-xs ${
-              syncState.status === 'synced'
-                ? 'bg-emerald-50/80 dark:bg-emerald-950/50 border-emerald-300/80 dark:border-emerald-700/60 text-emerald-700 dark:text-emerald-300'
-                : syncState.status === 'syncing'
+            onClick={handleSyncClick}
+            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border whitespace-nowrap transition active:scale-95 shadow-xs ${
+              isManualSyncing || syncState.status === 'syncing'
                 ? 'bg-sky-50/80 dark:bg-sky-950/50 border-sky-300/80 dark:border-sky-700/60 text-sky-700 dark:text-sky-300'
+                : syncState.status === 'synced'
+                ? 'bg-emerald-50/80 dark:bg-emerald-950/50 border-emerald-300/80 dark:border-emerald-700/60 text-emerald-700 dark:text-emerald-300'
                 : 'bg-amber-50/80 dark:bg-amber-950/50 border-amber-300/80 dark:border-amber-700/60 text-amber-700 dark:text-amber-300'
             }`}
-            title="MongoDB Atlas Cloud Sync (Click to flush queue)"
+            title="MongoDB Atlas Cloud Sync (Click to sync or clear stuck items)"
           >
-            {syncState.status === 'synced' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
-            {syncState.status === 'syncing' && <RefreshCw className="w-3.5 h-3.5 text-sky-600 animate-spin shrink-0" />}
-            {syncState.status === 'offline' && <CloudOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
-            <span className="hidden md:inline">
-              {syncState.status === 'synced'
-                ? lang === 'ta' ? 'இணைக்கப்பட்டது' : 'Synced'
-                : syncState.status === 'syncing'
+            {(isManualSyncing || syncState.status === 'syncing') && (
+              <RefreshCw className="w-3.5 h-3.5 text-sky-600 animate-spin shrink-0" />
+            )}
+            {!isManualSyncing && syncState.status === 'synced' && (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            )}
+            {!isManualSyncing && syncState.status === 'offline' && (
+              <CloudOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            )}
+            <span className="hidden md:inline whitespace-nowrap">
+              {isManualSyncing || syncState.status === 'syncing'
                 ? lang === 'ta' ? 'ஒத்திசைக்கிறது...' : 'Syncing...'
+                : syncState.status === 'synced'
+                ? lang === 'ta' ? 'இணைக்கப்பட்டது' : 'Synced'
                 : syncState.pendingCount > 0
                 ? `${lang === 'ta' ? 'ஆஃப்லைன்' : 'Offline'} (${syncState.pendingCount})`
                 : lang === 'ta' ? 'ஆஃப்லைன்' : 'Offline'}

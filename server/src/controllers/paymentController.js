@@ -46,6 +46,21 @@ export const recordPayment = async (req, res, next) => {
     const clientId = req.body.clientId || req.body._id || req.body.id || `pay_${Date.now()}`;
     const createdBy = req.user ? req.user._id : 'owner';
 
+    // Idempotent check for offline sync replay
+    const existingPayment = await Payment.findOne({
+      $or: [
+        ...(clientId ? [{ clientId }] : []),
+        ...(receiptNo ? [{ receiptNo }] : []),
+      ],
+    });
+    if (existingPayment) {
+      return res.status(200).json({
+        success: true,
+        payment: existingPayment,
+        message: 'Payment already recorded',
+      });
+    }
+
     const custId = loan.customerId ? (loan.customerId._id || loan.customerId) : req.body.customerId;
 
     const newPayment = await Payment.create({
@@ -185,7 +200,10 @@ export const deletePayment = async (req, res, next) => {
     if (req.user?.role === 'client') {
       return res.status(403).json({ success: false, message: 'Access denied: Clients cannot reverse payments.' });
     }
-    const payment = await Payment.findById(req.params.id);
+    const isObjId = mongoose.Types.ObjectId.isValid(req.params.id);
+    const payment = isObjId
+      ? await Payment.findById(req.params.id)
+      : await Payment.findOne({ $or: [{ clientId: req.params.id }, { receiptNo: req.params.id }] });
     if (!payment) {
       return res.status(404).json({
         success: false,
@@ -193,7 +211,10 @@ export const deletePayment = async (req, res, next) => {
       });
     }
 
-    const loan = await Loan.findById(payment.loanId);
+    const isLoanObjId = mongoose.Types.ObjectId.isValid(payment.loanId);
+    const loan = isLoanObjId
+      ? await Loan.findById(payment.loanId)
+      : await Loan.findOne({ $or: [{ clientId: payment.loanId }, { loanNo: payment.loanId }] });
     if (!loan) {
       return res.status(404).json({
         success: false,

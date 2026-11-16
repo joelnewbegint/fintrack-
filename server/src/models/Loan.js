@@ -76,7 +76,7 @@ const loanSchema = new mongoose.Schema(
     },
     interestPercent: {
       type: Number,
-      required: true,
+      default: 0,
       min: 0,
     },
     chargeAmount: {

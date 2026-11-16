@@ -136,6 +136,90 @@ export const removeFromSyncQueue = async (id) => {
 };
 
 /**
+ * Update retry counter for an item in the queue
+ */
+export const updateQueueItemRetry = async (id, retryCount = 1) => {
+  try {
+    const db = await getDB();
+    if (!db) return;
+
+    return new Promise((resolve) => {
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const getReq = store.get(id);
+
+      getReq.onsuccess = () => {
+        const item = getReq.result;
+        if (!item) return resolve(false);
+        item.retryCount = retryCount;
+        item.lastAttemptAt = Date.now();
+        const putReq = store.put(item);
+        putReq.onsuccess = () => resolve(true);
+        putReq.onerror = () => resolve(false);
+      };
+      getReq.onerror = () => resolve(false);
+    });
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Clear all items in the offline sync queue
+ */
+export const clearSyncQueue = async () => {
+  try {
+    const db = await getDB();
+    if (!db) return false;
+
+    return new Promise((resolve) => {
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const req = store.clear();
+
+      req.onsuccess = () => {
+        broadcastQueueCount();
+        resolve(true);
+      };
+
+      req.onerror = () => {
+        resolve(false);
+      };
+    });
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Prune stale queue items older than maxAgeMs or exceeding max retries
+ */
+export const pruneStaleQueueItems = async (maxAgeMs = 48 * 60 * 60 * 1000) => {
+  try {
+    const db = await getDB();
+    if (!db) return 0;
+    const now = Date.now();
+    const queue = await getSyncQueue();
+    let prunedCount = 0;
+
+    for (const item of queue) {
+      const age = now - (item.timestamp || 0);
+      const retries = item.retryCount || 0;
+      if (age > maxAgeMs || retries >= 4) {
+        await removeFromSyncQueue(item.id);
+        prunedCount++;
+      }
+    }
+    if (prunedCount > 0) {
+      broadcastQueueCount();
+    }
+    return prunedCount;
+  } catch {
+    return 0;
+  }
+};
+
+/**
  * Get count of pending mutations in offline queue
  */
 export const getQueueCount = async () => {

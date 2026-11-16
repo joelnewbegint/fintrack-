@@ -61,7 +61,18 @@ export const createExpense = async (req, res, next) => {
       });
     }
 
+    const clientId = req.body.clientId || req.body._id || req.body.id || `exp_${Date.now()}`;
+    const existingExpense = await Expense.findOne({ clientId });
+    if (existingExpense) {
+      return res.status(200).json({
+        success: true,
+        message: 'Expense already recorded',
+        expense: existingExpense,
+      });
+    }
+
     const expense = await Expense.create({
+      clientId,
       title,
       category: category || 'miscellaneous',
       amount: Number(amount),

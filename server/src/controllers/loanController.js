@@ -21,10 +21,13 @@ export const createLoan = async (req, res, next) => {
       borrowerPhoto,
     } = req.body;
 
-    const isObjId = mongoose.Types.ObjectId.isValid(customerId);
+    const targetCustId = typeof customerId === 'object' && customerId !== null
+      ? (customerId._id || customerId.id || customerId.clientId)
+      : customerId;
+    const isObjId = mongoose.Types.ObjectId.isValid(targetCustId);
     const customer = isObjId
-      ? await Customer.findById(customerId)
-      : await Customer.findOne({ clientId: customerId });
+      ? await Customer.findById(targetCustId)
+      : await Customer.findOne({ clientId: targetCustId });
 
     const customerName = req.body.customerName || (customer ? customer.name : '');
     const customerPhone = req.body.customerPhone || (customer ? customer.phone : '');
@@ -98,11 +101,26 @@ export const createLoan = async (req, res, next) => {
     const clientId = req.body.clientId || req.body._id || req.body.id || `loan_${Date.now()}`;
     const createdBy = req.user ? req.user._id : 'owner';
 
+    // Idempotent sync check: If loan with clientId or loanNo already exists, return existing
+    const existingLoan = await Loan.findOne({
+      $or: [
+        ...(clientId ? [{ clientId }] : []),
+        ...(loanNo ? [{ loanNo }] : []),
+      ],
+    });
+    if (existingLoan) {
+      return res.status(200).json({
+        success: true,
+        loan: existingLoan,
+        message: 'Loan already synced',
+      });
+    }
+
     const newLoan = await Loan.create({
       clientId,
       createdBy,
       loanNo,
-      customerId: customer ? customer._id : customerId,
+      customerId: customer ? customer._id : targetCustId,
       customerName,
       customerPhone,
       customerArea,
