@@ -1752,6 +1752,35 @@ export const api = {
     return { success: true };
   },
 
+  getUserProfile: async () => {
+    const result = await safeFetchJson('/api/auth/me', { headers: getHeaders() });
+    if (result.ok && result.data?.user) return result.data.user;
+    const local = localStorage.getItem('fintrack_user');
+    return local ? JSON.parse(local) : null;
+  },
+
+  updateUserProfile: async (profileData) => {
+    const result = await safeFetchJson('/api/auth/profile', {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(profileData),
+    });
+    if (result.ok && result.data?.user) {
+      localStorage.setItem('fintrack_user', JSON.stringify(result.data.user));
+      return result.data.user;
+    }
+    const local = localStorage.getItem('fintrack_user');
+    if (local) {
+      try {
+        const u = JSON.parse(local);
+        const merged = { ...u, ...profileData };
+        localStorage.setItem('fintrack_user', JSON.stringify(merged));
+        return merged;
+      } catch (e) {}
+    }
+    throw new Error(result.error || 'Failed to update profile');
+  },
+
   getSyncStatus,
   flushOfflineQueue: () => flushOfflineQueue(safeFetchJson, getHeaders),
   cleanseDumpData: () => {},

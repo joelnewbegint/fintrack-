@@ -47,7 +47,14 @@ export const getDashboardStats = async (req, res, next) => {
       ],
     };
 
+    const clientFilter = req.user?.role === 'client'
+      ? { $or: [{ customerId: { $in: [req.user.customerId, req.user._id].filter(Boolean) } }, ...(req.user.phone ? [{ customerPhone: req.user.phone }] : [])] }
+      : {};
+
+    const loanMatchPipeline = Object.keys(clientFilter).length > 0 ? [{ $match: clientFilter }] : [];
+
     const loanAggregate = await Loan.aggregate([
+      ...loanMatchPipeline,
       {
         $group: {
           _id: null,
@@ -191,6 +198,7 @@ export const getDashboardStats = async (req, res, next) => {
 
     // 2. Finance Type Breakdown (Daily, Weekly, Monthly)
     const typeBreakdown = await Loan.aggregate([
+      ...loanMatchPipeline,
       {
         $group: {
           _id: { $toLower: { $ifNull: ['$financeType', 'daily'] } },
@@ -243,9 +251,11 @@ export const getDashboardStats = async (req, res, next) => {
     });
 
     // 3. Today's Collections (Payments already received today)
-    const todayPayments = await Payment.find({
+    const todayPaymentQuery = {
       date: { $gte: startOfToday, $lte: endOfToday },
-    })
+      ...(req.user?.role === 'client' ? { customerId: { $in: [req.user.customerId, req.user._id].filter(Boolean) } } : {}),
+    };
+    const todayPayments = await Payment.find(todayPaymentQuery)
       .populate('customerId', 'name phone area')
       .populate('loanId', 'loanNo financeType')
       .populate('collectedBy', 'name role')
@@ -254,16 +264,22 @@ export const getDashboardStats = async (req, res, next) => {
     const todayCollectedAmount = todayPayments.reduce((acc, p) => acc + p.amount, 0);
 
     // 3b. Fully Completed / Settled Loans (100% Repaid)
-    const completedLoansList = await Loan.find({ status: 'completed' })
+    const completedLoanQuery = {
+      status: 'completed',
+      ...(Object.keys(clientFilter).length > 0 ? clientFilter : {}),
+    };
+    const completedLoansList = await Loan.find(completedLoanQuery)
       .populate('customerId', 'name phone area photoUrl')
       .sort({ updatedAt: -1 })
       .limit(30);
 
     // 4. Today's Due Installments
     // Active/Overdue loans with schedule items due on or before today and not fully paid
-    const activeLoans = await Loan.find({
+    const activeLoanQuery = {
       status: { $in: ['active', 'overdue'] },
-    }).populate('customerId', 'name phone area photoUrl');
+      ...(Object.keys(clientFilter).length > 0 ? clientFilter : {}),
+    };
+    const activeLoans = await Loan.find(activeLoanQuery).populate('customerId', 'name phone area photoUrl');
 
     const todayDueList = [];
     activeLoans.forEach((loan) => {

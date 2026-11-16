@@ -20,17 +20,6 @@ const safeParseJson = async (res) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('fintrack_user');
-      if (!saved || saved === 'undefined' || saved === 'null') return null;
-      return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Corrupted fintrack_user in localStorage, clearing:', e);
-      localStorage.removeItem('fintrack_user');
-      return null;
-    }
-  });
   const [token, setToken] = useState(() => {
     try {
       const saved = localStorage.getItem('fintrack_token');
@@ -42,15 +31,32 @@ export const AuthProvider = ({ children }) => {
     }
   });
 
-  // Fast-start: if we already have a saved user in localStorage, never block the UI with a spinner!
+  const [user, setUser] = useState(() => {
+    try {
+      const savedTok = localStorage.getItem('fintrack_token');
+      if (!savedTok || savedTok === 'undefined' || savedTok === 'null') {
+        localStorage.removeItem('fintrack_user');
+        return null;
+      }
+      const saved = localStorage.getItem('fintrack_user');
+      if (!saved || saved === 'undefined' || saved === 'null') return null;
+      return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Corrupted fintrack_user in localStorage, clearing:', e);
+      localStorage.removeItem('fintrack_user');
+      return null;
+    }
+  });
+
+  // If token exists in storage but user has not been deserialized yet, verify first
   const [loading, setLoading] = useState(() => {
     try {
-      const saved = localStorage.getItem('fintrack_user');
       const savedTok = localStorage.getItem('fintrack_token');
-      if (savedTok && saved && saved !== 'undefined' && saved !== 'null') {
-        return false;
+      const savedUser = localStorage.getItem('fintrack_user');
+      if (savedTok && (!savedUser || savedUser === 'undefined' || savedUser === 'null')) {
+        return true;
       }
-      return false; // Even without token, render login immediately rather than blank screen
+      return false;
     } catch {
       return false;
     }
@@ -222,8 +228,45 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('fintrack_user');
   };
 
+  const updateProfile = async (profileData) => {
+    if (!token) throw new Error('Not authenticated');
+
+    try {
+      const baseUrl = getApiBaseUrl();
+      const res = await fetch(`${baseUrl}/api/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      const data = await safeParseJson(res);
+      if (res.ok && data?.success && data?.user) {
+        setUser(data.user);
+        localStorage.setItem('fintrack_user', JSON.stringify(data.user));
+        return data.user;
+      } else if (data?.message) {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      if (err.message && !err.message.includes('fetch') && !err.message.includes('Failed to fetch')) {
+        throw err;
+      }
+      console.warn('Network update failed, updating local profile cache...', err);
+    }
+
+    // Local update fallback if offline / standalone
+    const updated = { ...user, ...profileData };
+    setUser(updated);
+    localStorage.setItem('fintrack_user', JSON.stringify(updated));
+    return updated;
+  };
+
   const isOwner = user?.role === 'owner';
   const isAgent = user?.role === 'agent';
+  const isClient = user?.role === 'client';
 
   return (
     <AuthContext.Provider
@@ -233,8 +276,10 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         logout,
+        updateProfile,
         isOwner,
         isAgent,
+        isClient,
       }}
     >
       {children}

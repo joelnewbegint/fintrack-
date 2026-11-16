@@ -29,7 +29,7 @@ export const Sidebar = ({
   onToggleCollapsed,
 }) => {
   const { t, lang } = useLanguage();
-  const { isOwner } = useAuth();
+  const { isOwner, isClient } = useAuth();
   const { isLaptop, isMobile } = useDeviceMode();
 
   if (isMobile) {
@@ -37,17 +37,24 @@ export const Sidebar = ({
     return null;
   }
 
-  const navItems = [
-    { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
-    { id: 'customers', label: t('customers'), icon: Users },
-    { id: 'loans', label: t('loans'), icon: Banknote },
-    { id: 'payments', label: t('payments'), icon: Receipt },
-    { id: 'expenses', label: t('expenses'), icon: Receipt },
-    ...(isOwner ? [{ id: 'investments', label: t('investments'), icon: TrendingUp }] : []),
-    { id: 'dailyClosing', label: t('dailyClosing'), icon: FileSpreadsheet },
-    { id: 'calendar', label: t('calendar'), icon: CalendarDays },
-    { id: 'settings', label: t('settings'), icon: SettingsIcon },
-  ];
+  const navItems = isClient
+    ? [
+        { id: 'dashboard', label: lang === 'ta' ? 'முகப்பு' : 'Overview', icon: LayoutDashboard },
+        { id: 'loans', label: lang === 'ta' ? 'எனது கடன்கள்' : 'My Loans', icon: Banknote },
+        { id: 'payments', label: lang === 'ta' ? 'செலுத்திய விவரம்' : 'Payment History', icon: Receipt },
+        { id: 'settings', label: lang === 'ta' ? 'சுயவிவரம் & அமைப்புகள்' : 'Profile & Settings', icon: SettingsIcon },
+      ]
+    : [
+        { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
+        { id: 'customers', label: t('customers'), icon: Users },
+        { id: 'loans', label: t('loans'), icon: Banknote },
+        { id: 'payments', label: t('payments'), icon: Receipt },
+        { id: 'expenses', label: t('expenses'), icon: Receipt },
+        ...(isOwner ? [{ id: 'investments', label: t('investments'), icon: TrendingUp }] : []),
+        { id: 'dailyClosing', label: t('dailyClosing'), icon: FileSpreadsheet },
+        { id: 'calendar', label: t('calendar'), icon: CalendarDays },
+        { id: 'settings', label: t('settings'), icon: SettingsIcon },
+      ];
 
   return (
     <aside
@@ -142,24 +149,26 @@ export const Sidebar = ({
             )}
           </button>
 
-          {/* WhatsApp Hub Quick Item */}
-          <button
-            onClick={onOpenWhatsAppHub}
-            className={`w-full flex items-center ${
-              isCollapsed ? 'justify-center p-3' : 'space-x-3 px-3.5 py-3'
-            } rounded-2xl text-xs sm:text-sm font-bold transition-all duration-200 text-left text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40`}
-            title={lang === 'ta' ? 'வாட்ஸ்அப் லாகின் & செய்தி' : 'WhatsApp Web & Quick Send'}
-          >
-            <Smartphone className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            {!isCollapsed && (
-              <div className="flex items-center justify-between flex-1 min-w-0">
-                <span className="truncate">{lang === 'ta' ? 'வாட்ஸ்அப்' : 'WhatsApp Web'}</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px]">
-                  Send
-                </span>
-              </div>
-            )}
-          </button>
+          {/* WhatsApp Hub Quick Item - Staff/Owner only */}
+          {!isClient && (
+            <button
+              onClick={onOpenWhatsAppHub}
+              className={`w-full flex items-center ${
+                isCollapsed ? 'justify-center p-3' : 'space-x-3 px-3.5 py-3'
+              } rounded-2xl text-xs sm:text-sm font-bold transition-all duration-200 text-left text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40`}
+              title={lang === 'ta' ? 'வாட்ஸ்அப் லாகின் & செய்தி' : 'WhatsApp Web & Quick Send'}
+            >
+              <Smartphone className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              {!isCollapsed && (
+                <div className="flex items-center justify-between flex-1 min-w-0">
+                  <span className="truncate">{lang === 'ta' ? 'வாட்ஸ்அப்' : 'WhatsApp Web'}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px]">
+                    Send
+                  </span>
+                </div>
+              )}
+            </button>
+          )}
         </nav>
       </div>
 
@@ -195,7 +204,7 @@ export const Sidebar = ({
       {isCollapsed ? (
         <div
           className="w-10 h-10 rounded-2xl bg-sky-50 dark:bg-sky-950/60 flex items-center justify-center text-sky-600 dark:text-sky-400 border border-sky-200/60 dark:border-sky-800/40 cursor-default"
-          title={isOwner ? 'Financier Account (நிர்வாகி)' : 'Field Agent Mode (வசூல் முகவர்)'}
+          title={isOwner ? 'Financier Account (நிர்வாகி)' : isClient ? 'Client Account (வாடிக்கையாளர்)' : 'Field Agent Mode (வசூல் முகவர்)'}
         >
           <ShieldAlert className="w-5 h-5 text-sky-500" />
         </div>
@@ -203,11 +212,13 @@ export const Sidebar = ({
         <div className="mt-auto p-3.5 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/50 dark:to-slate-900/80 border border-sky-100 dark:border-sky-800/40 text-xs">
           <div className="flex items-center space-x-2 text-sky-700 dark:text-sky-300 font-bold mb-1">
             <ShieldAlert className="w-4 h-4 text-sky-500" />
-            <span>{isOwner ? 'Financier Account' : 'Field Agent Mode'}</span>
+            <span>{isOwner ? 'Financier Account' : isClient ? 'Client Account' : 'Field Agent Mode'}</span>
           </div>
           <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
             {isOwner
               ? 'Full administrative control over loans, WhatsApp, audit logs, and settings.'
+              : isClient
+              ? 'Personal account: view your registered loans, repayment dues, and profile.'
               : 'Authorized for daily collection recording and customer view.'}
           </p>
         </div>

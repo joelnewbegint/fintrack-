@@ -65,7 +65,7 @@ export const Dashboard = ({
   onOpenExpenses,
 }) => {
   const { t, lang } = useLanguage();
-  const { user, isOwner } = useAuth();
+  const { user, isOwner, isClient } = useAuth();
   const { isMobile, isTablet, isLaptop } = useDeviceMode();
 
   const [stats, setStats] = useState(null);
@@ -823,7 +823,7 @@ export const Dashboard = ({
                   </p>
                 </div>
                 <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                  {user?.role === 'owner' ? 'Owner' : 'Agent'}
+                  {user?.role === 'owner' ? 'Owner' : user?.role === 'client' ? 'Client' : 'Agent'}
                 </span>
               </div>
 
@@ -1429,6 +1429,22 @@ export const Dashboard = ({
                     <span className="text-xs font-mono bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-lg font-bold">
                       N
                     </span>
+                  </div>
+                ) : isClient ? (
+                  <div className="p-4 rounded-3xl glass border border-sky-200/80 dark:border-sky-800 text-slate-900 dark:text-white flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-3 rounded-2xl bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-300">
+                        <CheckCircle2 className="w-6 h-6 text-sky-500" />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-sm">
+                          {lang === 'ta' ? 'வாடிக்கையாளர் கணக்கு (Client Account)' : 'Client / Borrower Dashboard'}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 font-medium">
+                          {lang === 'ta' ? 'உங்கள் செயலில் உள்ள கடன்கள் மற்றும் நிலுவை விவரங்கள்' : 'Your active loans and repayment progress'}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="p-4 rounded-3xl glass border border-sky-200/80 dark:border-sky-800 text-slate-900 dark:text-white flex items-center justify-between">

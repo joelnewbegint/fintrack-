@@ -1,7 +1,7 @@
-import mongoose from 'mongoose';
 import Customer from '../models/Customer.js';
 import Loan from '../models/Loan.js';
 import Payment from '../models/Payment.js';
+import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
 
 export const getCustomers = async (req, res, next) => {
@@ -9,8 +9,15 @@ export const getCustomers = async (req, res, next) => {
     const { search, area, status } = req.query;
     let query = {};
 
-    // If agent, and agent has assignedAreas, filter by those areas
-    if (req.user.role === 'agent' && req.user.assignedAreas && req.user.assignedAreas.length > 0) {
+    // Strict Role-Based User Isolation
+    if (req.user?.role === 'client') {
+      const matchConditions = [];
+      if (req.user.customerId) matchConditions.push({ _id: req.user.customerId });
+      if (req.user._id) matchConditions.push({ userId: req.user._id });
+      if (req.user.phone) matchConditions.push({ phone: req.user.phone });
+      if (req.user.email) matchConditions.push({ email: req.user.email });
+      query.$or = matchConditions.length > 0 ? matchConditions : [{ _id: null }];
+    } else if (req.user?.role === 'agent' && req.user.assignedAreas && req.user.assignedAreas.length > 0) {
       query.area = { $in: req.user.assignedAreas };
     }
 
@@ -154,6 +161,21 @@ export const getCustomerById = async (req, res, next) => {
       });
     }
 
+    // Role-based Client Isolation
+    if (req.user?.role === 'client') {
+      const isOwner =
+        (req.user.customerId && String(customer._id) === String(req.user.customerId)) ||
+        (customer.userId && String(customer.userId) === String(req.user._id)) ||
+        (customer.phone && customer.phone === req.user.phone) ||
+        (customer.email && customer.email === req.user.email);
+      if (!isOwner) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own customer records.',
+        });
+      }
+    }
+
     // Fetch customer's loans
     const loanConditions = [{ customerId: customer._id }];
     if (customer.clientId) loanConditions.push({ customerId: customer.clientId });
@@ -265,22 +287,55 @@ export const updateCustomer = async (req, res, next) => {
       });
     }
 
+    // Role-based Client Isolation
+    if (req.user?.role === 'client') {
+      const isOwner =
+        (req.user.customerId && String(customer._id) === String(req.user.customerId)) ||
+        (customer.userId && String(customer.userId) === String(req.user._id)) ||
+        (customer.phone && customer.phone === req.user.phone) ||
+        (customer.email && customer.email === req.user.email);
+      if (!isOwner) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own customer records.',
+        });
+      }
+    }
+
     const before = customer.toObject();
     const updated = await Customer.findOneAndUpdate(query, req.body, {
       new: true,
       runValidators: true,
     });
 
-    if (req.user) {
-      await AuditLog.create({
-        userId: req.user._id,
-        userName: req.user.name,
-        action: 'UPDATE_CUSTOMER',
-        entity: 'Customer',
-        entityId: updated._id.toString(),
-        before,
-        after: updated.toObject(),
-      });
+    // Synchronize linked User account personal info if customer was updated
+    if (updated.userId) {
+      try {
+        await User.findByIdAndUpdate(updated.userId, {
+          ...(req.body.name && { name: req.body.name.trim() }),
+          ...(req.body.phone && { phone: req.body.phone.trim() }),
+          ...(req.body.address && { address: req.body.address.trim() }),
+          ...(req.body.email && { email: req.body.email.toLowerCase().trim() }),
+        });
+      } catch (uErr) {
+        console.warn('[CustomerController] User profile sync warning:', uErr.message);
+      }
+    }
+
+    try {
+      if (req.user) {
+        await AuditLog.create({
+          userId: req.user._id,
+          userName: req.user.name,
+          action: 'UPDATE_CUSTOMER',
+          entity: 'Customer',
+          entityId: updated._id.toString(),
+          before,
+          after: updated.toObject(),
+        });
+      }
+    } catch (aErr) {
+      console.warn('[CustomerController] AuditLog error:', aErr.message);
     }
 
     res.status(200).json({
@@ -304,6 +359,14 @@ export const deleteCustomer = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: 'Customer not found',
+      });
+    }
+
+    // Role-based Client Isolation: clients cannot delete customer profiles
+    if (req.user?.role === 'client') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Clients cannot delete customer accounts.',
       });
     }
 

@@ -261,10 +261,10 @@ export const Login = () => {
               />
               <span className={serverStatus === 'online' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500'}>
                 {serverStatus === 'online'
-                  ? 'API: Online (Port 5000)'
+                  ? `API: Connected (${api.getApiBaseUrl().includes('localhost') ? 'Local Dev' : 'Cloud DB'})`
                   : serverStatus === 'checking'
-                  ? 'Checking server...'
-                  : 'API: Unreachable (Offline)'}
+                  ? 'Connecting to server...'
+                  : 'API: Standalone / Offline'}
               </span>
             </div>
 
@@ -291,12 +291,12 @@ export const Login = () => {
           {showServerConfig && (
             <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
               <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-                Backend API URL (Leave blank for default <code className="font-mono text-sky-600">http://localhost:5000</code>):
+                Backend API URL (Current: <code className="font-mono text-sky-600 break-all">{api.getApiBaseUrl()}</code>):
               </p>
               <div className="flex space-x-2">
                 <input
                   type="text"
-                  placeholder="http://localhost:5000"
+                  placeholder={api.getApiBaseUrl()}
                   value={customApiUrl}
                   onChange={(e) => setCustomApiUrl(e.target.value)}
                   className="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono outline-none focus:ring-2 focus:ring-sky-400"

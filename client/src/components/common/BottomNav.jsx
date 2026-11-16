@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import { useDeviceMode } from '../../context/DeviceModeContext';
 import {
   LayoutDashboard,
   Users,
   Banknote,
   Receipt,
+  Settings,
   MoreHorizontal,
 } from 'lucide-react';
 
 export const BottomNav = ({ activeTab, setActiveTab, onOpenMoreSheet }) => {
   const { lang } = useLanguage();
+  const { isClient } = useAuth();
   const { isMobile } = useDeviceMode();
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
@@ -38,34 +41,57 @@ export const BottomNav = ({ activeTab, setActiveTab, onOpenMoreSheet }) => {
   // BottomNav is visible in Mobile mode only
   if (!isMobile || isKeyboardOpen) return null;
 
-  const tabs = [
-    {
-      id: 'dashboard',
-      label: lang === 'ta' ? 'முகப்பு' : 'Home',
-      icon: LayoutDashboard,
-    },
-    {
-      id: 'customers',
-      label: lang === 'ta' ? 'வாடிக்கையாளர்' : 'Customers',
-      icon: Users,
-    },
-    {
-      id: 'loans',
-      label: lang === 'ta' ? 'கடன்' : 'Loans',
-      icon: Banknote,
-    },
-    {
-      id: 'payments',
-      label: lang === 'ta' ? 'வசூல்' : 'Collect',
-      icon: Receipt,
-    },
-    {
-      id: 'more',
-      label: lang === 'ta' ? 'கூடுதல்' : 'More',
-      icon: MoreHorizontal,
-      isMore: true,
-    },
-  ];
+  const tabs = isClient
+    ? [
+        {
+          id: 'dashboard',
+          label: lang === 'ta' ? 'முகப்பு' : 'Home',
+          icon: LayoutDashboard,
+        },
+        {
+          id: 'loans',
+          label: lang === 'ta' ? 'கடன்கள்' : 'Loans',
+          icon: Banknote,
+        },
+        {
+          id: 'payments',
+          label: lang === 'ta' ? 'செலுத்தியவை' : 'History',
+          icon: Receipt,
+        },
+        {
+          id: 'settings',
+          label: lang === 'ta' ? 'சுயவிவரம்' : 'Profile',
+          icon: Settings,
+        },
+      ]
+    : [
+        {
+          id: 'dashboard',
+          label: lang === 'ta' ? 'முகப்பு' : 'Home',
+          icon: LayoutDashboard,
+        },
+        {
+          id: 'customers',
+          label: lang === 'ta' ? 'வாடிக்கையாளர்' : 'Customers',
+          icon: Users,
+        },
+        {
+          id: 'loans',
+          label: lang === 'ta' ? 'கடன்' : 'Loans',
+          icon: Banknote,
+        },
+        {
+          id: 'payments',
+          label: lang === 'ta' ? 'வசூல்' : 'Collect',
+          icon: Receipt,
+        },
+        {
+          id: 'more',
+          label: lang === 'ta' ? 'கூடுதல்' : 'More',
+          icon: MoreHorizontal,
+          isMore: true,
+        },
+      ];
 
   return (
     <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto z-40 pointer-events-none">

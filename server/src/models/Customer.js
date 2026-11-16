@@ -12,6 +12,18 @@ const customerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: 'owner',
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
+      default: null,
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: '',
+    },
     name: {
       type: String,
       required: [true, 'Customer name is required'],

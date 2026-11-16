@@ -31,13 +31,19 @@ import Settings from './pages/Settings';
 import api from './services/api';
 
 export function App() {
-  const { user, loading, isOwner } = useAuth();
+  const { user, loading, isOwner, isClient } = useAuth();
   const { isMobile, isTablet, isLaptop, isRealPhone } = useDeviceMode();
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedLoanId, setSelectedLoanId] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [loanFilterType, setLoanFilterType] = useState('all');
+
+  useEffect(() => {
+    if (isClient && !['dashboard', 'loans', 'payments', 'settings'].includes(activeTab)) {
+      setActiveTab('dashboard');
+    }
+  }, [isClient, activeTab]);
 
   // Quick Action Modals triggered by shortcuts, Navbar, or mobile FAB
   const [showGlobalLoanModal, setShowGlobalLoanModal] = useState(false);
@@ -295,13 +301,15 @@ export function App() {
         onOpenMoreSheet={() => setShowMoreSheet(true)}
       />
 
-      {/* Mobile-Mode Round 56px Floating Action Button */}
-      <FloatingPaymentButton
-        onRecordPayment={() => setShowGlobalPayModal(true)}
-        onAddLoan={() => setShowGlobalLoanModal(true)}
-        onAddCustomer={() => setShowGlobalCustomerModal(true)}
-        onAddInvestment={() => setShowGlobalInvestmentModal(true)}
-      />
+      {/* Mobile-Mode Round 56px Floating Action Button (Admin/Agent only) */}
+      {!isClient && (
+        <FloatingPaymentButton
+          onRecordPayment={() => setShowGlobalPayModal(true)}
+          onAddLoan={() => setShowGlobalLoanModal(true)}
+          onAddCustomer={() => setShowGlobalCustomerModal(true)}
+          onAddInvestment={() => setShowGlobalInvestmentModal(true)}
+        />
+      )}
 
       {/* Slide-in More / Settings Sheet */}
       <MobileMoreSheet

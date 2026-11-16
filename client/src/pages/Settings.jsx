@@ -26,11 +26,15 @@ import {
   RefreshCw,
   Cloud,
   Database,
+  User,
+  Phone,
+  Mail,
+  MapPin,
 } from 'lucide-react';
 
 export const Settings = () => {
   const { t, lang, toggleLanguage } = useLanguage();
-  const { isOwner, user } = useAuth();
+  const { isOwner, isClient, user, updateProfile } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const {
     isInstalled,
@@ -43,7 +47,48 @@ export const Settings = () => {
     updateStatus,
   } = usePWA();
 
-  const [activeSection, setActiveSection] = useState('whatsapp');
+  const [activeSection, setActiveSection] = useState(() => (isOwner ? 'whatsapp' : 'profile'));
+
+  const [profileData, setProfileData] = useState({
+    name: user?.name || '',
+    phone: user?.phone || '',
+    email: user?.email || '',
+    address: user?.address || '',
+  });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState('');
+  const [profileError, setProfileError] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user.name || '',
+        phone: user.phone || '',
+        email: user.email || '',
+        address: user.address || '',
+      });
+    }
+  }, [user]);
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setProfileSaving(true);
+    setProfileSuccess('');
+    setProfileError('');
+    try {
+      if (updateProfile) {
+        await updateProfile(profileData);
+      } else {
+        await api.updateUserProfile(profileData);
+      }
+      setProfileSuccess(lang === 'ta' ? 'சுயவிவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது!' : 'Profile updated successfully!');
+      setTimeout(() => setProfileSuccess(''), 4000);
+    } catch (err) {
+      setProfileError(err.message || 'Failed to update profile');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   const [settings, setSettings] = useState({
     businessName: "VK BANKER'S & FINANCE",
@@ -127,79 +172,209 @@ export const Settings = () => {
       </div>
 
       {/* Section Tabs */}
-      {isOwner && (
-        <div className="flex flex-wrap gap-2 pb-1">
-          <button
-            onClick={() => setActiveSection('appearance')}
-            className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
-              activeSection === 'appearance'
-                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
-                : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
-            }`}
-          >
-            <Sliders className="w-4 h-4 text-sky-400" />
-            <span>Appearance & Comfort (பார்வை & வசதிகள்)</span>
-          </button>
+      <div className="flex flex-wrap gap-2 pb-1">
+        <button
+          onClick={() => setActiveSection('profile')}
+          className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
+            activeSection === 'profile'
+              ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
+              : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
+          }`}
+        >
+          <User className="w-4 h-4 text-sky-400" />
+          <span>{lang === 'ta' ? 'சுயவிவரம் (My Profile)' : 'My Profile & Account'}</span>
+        </button>
 
-          <button
-            onClick={() => setActiveSection('whatsapp')}
-            className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
-              activeSection === 'whatsapp'
-                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
-                : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
-            }`}
-          >
-            <Smartphone className="w-4 h-4 text-emerald-500" />
-            <span>WhatsApp Connect (வாட்ஸ்அப்)</span>
-          </button>
+        <button
+          onClick={() => setActiveSection('appearance')}
+          className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
+            activeSection === 'appearance'
+              ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
+              : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
+          }`}
+        >
+          <Sliders className="w-4 h-4 text-sky-400" />
+          <span>Appearance & Comfort (பார்வை & வசதிகள்)</span>
+        </button>
 
-          <button
-            onClick={() => setActiveSection('cloudSync')}
-            className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
-              activeSection === 'cloudSync'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-500/25 ring-2 ring-emerald-400/40'
-                : 'glass text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-emerald-100/60 dark:border-emerald-900/40'
-            }`}
-          >
-            <Cloud className="w-4 h-4 text-emerald-500" />
-            <span>Cloud Sync & Devices (சாதனங்கள் இணைப்பு)</span>
-          </button>
+        {isOwner && (
+          <>
+            <button
+              onClick={() => setActiveSection('whatsapp')}
+              className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
+                activeSection === 'whatsapp'
+                  ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
+                  : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
+              }`}
+            >
+              <Smartphone className="w-4 h-4 text-emerald-500" />
+              <span>WhatsApp Connect (வாட்ஸ்அப்)</span>
+            </button>
 
-          <button
-            onClick={() => setActiveSection('business')}
-            className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
-              activeSection === 'business'
-                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
-                : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
-            }`}
-          >
-            <Building className="w-4 h-4 text-sky-500" />
-            <span>Business Profile (நிறுவன விவரங்கள்)</span>
-          </button>
+            <button
+              onClick={() => setActiveSection('cloudSync')}
+              className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
+                activeSection === 'cloudSync'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-500/25 ring-2 ring-emerald-400/40'
+                  : 'glass text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-emerald-100/60 dark:border-emerald-900/40'
+              }`}
+            >
+              <Cloud className="w-4 h-4 text-emerald-500" />
+              <span>Cloud Sync & Devices (சாதனங்கள் இணைப்பு)</span>
+            </button>
 
-          <button
-            onClick={() => setActiveSection('audit')}
-            className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
-              activeSection === 'audit'
-                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
-                : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
-            }`}
-          >
-            <Shield className="w-4 h-4 text-indigo-400" />
-            <span>Audit Trail & Backup (தணிக்கை & பேக்அப்)</span>
-          </button>
+            <button
+              onClick={() => setActiveSection('business')}
+              className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
+                activeSection === 'business'
+                  ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
+                  : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
+              }`}
+            >
+              <Building className="w-4 h-4 text-sky-500" />
+              <span>Business Profile (நிறுவன விவரங்கள்)</span>
+            </button>
 
-          <button
-            onClick={() => setActiveSection('pwa')}
-            className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
-              activeSection === 'pwa'
-                ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
-                : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
-            }`}
-          >
-            <Smartphone className="w-4 h-4 text-amber-500" />
-            <span>PWA & App Install (செயலி நிறுவல்)</span>
-          </button>
+            <button
+              onClick={() => setActiveSection('audit')}
+              className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
+                activeSection === 'audit'
+                  ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
+                  : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
+              }`}
+            >
+              <Shield className="w-4 h-4 text-indigo-400" />
+              <span>Audit Trail & Backup (தணிக்கை & பேக்அப்)</span>
+            </button>
+          </>
+        )}
+
+        <button
+          onClick={() => setActiveSection('pwa')}
+          className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
+            activeSection === 'pwa'
+              ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
+              : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
+          }`}
+        >
+          <Smartphone className="w-4 h-4 text-amber-500" />
+          <span>PWA & App Install (செயலி நிறுவல்)</span>
+        </button>
+      </div>
+
+      {/* 0. Personal User Profile Tab */}
+      {activeSection === 'profile' && (
+        <div className="space-y-6 max-w-3xl">
+          <div className="glass-card rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800/80 shadow-md space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center space-x-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-md shrink-0">
+                  {profileData.name ? profileData.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-lg text-slate-900 dark:text-white">
+                    {profileData.name || 'User Profile'}
+                  </h3>
+                  <div className="flex items-center space-x-2 mt-0.5">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">
+                      {user?.role === 'owner' ? 'Financier / Owner' : user?.role === 'client' ? 'Client / Borrower' : 'Agent'}
+                    </span>
+                    <span className="text-xs text-slate-400 font-mono">
+                      ID: {user?.id || user?._id || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {profileSuccess && (
+              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 shrink-0" />
+                <span>{profileSuccess}</span>
+              </div>
+            )}
+
+            {profileError && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold">
+                {profileError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center space-x-1.5">
+                    <User className="w-3.5 h-3.5 text-sky-500" />
+                    <span>{lang === 'ta' ? 'முழு பெயர் (Full Name)' : 'Full Name'} *</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={profileData.name}
+                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold focus:ring-2 focus:ring-sky-500 outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center space-x-1.5">
+                    <Phone className="w-3.5 h-3.5 text-sky-500" />
+                    <span>{lang === 'ta' ? 'மொபைல் எண் (Mobile Phone)' : 'Mobile Phone'} *</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={profileData.phone}
+                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold focus:ring-2 focus:ring-sky-500 outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center space-x-1.5">
+                    <Mail className="w-3.5 h-3.5 text-sky-500" />
+                    <span>{lang === 'ta' ? 'மின்னஞ்சல் (Email Address)' : 'Email Address'} *</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={profileData.email}
+                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold focus:ring-2 focus:ring-sky-500 outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center space-x-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-sky-500" />
+                    <span>{lang === 'ta' ? 'முகவரி (Address)' : 'Residential / Office Address'}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={profileData.address}
+                    onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                    placeholder="e.g. 12, Main Bazaar, Coimbatore"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold focus:ring-2 focus:ring-sky-500 outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={profileSaving}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 text-white font-bold text-xs shadow-md shadow-sky-500/20 hover:shadow-lg active:scale-95 transition flex items-center space-x-2 disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>
+                    {profileSaving
+                      ? (lang === 'ta' ? 'சேமிக்கப்படுகிறது...' : 'Saving...')
+                      : (lang === 'ta' ? 'சுயவிவரத்தை சேமிக்க (Save Profile)' : 'Save Personal Details')}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

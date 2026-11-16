@@ -6,6 +6,9 @@ import AuditLog from '../models/AuditLog.js';
 
 export const recordPayment = async (req, res, next) => {
   try {
+    if (req.user?.role === 'client') {
+      return res.status(403).json({ success: false, message: 'Access denied: Clients cannot record payments.' });
+    }
     const { loanId, amount, mode, date, notes } = req.body;
 
     const isObjId = mongoose.Types.ObjectId.isValid(loanId);
@@ -144,6 +147,12 @@ export const getPayments = async (req, res, next) => {
     const { loanId, customerId, mode, startDate, endDate, limit = 50 } = req.query;
     let query = {};
 
+    // Role-based Client Isolation
+    if (req.user?.role === 'client') {
+      const clientCustIds = [req.user.customerId, req.user._id].filter(Boolean);
+      query.$or = [{ customerId: { $in: clientCustIds } }];
+    }
+
     if (loanId) query.loanId = loanId;
     if (customerId) query.customerId = customerId;
     if (mode && mode !== 'all') query.mode = mode;
@@ -173,6 +182,9 @@ export const getPayments = async (req, res, next) => {
 
 export const deletePayment = async (req, res, next) => {
   try {
+    if (req.user?.role === 'client') {
+      return res.status(403).json({ success: false, message: 'Access denied: Clients cannot reverse payments.' });
+    }
     const payment = await Payment.findById(req.params.id);
     if (!payment) {
       return res.status(404).json({

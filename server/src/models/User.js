@@ -26,8 +26,22 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['owner', 'agent'],
+      enum: ['owner', 'admin', 'agent', 'client'],
       default: 'agent',
+    },
+    address: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Customer',
+      default: null,
+    },
+    preferences: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
     assignedAreas: {
       type: [String],

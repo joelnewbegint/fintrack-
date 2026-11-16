@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import Loan from '../models/Loan.js';
 import Customer from '../models/Customer.js';
 import Payment from '../models/Payment.js';
@@ -6,6 +5,9 @@ import AuditLog from '../models/AuditLog.js';
 
 export const createLoan = async (req, res, next) => {
   try {
+    if (req.user?.role === 'client') {
+      return res.status(403).json({ success: false, message: 'Access denied: Clients cannot issue loans.' });
+    }
     const {
       customerId,
       principal,
@@ -132,32 +134,22 @@ export const createLoan = async (req, res, next) => {
       }
     }
 
-    try {
-      await AuditLog.create({
-        userId: req.user?._id || 'owner',
-        userName: req.user?.name || 'Owner',
-        action: 'CREATE_LOAN',
-        entity: 'Loan',
-        entityId: newLoan._id.toString(),
-        after: {
-          loanNo: newLoan.loanNo,
-          customer: customer?.name || customerName || 'Borrower',
-          principal: newLoan.principal,
-          financeType: newLoan.financeType,
-          totalPayable: newLoan.totalPayable,
-        },
-      });
-    } catch (auditErr) {
-      console.warn('[LoanController] AuditLog error:', auditErr.message);
-    }
+    await AuditLog.create({
+      userId: req.user._id,
+      userName: req.user.name,
+      action: 'CREATE_LOAN',
+      entity: 'Loan',
+      entityId: newLoan._id.toString(),
+      after: {
+        loanNo: newLoan.loanNo,
+        customer: customer.name,
+        principal: newLoan.principal,
+        financeType: newLoan.financeType,
+        totalPayable: newLoan.totalPayable,
+      },
+    });
 
-    try {
-      if (newLoan.customerId) {
-        await newLoan.populate('customerId', 'name phone area address photoUrl photo');
-      }
-    } catch (popErr) {
-      console.warn('[LoanController] Populate customer error:', popErr.message);
-    }
+    await newLoan.populate('customerId', 'name phone area address photoUrl photo');
 
     res.status(201).json({
       success: true,
@@ -173,6 +165,16 @@ export const getLoans = async (req, res, next) => {
   try {
     const { status, financeType, customerId, search } = req.query;
     let query = {};
+
+    // Role-based Client Isolation
+    if (req.user?.role === 'client') {
+      const clientCustIds = [req.user.customerId, req.user._id].filter(Boolean);
+      const orList = [{ customerId: { $in: clientCustIds } }];
+      if (req.user.phone) orList.push({ customerPhone: req.user.phone });
+      query.$or = orList;
+    } else if (req.user?.role === 'agent' && req.user.assignedAreas && req.user.assignedAreas.length > 0) {
+      query.customerArea = { $in: req.user.assignedAreas };
+    }
 
     if (status && status !== 'all') {
       query.status = status;
@@ -259,6 +261,19 @@ export const getLoanById = async (req, res, next) => {
       });
     }
 
+    // Role-based Client Isolation
+    if (req.user?.role === 'client') {
+      const isOwner =
+        (loan.customerId && (String(loan.customerId._id || loan.customerId) === String(req.user.customerId) || String(loan.customerId._id || loan.customerId) === String(req.user._id))) ||
+        (loan.customerPhone && loan.customerPhone === req.user.phone);
+      if (!isOwner) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own loan details.',
+        });
+      }
+    }
+
     const payments = await Payment.find({
       $or: [{ loanId: loan._id }, { loanId: loan.clientId }, { loanId: loan.loanNo }],
     })
@@ -277,6 +292,9 @@ export const getLoanById = async (req, res, next) => {
 
 export const updateLoanStatus = async (req, res, next) => {
   try {
+    if (req.user?.role === 'client') {
+      return res.status(403).json({ success: false, message: 'Access denied: Clients cannot modify loan status.' });
+    }
     const { status, notes } = req.body;
     const id = req.params.id;
     const isObjId = mongoose.Types.ObjectId.isValid(id);
@@ -288,6 +306,19 @@ export const updateLoanStatus = async (req, res, next) => {
         success: false,
         message: 'Loan not found',
       });
+    }
+
+    // Role-based Client Isolation
+    if (req.user?.role === 'client') {
+      const isOwner =
+        (loan.customerId && (String(loan.customerId._id || loan.customerId) === String(req.user.customerId) || String(loan.customerId._id || loan.customerId) === String(req.user._id))) ||
+        (loan.customerPhone && loan.customerPhone === req.user.phone);
+      if (!isOwner) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own loan details.',
+        });
+      }
     }
 
     const before = loan.toObject();
@@ -317,6 +348,9 @@ export const updateLoanStatus = async (req, res, next) => {
 
 export const updateLoan = async (req, res, next) => {
   try {
+    if (req.user?.role === 'client') {
+      return res.status(403).json({ success: false, message: 'Access denied: Clients cannot update loan terms.' });
+    }
     const id = req.params.id;
     const isObjId = mongoose.Types.ObjectId.isValid(id);
     const query = isObjId ? { _id: id } : { $or: [{ clientId: id }, { loanNo: id }] };
@@ -326,6 +360,19 @@ export const updateLoan = async (req, res, next) => {
         success: false,
         message: 'Loan not found',
       });
+    }
+
+    // Role-based Client Isolation
+    if (req.user?.role === 'client') {
+      const isOwner =
+        (loan.customerId && (String(loan.customerId._id || loan.customerId) === String(req.user.customerId) || String(loan.customerId._id || loan.customerId) === String(req.user._id))) ||
+        (loan.customerPhone && loan.customerPhone === req.user.phone);
+      if (!isOwner) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own loan details.',
+        });
+      }
     }
 
     const before = loan.toObject();
@@ -464,6 +511,19 @@ export const declareLoanHoliday = async (req, res, next) => {
       });
     }
 
+    // Role-based Client Isolation
+    if (req.user?.role === 'client') {
+      const isOwner =
+        (loan.customerId && (String(loan.customerId._id || loan.customerId) === String(req.user.customerId) || String(loan.customerId._id || loan.customerId) === String(req.user._id))) ||
+        (loan.customerPhone && loan.customerPhone === req.user.phone);
+      if (!isOwner) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own loan details.',
+        });
+      }
+    }
+
     const { date, installmentNo, type = 'holiday', reason = '' } = req.body;
     const dateStr = date ? new Date(date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
 
@@ -539,6 +599,19 @@ export const removeLoanHoliday = async (req, res, next) => {
       });
     }
 
+    // Role-based Client Isolation
+    if (req.user?.role === 'client') {
+      const isOwner =
+        (loan.customerId && (String(loan.customerId._id || loan.customerId) === String(req.user.customerId) || String(loan.customerId._id || loan.customerId) === String(req.user._id))) ||
+        (loan.customerPhone && loan.customerPhone === req.user.phone);
+      if (!isOwner) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own loan details.',
+        });
+      }
+    }
+
     const { date, installmentNo } = req.body;
     const dateStr = date ? new Date(date).toISOString().split('T')[0] : '';
 
@@ -580,6 +653,9 @@ export const removeLoanHoliday = async (req, res, next) => {
 
 export const deleteLoan = async (req, res, next) => {
   try {
+    if (req.user?.role === 'client') {
+      return res.status(403).json({ success: false, message: 'Access denied: Clients cannot delete loans.' });
+    }
     const id = req.params.id;
     const isObjId = mongoose.Types.ObjectId.isValid(id);
     const query = isObjId ? { _id: id } : { $or: [{ clientId: id }, { loanNo: id }] };
@@ -589,6 +665,19 @@ export const deleteLoan = async (req, res, next) => {
         success: false,
         message: 'Loan not found',
       });
+    }
+
+    // Role-based Client Isolation
+    if (req.user?.role === 'client') {
+      const isOwner =
+        (loan.customerId && (String(loan.customerId._id || loan.customerId) === String(req.user.customerId) || String(loan.customerId._id || loan.customerId) === String(req.user._id))) ||
+        (loan.customerPhone && loan.customerPhone === req.user.phone);
+      if (!isOwner) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You can only view your own loan details.',
+        });
+      }
     }
 
     const before = loan.toObject();
