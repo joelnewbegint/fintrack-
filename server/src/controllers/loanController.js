@@ -267,7 +267,10 @@ export const getLoanById = async (req, res, next) => {
 export const updateLoanStatus = async (req, res, next) => {
   try {
     const { status, notes } = req.body;
-    const loan = await Loan.findById(req.params.id);
+    const id = req.params.id;
+    const isObjId = mongoose.Types.ObjectId.isValid(id);
+    const query = isObjId ? { _id: id } : { $or: [{ clientId: id }, { loanNo: id }] };
+    const loan = await Loan.findOne(query);
 
     if (!loan) {
       return res.status(404).json({
@@ -303,7 +306,10 @@ export const updateLoanStatus = async (req, res, next) => {
 
 export const updateLoan = async (req, res, next) => {
   try {
-    const loan = await Loan.findById(req.params.id);
+    const id = req.params.id;
+    const isObjId = mongoose.Types.ObjectId.isValid(id);
+    const query = isObjId ? { _id: id } : { $or: [{ clientId: id }, { loanNo: id }] };
+    const loan = await Loan.findOne(query);
     if (!loan) {
       return res.status(404).json({
         success: false,
@@ -436,7 +442,10 @@ export const updateLoan = async (req, res, next) => {
 
 export const declareLoanHoliday = async (req, res, next) => {
   try {
-    const loan = await Loan.findById(req.params.id);
+    const id = req.params.id;
+    const isObjId = mongoose.Types.ObjectId.isValid(id);
+    const query = isObjId ? { _id: id } : { $or: [{ clientId: id }, { loanNo: id }] };
+    const loan = await Loan.findOne(query);
     if (!loan) {
       return res.status(404).json({
         success: false,
@@ -508,7 +517,10 @@ export const declareLoanHoliday = async (req, res, next) => {
 
 export const removeLoanHoliday = async (req, res, next) => {
   try {
-    const loan = await Loan.findById(req.params.id);
+    const id = req.params.id;
+    const isObjId = mongoose.Types.ObjectId.isValid(id);
+    const query = isObjId ? { _id: id } : { $or: [{ clientId: id }, { loanNo: id }] };
+    const loan = await Loan.findOne(query);
     if (!loan) {
       return res.status(404).json({
         success: false,

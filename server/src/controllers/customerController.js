@@ -32,7 +32,7 @@ export const getCustomers = async (req, res, next) => {
     const customers = await Customer.find(query).sort({ createdAt: -1 });
 
     // Populate active loans count, total loans count, and total outstanding for each customer
-    const customerIds = customers.map((c) => c._id);
+    const customerIds = customers.flatMap((c) => [c._id, c.clientId, c._id.toString()].filter(Boolean));
     const customerPhones = customers.map((c) => c.phone).filter(Boolean);
     const customerNames = customers.map((c) => c.name).filter(Boolean);
 
@@ -100,6 +100,7 @@ export const getCustomers = async (req, res, next) => {
       };
 
       addBuckets(customerLoanMap[cidStr]);
+      if (c.clientId) addBuckets(customerLoanMap[String(c.clientId)]);
       if (pClean) addBuckets(customerPhoneMap[pClean]);
       if (nClean) addBuckets(customerNameMap[nClean]);
 

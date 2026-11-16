@@ -224,14 +224,20 @@ export const getDashboardStats = async (req, res, next) => {
     };
 
     typeBreakdown.forEach((item) => {
-      if (financeTypesMap[item._id]) {
-        financeTypesMap[item._id] = {
-          ...financeTypesMap[item._id],
-          count: item.count,
-          activeLoans: item.activeLoans,
-          lent: item.lent,
-          collected: item.collected,
-          pending: item.pending,
+      let key = String(item._id || '').toLowerCase().trim();
+      if (key.includes('daily')) key = 'daily';
+      else if (key.includes('week')) key = 'weekly';
+      else if (key.includes('month')) key = 'monthly';
+      else key = 'daily';
+
+      if (financeTypesMap[key]) {
+        financeTypesMap[key] = {
+          ...financeTypesMap[key],
+          count: (financeTypesMap[key].count || 0) + (item.count || 0),
+          activeLoans: (financeTypesMap[key].activeLoans || 0) + (item.activeLoans || 0),
+          lent: (financeTypesMap[key].lent || 0) + (item.lent || 0),
+          collected: (financeTypesMap[key].collected || 0) + (item.collected || 0),
+          pending: (financeTypesMap[key].pending || 0) + (item.pending || 0),
         };
       }
     });

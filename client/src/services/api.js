@@ -85,7 +85,7 @@ export const getApiBaseUrl = () => {
     if (userUrl && userUrl.trim()) {
       return userUrl.trim().replace(/\/+$/, '');
     }
-  } catch (e) {}
+  } catch (e) { }
 
   const envUrl = import.meta.env.VITE_API_BASE_URL;
   if (envUrl && envUrl.trim() && !envUrl.includes('YOUR-API')) {
@@ -755,6 +755,9 @@ export const api = {
         loans.unshift(result.data.loan);
         setStored(STORAGE_KEYS.LOANS, loans);
       }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
       return result.data;
     }
 
@@ -845,15 +848,28 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(loanData),
     });
-    if (result.ok) return result.data;
+
+    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+    const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
+    const loanIndex = loans.findIndex((l) => String(l._id) === String(id) || String(l.clientId) === String(id) || String(l.loanNo) === String(id));
+
+    if (result.ok && result.data?.loan) {
+      if (loanIndex !== -1) {
+        loans[loanIndex] = result.data.loan;
+      } else {
+        loans.unshift(result.data.loan);
+      }
+      setStored(STORAGE_KEYS.LOANS, loans);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
+      return result.data;
+    }
 
     if (result.error && !result.isHtml) {
       throw new Error(result.error);
     }
 
-    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
-    const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
-    const loanIndex = loans.findIndex((l) => String(l._id) === String(id));
     if (loanIndex !== -1) {
       const existing = loans[loanIndex];
       const p = loanData.principal !== undefined ? Number(loanData.principal) : Number(existing.principal);
@@ -887,7 +903,18 @@ export const api = {
         }
       }
 
-      return { success: true, loan: updated };
+      await addToSyncQueue({
+        endpoint: `/api/loans/${id}`,
+        method: 'PUT',
+        data: loanData,
+        clientId: id,
+      });
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
+
+      return { success: true, loan: updated, isOffline: true };
     }
     throw new Error('Loan not found in local store');
   },
@@ -898,14 +925,34 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(statusData),
     });
-    if (result.ok) return result.data;
 
     const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
-    const index = loans.findIndex((l) => l._id === id);
+    const index = loans.findIndex((l) => String(l._id) === String(id) || String(l.clientId) === String(id) || String(l.loanNo) === String(id));
+
+    if (result.ok && result.data?.loan) {
+      if (index !== -1) {
+        loans[index] = result.data.loan;
+      }
+      setStored(STORAGE_KEYS.LOANS, loans);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
+      return result.data;
+    }
+
     if (index !== -1) {
       loans[index] = { ...loans[index], ...statusData };
       setStored(STORAGE_KEYS.LOANS, loans);
-      return { success: true, loan: loans[index] };
+      await addToSyncQueue({
+        endpoint: `/api/loans/${id}/status`,
+        method: 'PATCH',
+        data: statusData,
+        clientId: id,
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
+      return { success: true, loan: loans[index], isOffline: true };
     }
     return { success: true };
   },
@@ -915,15 +962,27 @@ export const api = {
       method: 'DELETE',
       headers: getHeaders(),
     });
-    if (result.ok) return result.data;
 
     let loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
-    loans = loans.filter((l) => String(l._id) !== String(id));
+    loans = loans.filter((l) => String(l._id) !== String(id) && String(l.clientId) !== String(id) && String(l.loanNo) !== String(id));
     setStored(STORAGE_KEYS.LOANS, loans);
 
     let payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments);
     payments = payments.filter((p) => String(p.loanId?._id || p.loanId) !== String(id));
     setStored(STORAGE_KEYS.PAYMENTS, payments);
+
+    if (!result.ok) {
+      await addToSyncQueue({
+        endpoint: `/api/loans/${id}`,
+        method: 'DELETE',
+        data: {},
+        clientId: id,
+      });
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+    }
 
     return { success: true };
   },
@@ -948,7 +1007,7 @@ export const api = {
       };
       const exIdx = loans[index].holidays.findIndex(
         (h) => (holidayData.installmentNo && Number(h.installmentNo) === Number(holidayData.installmentNo)) ||
-               (h.date && h.date.split('T')[0] === item.date)
+          (h.date && h.date.split('T')[0] === item.date)
       );
       if (exIdx >= 0) loans[index].holidays[exIdx] = item;
       else loans[index].holidays.push(item);
@@ -972,7 +1031,7 @@ export const api = {
     if (index !== -1 && Array.isArray(loans[index].holidays)) {
       loans[index].holidays = loans[index].holidays.filter(
         (h) => !(holidayData.installmentNo && Number(h.installmentNo) === Number(holidayData.installmentNo)) &&
-               !(holidayData.date && h.date && h.date.split('T')[0] === holidayData.date.split('T')[0])
+          !(holidayData.date && h.date && h.date.split('T')[0] === holidayData.date.split('T')[0])
       );
       setStored(STORAGE_KEYS.LOANS, loans);
       return { success: true, loan: loans[index] };
@@ -1682,20 +1741,20 @@ export const api = {
       try {
         const names = await caches.keys();
         await Promise.all(names.map((n) => caches.delete(n)));
-      } catch (e) {}
+      } catch (e) { }
     }
     try {
       await safeFetchJson('/api/settings/clear-all-data', {
         method: 'POST',
         headers: getHeaders(),
       });
-    } catch (e) {}
+    } catch (e) { }
     return { success: true };
   },
 
   getSyncStatus,
   flushOfflineQueue: () => flushOfflineQueue(safeFetchJson, getHeaders),
-  cleanseDumpData: () => {},
+  cleanseDumpData: () => { },
   getLocalCounts,
   getApiBaseUrl,
   setApiBaseUrl,

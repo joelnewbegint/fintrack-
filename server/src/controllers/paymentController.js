@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Payment from '../models/Payment.js';
 import Loan from '../models/Loan.js';
 import Customer from '../models/Customer.js';
@@ -96,21 +97,25 @@ export const recordPayment = async (req, res, next) => {
     await loan.save();
 
     // Audit log entry
-    await AuditLog.create({
-      userId: req.user._id,
-      userName: req.user.name,
-      action: 'RECORD_PAYMENT',
-      entity: 'Payment',
-      entityId: newPayment._id.toString(),
-      after: {
-        receiptNo: newPayment.receiptNo,
-        amount: payAmount,
-        customer: loan.customerId.name,
-        loanNo: loan.loanNo,
-        mode: newPayment.mode,
-        remainingBalance: loan.remainingBalance,
-      },
-    });
+    try {
+      await AuditLog.create({
+        userId: req.user?._id || 'owner',
+        userName: req.user?.name || 'Owner',
+        action: 'RECORD_PAYMENT',
+        entity: 'Payment',
+        entityId: newPayment._id.toString(),
+        after: {
+          receiptNo: newPayment.receiptNo,
+          amount: payAmount,
+          customer: loan.customerId?.name || 'Customer',
+          loanNo: loan.loanNo,
+          mode: newPayment.mode,
+          remainingBalance: loan.remainingBalance,
+        },
+      });
+    } catch (e) {
+      console.warn('[PaymentController] AuditLog error:', e.message);
+    }
 
     // Populate for receipt view
     const populatedPayment = await Payment.findById(newPayment._id)
@@ -238,18 +243,22 @@ export const deletePayment = async (req, res, next) => {
     await Payment.findByIdAndDelete(payment._id);
 
     // Audit log
-    await AuditLog.create({
-      userId: req.user._id,
-      userName: req.user.name,
-      action: 'DELETE_PAYMENT',
-      entity: 'Payment',
-      entityId: payment._id.toString(),
-      before,
-      after: {
-        undoneAmount: payment.amount,
-        revertedRemainingBalance: loan.remainingBalance,
-      },
-    });
+    try {
+      await AuditLog.create({
+        userId: req.user?._id || 'owner',
+        userName: req.user?.name || 'Owner',
+        action: 'DELETE_PAYMENT',
+        entity: 'Payment',
+        entityId: payment._id.toString(),
+        before,
+        after: {
+          undoneAmount: payment.amount,
+          revertedRemainingBalance: loan.remainingBalance,
+        },
+      });
+    } catch (e) {
+      console.warn('[PaymentController] AuditLog error:', e.message);
+    }
 
     res.status(200).json({
       success: true,
