@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Customer from '../models/Customer.js';
 import Loan from '../models/Loan.js';
 import Payment from '../models/Payment.js';
@@ -11,12 +12,15 @@ export const getCustomers = async (req, res, next) => {
 
     // Strict Role-Based User Isolation
     if (req.user?.role === 'client') {
-      const matchConditions = [];
-      if (req.user.customerId) matchConditions.push({ _id: req.user.customerId });
-      if (req.user._id) matchConditions.push({ userId: req.user._id });
-      if (req.user.phone) matchConditions.push({ phone: req.user.phone });
-      if (req.user.email) matchConditions.push({ email: req.user.email });
-      query.$or = matchConditions.length > 0 ? matchConditions : [{ _id: null }];
+      if (req.user.customerId) {
+        query._id = req.user.customerId;
+      } else {
+        const matchConditions = [];
+        if (req.user._id) matchConditions.push({ userId: req.user._id });
+        if (req.user.phone) matchConditions.push({ phone: req.user.phone });
+        if (req.user.email) matchConditions.push({ email: req.user.email });
+        query.$or = matchConditions.length > 0 ? matchConditions : [{ _id: null }];
+      }
     } else if (req.user?.role === 'agent' && req.user.assignedAreas && req.user.assignedAreas.length > 0) {
       query.area = { $in: req.user.assignedAreas };
     }

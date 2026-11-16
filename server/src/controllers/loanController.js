@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Loan from '../models/Loan.js';
 import Customer from '../models/Customer.js';
 import Payment from '../models/Payment.js';

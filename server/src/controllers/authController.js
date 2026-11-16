@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
+import Customer from '../models/Customer.js';
 import AuditLog from '../models/AuditLog.js';
 
 const signToken = (id) => {
@@ -253,9 +254,12 @@ export const registerUser = async (req, res, next) => {
       }
     }
 
+    const token = signToken(newUser._id);
+
     res.status(201).json({
       success: true,
       message: 'User created successfully',
+      token,
       user: {
         id: newUser._id,
         _id: newUser._id,
