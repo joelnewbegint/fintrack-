@@ -2,6 +2,16 @@ import mongoose from 'mongoose';
 
 const paymentSchema = new mongoose.Schema(
   {
+    clientId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.Mixed,
+      default: 'owner',
+    },
     receiptNo: {
       type: String,
       required: true,
@@ -10,13 +20,13 @@ const paymentSchema = new mongoose.Schema(
       trim: true,
     },
     loanId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.Mixed,
       ref: 'Loan',
       required: true,
       index: true,
     },
     customerId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.Mixed,
       ref: 'Customer',
       required: true,
       index: true,
@@ -38,9 +48,9 @@ const paymentSchema = new mongoose.Schema(
       default: 'cash',
     },
     collectedBy: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.Mixed,
       ref: 'User',
-      required: true,
+      default: 'owner',
     },
     notes: {
       type: String,

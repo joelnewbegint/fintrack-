@@ -17,7 +17,7 @@ export const getApiBase = () => {
       return 'http://localhost:5000';
     }
   }
-  return '';
+  return 'https://fintrack-backend.onrender.com';
 };
 
 const _fetch = window.fetch.bind(window);

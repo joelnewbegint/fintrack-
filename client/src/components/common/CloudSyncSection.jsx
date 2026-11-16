@@ -79,10 +79,11 @@ export const CloudSyncSection = () => {
     try {
       setSyncing(true);
       setSyncResult(null);
-      const res = await api.syncLocalDataToCloud();
+      const res = await api.importLocalDataToCloud();
+      const imp = res.imported || {};
       setSyncResult({
         success: true,
-        message: `Successfully uploaded ${res.synced?.customers || 0} customers, ${res.synced?.loans || 0} loans, and ${res.synced?.payments || 0} payments to MongoDB Atlas!`,
+        message: `Successfully imported to MongoDB Atlas: ${imp.customers || 0} customers, ${imp.loans || 0} loans, ${imp.payments || 0} payments, ${imp.expenses || 0} expenses, ${imp.investments || 0} investments! All devices are now synchronized.`,
       });
       setCounts(api.getLocalCounts());
     } catch (err) {
@@ -97,17 +98,17 @@ export const CloudSyncSection = () => {
 
   const handleDownloadBackup = async () => {
     try {
-      const blob = await api.downloadBackup();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `VK_Bankers_FullBackup_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      await api.exportBackupJSON();
     } catch (err) {
-      alert('Failed to download backup: ' + err.message);
+      alert('Failed to download JSON backup: ' + err.message);
+    }
+  };
+
+  const handleDownloadExcelBackup = async () => {
+    try {
+      await api.exportBackupExcel();
+    } catch (err) {
+      alert('Failed to download Excel backup: ' + err.message);
     }
   };
 
@@ -323,54 +324,52 @@ export const CloudSyncSection = () => {
         </div>
       </div>
 
-      {/* 4. Local to Cloud Data Push */}
-      {isOnline && (
-        <div className="glass-card rounded-3xl p-6 border border-emerald-300/80 dark:border-emerald-700/60 shadow-md space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h4 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center space-x-1.5">
-                <Cloud className="w-4 h-4 text-emerald-600" />
-                <span>Push Local Records to MongoDB Atlas (கிளவுடில் பதிவேற்ற)</span>
-              </h4>
-              <p className="text-xs text-slate-500">
-                You have {counts.customers} customers and {counts.loans} loans stored locally. Click to push any un-synced records directly to MongoDB Atlas.
-              </p>
-            </div>
-
-            <button
-              onClick={handleSyncToCloud}
-              disabled={syncing}
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition flex items-center justify-center space-x-1.5 shrink-0"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-              <span>{syncing ? 'Uploading...' : 'Sync All to Cloud'}</span>
-            </button>
+      {/* 4. One-Time Local to Cloud Data Import (Zero Duplicates / Safe Upsert) */}
+      <div className="glass-card rounded-3xl p-6 border border-emerald-400/80 dark:border-emerald-700/60 shadow-md space-y-3 bg-gradient-to-r from-emerald-500/5 to-teal-500/5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center space-x-1.5">
+              <Cloud className="w-4 h-4 text-emerald-600" />
+              <span>Import Local Data to Cloud / உள்ளூர் தரவை கிளவுடில் பதிவேற்ற</span>
+            </h4>
+            <p className="text-xs text-slate-500 mt-0.5">
+              You have {counts.customers} customers, {counts.loans} loans, and {counts.payments} payments in this browser. Uploads everything to MongoDB Atlas with unique clientId (preserves IDs, zero duplicates, leaves local data intact).
+            </p>
           </div>
 
-          {syncResult && (
-            <div
-              className={`p-3 rounded-xl text-xs font-bold ${
-                syncResult.success
-                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
-                  : 'bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-300'
-              }`}
-            >
-              {syncResult.message}
-            </div>
-          )}
+          <button
+            onClick={handleSyncToCloud}
+            disabled={syncing}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-500/25 active:scale-95 transition flex items-center justify-center space-x-2 shrink-0 disabled:opacity-50"
+          >
+            <Upload className={`w-4 h-4 ${syncing ? 'animate-bounce' : ''}`} />
+            <span>{syncing ? 'Importing to Cloud...' : 'Import Local Data to Cloud'}</span>
+          </button>
         </div>
-      )}
 
-      {/* 5. Zero-Loss Cross-Device Backup & Restore (Universal) */}
+        {syncResult && (
+          <div
+            className={`p-3.5 rounded-2xl text-xs font-bold leading-relaxed ${
+              syncResult.success
+                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                : 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+            }`}
+          >
+            {syncResult.message}
+          </div>
+        )}
+      </div>
+
+      {/* 5. Export Backup (JSON & Excel) + Universal Restore */}
       <div className="glass-card rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800/80 shadow-md space-y-4">
         <div className="flex items-center space-x-2.5 pb-2 border-b border-slate-100 dark:border-slate-800">
           <Download className="w-5 h-5 text-emerald-600" />
           <div>
             <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">
-              Instant Cross-Device Backup & Transfer (முழு தரவு பேக்அப் & மீட்டல்)
+              Export Backup (JSON & Excel) / தரவு காப்புப்பிரதி
             </h4>
             <p className="text-[11px] text-slate-500">
-              Download your full database file and open/restore it on any other phone, tablet, or PC with zero data loss.
+              Download your complete system data as JSON or Excel spreadsheet (.xlsx), or restore onto any phone/laptop.
             </p>
           </div>
         </div>
@@ -382,35 +381,58 @@ export const CloudSyncSection = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Download Backup */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-2.5">
-            <p className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
-              1. Download Backup File (.json)
-            </p>
-            <p className="text-[11px] text-slate-500">
-              Exports all {counts.customers} customers, {counts.loans} loans, {counts.payments} payment receipts, and settings.
-            </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          {/* Download JSON Backup */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-2.5 flex flex-col justify-between">
+            <div>
+              <p className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
+                1. JSON Cloud Backup
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Raw JSON backup file containing all collections, schemas, and timestamps.
+              </p>
+            </div>
             <button
               onClick={handleDownloadBackup}
-              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition flex items-center justify-center space-x-1.5"
+              className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition flex items-center justify-center space-x-1.5"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Download Full Backup (JSON)</span>
+              <span>Export Backup (JSON)</span>
+            </button>
+          </div>
+
+          {/* Download Excel (.xlsx) Backup */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-2.5 flex flex-col justify-between">
+            <div>
+              <p className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
+                2. Excel Workbook (.xlsx)
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Multi-sheet workbook with Customers, Loans, Payments, Expenses, and Investments.
+              </p>
+            </div>
+            <button
+              onClick={handleDownloadExcelBackup}
+              className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition flex items-center justify-center space-x-1.5"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export Backup (Excel)</span>
             </button>
           </div>
 
           {/* Restore / Import on This Device */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-2.5">
-            <p className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
-              2. Restore Backup on This Device
-            </p>
-            <p className="text-[11px] text-slate-500">
-              Select the downloaded backup file to load all records into this device immediately.
-            </p>
-            <label className="w-full py-2.5 px-4 rounded-xl border-2 border-dashed border-sky-400 dark:border-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 text-sky-700 dark:text-sky-300 font-bold text-xs transition flex items-center justify-center space-x-1.5 cursor-pointer active:scale-95 text-center">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-2.5 flex flex-col justify-between">
+            <div>
+              <p className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
+                3. Restore Backup (.json)
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Select a saved .json backup file to load all records into this device.
+              </p>
+            </div>
+            <label className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-sky-400 dark:border-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 text-sky-700 dark:text-sky-300 font-bold text-xs transition flex items-center justify-center space-x-1.5 cursor-pointer active:scale-95 text-center">
               <Upload className="w-3.5 h-3.5 text-sky-500" />
-              <span>{importing ? 'Restoring...' : 'Upload & Restore Backup (.json)'}</span>
+              <span>{importing ? 'Restoring...' : 'Restore Backup'}</span>
               <input
                 type="file"
                 accept=".json"

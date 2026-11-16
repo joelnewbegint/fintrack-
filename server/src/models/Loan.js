@@ -34,6 +34,16 @@ const installmentSchema = new mongoose.Schema({
 
 const loanSchema = new mongoose.Schema(
   {
+    clientId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.Mixed,
+      default: 'owner',
+    },
     loanNo: {
       type: String,
       required: true,
@@ -42,7 +52,7 @@ const loanSchema = new mongoose.Schema(
       trim: true,
     },
     customerId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.Mixed,
       ref: 'Customer',
       required: true,
       index: true,

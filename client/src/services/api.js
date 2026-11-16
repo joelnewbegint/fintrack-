@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx';
 import {
   initialCustomers,
   initialLoans,
@@ -6,6 +7,8 @@ import {
   initialInvestments,
   initialExpenses,
 } from './mockData';
+import { addToSyncQueue } from './offlineQueue';
+import { initSyncManager, getSyncStatus, flushOfflineQueue } from './syncManager';
 
 // Local Storage helpers for offline / static mode (Firebase Hosting, Vercel, etc.)
 const STORAGE_KEYS = {
@@ -17,79 +20,20 @@ const STORAGE_KEYS = {
   EXPENSES: 'fintrack_local_expenses',
 };
 
-/**
- * Universal Fresh Start Reset:
- * Completely purges all customer records, loans, repayment ledgers, expenses, and investments
- * across all mobile phones, laptops, and tablets to provide a 100% clean, brand new system.
- */
-export const resetToCleanSite = (force = false) => {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  try {
-    const isClean = localStorage.getItem('fintrack_clean_fresh_site_v4');
-    if (force || isClean !== 'true') {
-      // Clear legacy flags and drafts
-      [
-        'fintrack_clean_fresh_site_v1',
-        'fintrack_clean_fresh_site_v2',
-        'fintrack_clean_fresh_site_v3',
-        'fintrack_loan_form_draft',
-        'fintrack_real_dataset_v1',
-        'fintrack_real_dataset_v2',
-        'fintrack_real_dataset_v3',
-        'fintrack_real_dataset_v4',
-        'fintrack_real_dataset_v5',
-        'fintrack_real_dataset_v6',
-        'fintrack_real_dataset_v7',
-      ].forEach((key) => localStorage.removeItem(key));
-
-      // Sanitize stored collections: remove any legacy mock/dump loan items
-      const DUMP_SUBSTRINGS = ['loan_tn_', 'Subramanian', 'RS Hotal', 'Ambur', 'CTM Road'];
-
-      const sanitizeCollection = (key) => {
-        try {
-          const raw = localStorage.getItem(key);
-          if (!raw) return [];
-          const list = JSON.parse(raw);
-          if (!Array.isArray(list)) return [];
-          return list.filter((item) => {
-            const str = JSON.stringify(item);
-            return !DUMP_SUBSTRINGS.some((d) => str.includes(d));
-          });
-        } catch {
-          return [];
-        }
-      };
-
-      if (force) {
-        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify([]));
-        localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify([]));
-        localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify([]));
-        localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify([]));
-        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify([]));
-      } else {
-        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(sanitizeCollection(STORAGE_KEYS.CUSTOMERS)));
-        localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(sanitizeCollection(STORAGE_KEYS.LOANS)));
-        localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(sanitizeCollection(STORAGE_KEYS.PAYMENTS)));
-        localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify(sanitizeCollection(STORAGE_KEYS.INVESTMENTS)));
-        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(sanitizeCollection(STORAGE_KEYS.EXPENSES)));
-      }
-
-      localStorage.setItem('fintrack_clean_fresh_site_v4', 'true');
-      console.log('✨ FinTrack v4: Successfully cleaned all dump data across storage!');
-    }
-  } catch (err) {
-    console.warn('Fresh site reset notice:', err);
-  }
-};
-
-resetToCleanSite();
-
-export const cleanseDumpData = () => {
-  resetToCleanSite(true);
-};
-
-export const initRealDataset = () => {
-  resetToCleanSite(false);
+// Safe Local Cache Helpers (Read-only fallback; NEVER automatically purged or wiped)
+export const getLocalCounts = () => {
+  const c = getStored(STORAGE_KEYS.CUSTOMERS, []);
+  const l = getStored(STORAGE_KEYS.LOANS, []);
+  const p = getStored(STORAGE_KEYS.PAYMENTS, []);
+  const e = getStored(STORAGE_KEYS.EXPENSES, []);
+  const i = getStored(STORAGE_KEYS.INVESTMENTS, []);
+  return {
+    customers: c.length,
+    loans: l.length,
+    payments: p.length,
+    expenses: e.length,
+    investments: i.length,
+  };
 };
 
 const getStored = (key, fallback = []) => {
@@ -131,7 +75,7 @@ const getHeaders = () => {
  * 1. User manual override stored in localStorage (allows switching backend on any device!)
  * 2. Build-time Vite env variable (VITE_API_BASE_URL)
  * 3. Default to http://localhost:5000 if running on local dev machine
- * 4. Fallback to empty string (relative)
+ * 4. Production Render cloud backend default: https://fintrack-backend.onrender.com
  */
 export const getApiBaseUrl = () => {
   try {
@@ -144,7 +88,7 @@ export const getApiBaseUrl = () => {
   } catch (e) {}
 
   const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl && envUrl.trim()) {
+  if (envUrl && envUrl.trim() && !envUrl.includes('YOUR-API')) {
     return envUrl.trim().replace(/\/+$/, '');
   }
 
@@ -156,7 +100,8 @@ export const getApiBaseUrl = () => {
     return 'http://localhost:5000';
   }
 
-  return '';
+  // Production Render cloud backend
+  return 'https://fintrack-backend.onrender.com';
 };
 
 export const setApiBaseUrl = (url) => {
@@ -169,31 +114,41 @@ export const setApiBaseUrl = (url) => {
       localStorage.setItem('fintrack_api_base_url', cleanUrl);
       localStorage.setItem('fintrack_api_url', cleanUrl);
     }
+    // Check connection immediately
+    api.checkBackendHealth();
   } catch (e) {
     console.warn('Could not save API base URL to localStorage:', e);
   }
 };
 
-// Check if response is valid JSON; returns { ok: true, data } or { ok: false, error }
+// Check if response is valid JSON; returns { ok: true, data } or { ok: false, error, isOffline }
 const safeFetchJson = async (url, options = {}) => {
   try {
     const baseUrl = getApiBaseUrl();
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-    const res = await fetch(fullUrl, options);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch(fullUrl, {
+      ...options,
+      signal: options.signal || controller.signal,
+    });
+    clearTimeout(timeoutId);
+
     const contentType = res.headers.get('content-type') || '';
     const text = await res.text();
 
     if (contentType.includes('application/json') || (text.trim().startsWith('{') && !text.includes('<!DOCTYPE'))) {
       const json = JSON.parse(text);
       if (res.ok && json.success !== false) {
-        return { ok: true, data: json };
+        return { ok: true, data: json, status: res.status };
       }
-      return { ok: false, error: json.message || `Request failed with status ${res.status}` };
+      return { ok: false, error: json.message || `Request failed with status ${res.status}`, status: res.status };
     }
-    // Server returned HTML (e.g. <!DOCTYPE html> on Firebase static hosting or 404/502)
-    return { ok: false, isHtml: true, status: res.status };
+    // Server returned HTML (e.g. Firebase static hosting or 404/502)
+    return { ok: false, isHtml: true, isOffline: true, status: res.status };
   } catch (err) {
-    return { ok: false, error: err.message };
+    return { ok: false, isOffline: true, error: err.message };
   }
 };
 
@@ -537,22 +492,41 @@ export const api = {
   },
 
   createCustomer: async (customerData) => {
+    const clientId = customerData.clientId || customerData._id || customerData.id || `cust_${Date.now()}`;
+    const payload = { ...customerData, clientId };
+
     const result = await safeFetchJson('/api/customers', {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify(customerData),
+      body: JSON.stringify(payload),
     });
-    if (result.ok) return result.data;
 
     const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
-    const newCustomer = {
-      ...customerData,
-      _id: 'cust_' + Date.now(),
-      createdAt: new Date().toISOString(),
-    };
-    customers.unshift(newCustomer);
+    const savedCustomer =
+      result.ok && result.data?.customer
+        ? result.data.customer
+        : { ...payload, _id: clientId, createdAt: new Date().toISOString() };
+
+    const existingIdx = customers.findIndex(
+      (c) => c._id === savedCustomer._id || (c.clientId && c.clientId === savedCustomer.clientId)
+    );
+    if (existingIdx !== -1) {
+      customers[existingIdx] = savedCustomer;
+    } else {
+      customers.unshift(savedCustomer);
+    }
     setStored(STORAGE_KEYS.CUSTOMERS, customers);
-    return { success: true, customer: newCustomer };
+
+    if (!result.ok) {
+      await addToSyncQueue({
+        endpoint: '/api/customers',
+        method: 'POST',
+        data: savedCustomer,
+        clientId,
+      });
+    }
+
+    return { success: true, customer: savedCustomer, isOffline: !result.ok };
   },
 
   updateCustomer: async (id, customerData) => {
@@ -561,16 +535,26 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(customerData),
     });
-    if (result.ok) return result.data;
 
     const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
-    const index = customers.findIndex((c) => c._id === id);
+    const index = customers.findIndex((c) => c._id === id || c.clientId === id);
+    const updated = result.ok && result.data?.customer ? result.data.customer : { ...(customers[index] || {}), ...customerData };
+
     if (index !== -1) {
-      customers[index] = { ...customers[index], ...customerData };
+      customers[index] = updated;
       setStored(STORAGE_KEYS.CUSTOMERS, customers);
-      return { success: true, customer: customers[index] };
     }
-    return { success: true, customer: customerData };
+
+    if (!result.ok) {
+      await addToSyncQueue({
+        endpoint: `/api/customers/${id}`,
+        method: 'PUT',
+        data: customerData,
+        clientId: id,
+      });
+    }
+
+    return { success: true, customer: updated, isOffline: !result.ok };
   },
 
   deleteCustomer: async (id) => {
@@ -578,11 +562,20 @@ export const api = {
       method: 'DELETE',
       headers: getHeaders(),
     });
-    if (result.ok) return result.data;
 
     const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
-    const filtered = customers.filter((c) => c._id !== id);
+    const filtered = customers.filter((c) => c._id !== id && c.clientId !== id);
     setStored(STORAGE_KEYS.CUSTOMERS, filtered);
+
+    if (!result.ok) {
+      await addToSyncQueue({
+        endpoint: `/api/customers/${id}`,
+        method: 'DELETE',
+        data: {},
+        clientId: id,
+      });
+    }
+
     return { success: true };
   },
 
@@ -1012,24 +1005,40 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(paymentData),
     });
-    if (result.ok) return result.data;
 
     const payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments);
     const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+
+    if (result.ok && result.data) {
+      // Sync local storage mirror
+      if (result.data.payment) {
+        payments.unshift(result.data.payment);
+        setStored(STORAGE_KEYS.PAYMENTS, payments);
+      }
+      return result.data;
+    }
 
     const receiptNo = `REC-2026-${String(payments.length + 1).padStart(4, '0')}`;
     const newPayment = {
       ...paymentData,
       _id: 'pay_' + Date.now(),
       receiptNo,
-      paymentDate: new Date().toISOString(),
+      paymentDate: paymentData.date || new Date().toISOString(),
       collectedBy: 'Authorized FinTrack Agent',
     };
     payments.unshift(newPayment);
     setStored(STORAGE_KEYS.PAYMENTS, payments);
 
+    // Queue offline sync
+    await addToSyncQueue({
+      endpoint: '/api/payments',
+      method: 'POST',
+      data: newPayment,
+      clientId: receiptNo,
+    });
+
     // Update loan balance
-    const loanIndex = loans.findIndex((l) => l._id === paymentData.loanId);
+    const loanIndex = loans.findIndex((l) => l._id === paymentData.loanId || l.loanNo === paymentData.loanId);
     let updatedLoan = null;
     if (loanIndex !== -1) {
       const targetLoan = loans[loanIndex];
@@ -1046,7 +1055,7 @@ export const api = {
       setStored(STORAGE_KEYS.LOANS, loans);
     }
 
-    return { success: true, payment: newPayment, loan: updatedLoan };
+    return { success: true, payment: newPayment, loan: updatedLoan, isOffline: true };
   },
 
   deletePayment: async (id) => {
@@ -1400,7 +1409,7 @@ export const api = {
     }
   },
 
-  syncLocalDataToCloud: async () => {
+  importLocalDataToCloud: async () => {
     const baseUrl = getApiBaseUrl();
     if (!baseUrl) {
       throw new Error('Please configure a valid Backend Server URL first before syncing to cloud.');
@@ -1411,83 +1420,153 @@ export const api = {
       throw new Error(`Cannot connect to backend server: ${health.reason || 'Server offline'}`);
     }
 
-    const localCustomers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
-    const localLoans = getStored(STORAGE_KEYS.LOANS, initialLoans);
-    const localPayments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments);
+    const localCustomers = getStored(STORAGE_KEYS.CUSTOMERS, []);
+    const localLoans = getStored(STORAGE_KEYS.LOANS, []);
+    const localPayments = getStored(STORAGE_KEYS.PAYMENTS, []);
+    const localExpenses = getStored(STORAGE_KEYS.EXPENSES, []);
+    const localInvestments = getStored(STORAGE_KEYS.INVESTMENTS, []);
+    const localSettings = getStored(STORAGE_KEYS.SETTINGS, null);
 
-    let syncedCust = 0;
-    let syncedLoans = 0;
-    let syncedPayments = 0;
+    const res = await safeFetchJson('/api/sync/import', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        customers: localCustomers,
+        loans: localLoans,
+        payments: localPayments,
+        expenses: localExpenses,
+        investments: localInvestments,
+        settings: localSettings,
+      }),
+    });
 
-    // Sync customers
-    for (const c of localCustomers) {
-      try {
-        const payload = { ...c };
-        delete payload._id; // Let MongoDB assign or match
-        const res = await safeFetchJson('/api/customers', {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify(payload),
-        });
-        if (res.ok) syncedCust++;
-      } catch (e) {
-        // Customer may already exist
-      }
+    if (res.ok && res.data) {
+      return res.data;
     }
-
-    // Sync loans
-    for (const l of localLoans) {
-      try {
-        const payload = { ...l };
-        delete payload._id;
-        const res = await safeFetchJson('/api/loans', {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify(payload),
-        });
-        if (res.ok) syncedLoans++;
-      } catch (e) {}
-    }
-
-    // Sync payments
-    for (const p of localPayments) {
-      try {
-        const payload = { ...p };
-        delete payload._id;
-        const res = await safeFetchJson('/api/payments', {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify(payload),
-        });
-        if (res.ok) syncedPayments++;
-      } catch (e) {}
-    }
-
-    return {
-      success: true,
-      synced: {
-        customers: syncedCust,
-        loans: syncedLoans,
-        payments: syncedPayments,
-      },
-    };
+    throw new Error(res.error || 'Failed to import local data to cloud database');
   },
 
-  downloadBackup: async () => {
+  syncLocalDataToCloud: async () => {
+    return api.importLocalDataToCloud();
+  },
+
+  exportBackupJSON: async () => {
     const data = {
       app: "VK BANKER'S & FINANCE",
       exportedAt: new Date().toISOString(),
-      version: '1.0.6',
-      customers: getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers),
-      loans: getStored(STORAGE_KEYS.LOANS, initialLoans),
-      payments: getStored(STORAGE_KEYS.PAYMENTS, initialPayments),
+      version: '2.0.0',
+      customers: getStored(STORAGE_KEYS.CUSTOMERS, []),
+      loans: getStored(STORAGE_KEYS.LOANS, []),
+      payments: getStored(STORAGE_KEYS.PAYMENTS, []),
       settings: getStored(STORAGE_KEYS.SETTINGS, initialSettings),
-      investments: getStored(STORAGE_KEYS.INVESTMENTS, initialInvestments),
-      expenses: getStored(STORAGE_KEYS.EXPENSES, initialExpenses),
+      investments: getStored(STORAGE_KEYS.INVESTMENTS, []),
+      expenses: getStored(STORAGE_KEYS.EXPENSES, []),
     };
 
     const json = JSON.stringify(data, null, 2);
-    return new Blob([json], { type: 'application/json' });
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `VK_Bankers_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+    return { success: true };
+  },
+
+  exportBackupExcel: async () => {
+    const customers = getStored(STORAGE_KEYS.CUSTOMERS, []);
+    const loans = getStored(STORAGE_KEYS.LOANS, []);
+    const payments = getStored(STORAGE_KEYS.PAYMENTS, []);
+    const expenses = getStored(STORAGE_KEYS.EXPENSES, []);
+    const investments = getStored(STORAGE_KEYS.INVESTMENTS, []);
+
+    const wb = XLSX.utils.book_new();
+
+    // 1. Customers Sheet
+    const custData = customers.map((c) => ({
+      'Customer ID': c.clientId || c._id,
+      'Name': c.name,
+      'Phone': c.phone,
+      'Area': c.area,
+      'Address': c.address,
+      'ID Type': c.idProofType,
+      'ID Number': c.idProofNumber,
+      'Guarantor': c.guarantor?.name || '',
+      'Guarantor Phone': c.guarantor?.phone || '',
+      'Status': c.status || 'active',
+      'Created At': c.createdAt || '',
+    }));
+    const wsCust = XLSX.utils.json_to_sheet(custData);
+    XLSX.utils.book_append_sheet(wb, wsCust, 'Customers');
+
+    // 2. Loans Sheet
+    const loanData = loans.map((l) => ({
+      'Loan No': l.loanNo,
+      'Customer': l.customerName,
+      'Phone': l.customerPhone,
+      'Area': l.area || l.customerArea,
+      'Scheme': l.financeType,
+      'Principal': l.principalAmount || l.principal,
+      'Upfront Charge': l.chargeAmount || 0,
+      'Disbursed Amount': l.disbursedAmount || 0,
+      'Total Payable': l.totalRepayable || l.totalPayable,
+      'Installment Due': l.installmentAmount,
+      'Tenure': l.durationDays || l.duration,
+      'Total Paid': l.totalPaid || l.totalCollected || 0,
+      'Balance Amount': l.balanceAmount != null ? l.balanceAmount : l.remainingBalance,
+      'Status': l.status,
+      'Start Date': l.startDate,
+      'End Date': l.endDate,
+    }));
+    const wsLoans = XLSX.utils.json_to_sheet(loanData);
+    XLSX.utils.book_append_sheet(wb, wsLoans, 'Loans');
+
+    // 3. Payments Sheet
+    const payData = payments.map((p) => ({
+      'Receipt No': p.receiptNo,
+      'Loan No': p.loanNo || p.loanId?.loanNo || '',
+      'Customer': p.customerName || p.customerId?.name || '',
+      'Amount': p.amount,
+      'Payment Mode': p.paymentMode || p.mode || 'cash',
+      'Date': p.paymentDate || p.date,
+      'Notes': p.notes || '',
+    }));
+    const wsPayments = XLSX.utils.json_to_sheet(payData);
+    XLSX.utils.book_append_sheet(wb, wsPayments, 'Payments');
+
+    // 4. Expenses Sheet
+    const expData = expenses.map((e) => ({
+      'Date': e.date,
+      'Category': e.category,
+      'Amount': e.amount,
+      'Payment Mode': e.mode || 'cash',
+      'Notes': e.title || e.notes || '',
+    }));
+    const wsExp = XLSX.utils.json_to_sheet(expData);
+    XLSX.utils.book_append_sheet(wb, wsExp, 'Expenses');
+
+    // 5. Investments Sheet
+    const invData = investments.map((i) => ({
+      'Investor': i.investorName,
+      'Amount': i.amount,
+      'Type': i.investmentType,
+      'Start Date': i.startDate,
+      'Returned': i.totalReturned || 0,
+      'Status': i.status,
+    }));
+    const wsInv = XLSX.utils.json_to_sheet(invData);
+    XLSX.utils.book_append_sheet(wb, wsInv, 'Investments');
+
+    // Download .xlsx file directly
+    XLSX.writeFile(wb, `VK_Bankers_Ledger_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    return { success: true };
+  },
+
+  downloadBackup: async () => {
+    return api.exportBackupJSON();
   },
 
   restoreBackup: async (jsonOrObject) => {
@@ -1564,9 +1643,19 @@ export const api = {
     return { success: true };
   },
 
-  resetToCleanSite,
-  cleanseDumpData,
-  initRealDataset,
+  getSyncStatus,
+  flushOfflineQueue: () => flushOfflineQueue(safeFetchJson, getHeaders),
 };
+
+if (typeof window !== 'undefined') {
+  // Start background sync polling every 5s with offline IndexedDB queue processor
+  setTimeout(() => {
+    initSyncManager({
+      checkBackendHealth: api.checkBackendHealth,
+      safeFetchJson,
+      getHeaders,
+    });
+  }, 1000);
+}
 
 export default api;

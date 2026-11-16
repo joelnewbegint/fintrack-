@@ -89,6 +89,12 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
 
   useEffect(() => {
     fetchLoans();
+    const handleSyncUpdate = () => {
+      fetchLoans();
+      fetchCustomers();
+    };
+    window.addEventListener('fintrack:data-updated', handleSyncUpdate);
+    return () => window.removeEventListener('fintrack:data-updated', handleSyncUpdate);
   }, [typeFilter, statusFilter, search]);
 
   const resolveCustomer = (loan) => {

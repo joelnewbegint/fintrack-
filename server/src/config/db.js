@@ -15,7 +15,7 @@ dotenv.config();
 let memServer = null;
 
 export const connectDB = async () => {
-  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/fintrack';
+  const uri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/fintrack';
 
   try {
     // Attempt standard connection (Atlas or local mongod)

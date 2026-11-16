@@ -17,17 +17,14 @@ export const createLoan = async (req, res, next) => {
       borrowerPhoto,
     } = req.body;
 
-    const customer = await Customer.findById(customerId);
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Customer not found',
-      });
-    }
+    const isObjId = mongoose.Types.ObjectId.isValid(customerId);
+    const customer = isObjId
+      ? await Customer.findById(customerId)
+      : await Customer.findOne({ clientId: customerId });
 
-    const customerName = req.body.customerName || customer.name;
-    const customerPhone = req.body.customerPhone || customer.phone;
-    const customerArea = req.body.customerArea || customer.area;
+    const customerName = req.body.customerName || (customer ? customer.name : '');
+    const customerPhone = req.body.customerPhone || (customer ? customer.phone : '');
+    const customerArea = req.body.customerArea || (customer ? customer.area : '');
 
     const principalNum = Number(principal);
     const interestPercentNum = Number(interestPercent) || 0;
@@ -93,11 +90,15 @@ export const createLoan = async (req, res, next) => {
     // Generate readable Loan Number
     const prefix = financeType === 'daily' ? 'D' : financeType === 'weekly' ? 'W' : 'M';
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const loanNo = `LN-${prefix}${new Date().getFullYear().toString().slice(-2)}-${randomSuffix}`;
+    const loanNo = req.body.loanNo || req.body.loanId || `LN-${prefix}${new Date().getFullYear().toString().slice(-2)}-${randomSuffix}`;
+    const clientId = req.body.clientId || req.body._id || req.body.id || `loan_${Date.now()}`;
+    const createdBy = req.user ? req.user._id : 'owner';
 
     const newLoan = await Loan.create({
+      clientId,
+      createdBy,
       loanNo,
-      customerId,
+      customerId: customer ? customer._id : customerId,
       customerName,
       customerPhone,
       customerArea,
@@ -116,12 +117,12 @@ export const createLoan = async (req, res, next) => {
       latePenaltyRate: latePenaltyRate || 0,
       totalCollected: 0,
       remainingBalance: totalPayable,
-      borrowerPhoto: borrowerPhoto || customer.photoUrl || '',
+      borrowerPhoto: borrowerPhoto || (customer ? customer.photoUrl : '') || '',
       schedule,
       notes: notes || '',
     });
 
-    if (borrowerPhoto && (!customer.photoUrl || customer.photoUrl !== borrowerPhoto)) {
+    if (customer && borrowerPhoto && (!customer.photoUrl || customer.photoUrl !== borrowerPhoto)) {
       try {
         customer.photoUrl = borrowerPhoto;
         await customer.save();
@@ -232,7 +233,10 @@ export const getLoans = async (req, res, next) => {
 
 export const getLoanById = async (req, res, next) => {
   try {
-    const loan = await Loan.findById(req.params.id).populate(
+    const id = req.params.id;
+    const isObjId = mongoose.Types.ObjectId.isValid(id);
+    const query = isObjId ? { _id: id } : { $or: [{ clientId: id }, { loanNo: id }] };
+    const loan = await Loan.findOne(query).populate(
       'customerId',
       'name phone address area photoUrl guarantor'
     );
@@ -244,7 +248,9 @@ export const getLoanById = async (req, res, next) => {
       });
     }
 
-    const payments = await Payment.find({ loanId: loan._id })
+    const payments = await Payment.find({
+      $or: [{ loanId: loan._id }, { loanId: loan.clientId }, { loanId: loan.loanNo }],
+    })
       .populate('collectedBy', 'name role')
       .sort({ date: -1 });
 
@@ -551,7 +557,10 @@ export const removeLoanHoliday = async (req, res, next) => {
 
 export const deleteLoan = async (req, res, next) => {
   try {
-    const loan = await Loan.findById(req.params.id);
+    const id = req.params.id;
+    const isObjId = mongoose.Types.ObjectId.isValid(id);
+    const query = isObjId ? { _id: id } : { $or: [{ clientId: id }, { loanNo: id }] };
+    const loan = await Loan.findOne(query);
     if (!loan) {
       return res.status(404).json({
         success: false,
@@ -562,10 +571,12 @@ export const deleteLoan = async (req, res, next) => {
     const before = loan.toObject();
 
     // Remove associated payments
-    await Payment.deleteMany({ loanId: loan._id });
+    await Payment.deleteMany({
+      $or: [{ loanId: loan._id }, { loanId: loan.clientId }, { loanId: loan.loanNo }],
+    });
 
     // Delete the loan
-    await Loan.findByIdAndDelete(req.params.id);
+    await Loan.findOneAndDelete(query);
 
     // Audit log
     await AuditLog.create({

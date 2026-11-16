@@ -2,6 +2,12 @@ import mongoose from 'mongoose';
 
 const expenseSchema = new mongoose.Schema(
   {
+    clientId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
     title: {
       type: String,
       required: true,
@@ -54,8 +60,8 @@ const expenseSchema = new mongoose.Schema(
       trim: true,
     },
     createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      type: mongoose.Schema.Types.Mixed,
+      default: 'owner',
     },
   },
   {

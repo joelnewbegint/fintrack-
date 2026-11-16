@@ -29,6 +29,7 @@ process.on('uncaughtException', (err) => {
 });
 
 // Route imports
+import mongoose from 'mongoose';
 import authRoutes from './routes/authRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
 import loanRoutes from './routes/loanRoutes.js';
@@ -39,6 +40,8 @@ import settingsRoutes from './routes/settingsRoutes.js';
 import whatsappRoutes from './routes/whatsappRoutes.js';
 import investmentRoutes from './routes/investmentRoutes.js';
 import expenseRoutes from './routes/expenseRoutes.js';
+import dailyClosingRoutes from './routes/dailyClosingRoutes.js';
+import syncRoutes from './routes/syncRoutes.js';
 
 // WhatsApp Service import
 import { initWhatsApp, getWhatsAppStatus } from './services/whatsapp.service.js';
@@ -73,10 +76,28 @@ app.use(
   })
 );
 
-// Cross-Origin Resource Sharing
+// Cross-Origin Resource Sharing (allow vk-banker.web.app and localhost)
+const allowedOrigins = [
+  'https://vk-banker.web.app',
+  'https://vk-bankers.web.app',
+  'https://vkbanker.web.app',
+  'https://campas-care.web.app',
+  process.env.CLIENT_URL,
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: '*',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.includes(origin) ||
+        /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
+        /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Fallback allow to avoid unexpected device blocks
+    },
     credentials: true,
   })
 );
@@ -98,9 +119,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health Check
 app.get('/api/health', (req, res) => {
+  const isConnected = mongoose.connection.readyState === 1;
   res.status(200).json({
-    status: 'online',
-    app: 'FinTrack API',
+    ok: true,
+    db: isConnected ? 'connected' : 'disconnected',
+    status: isConnected ? 'online' : 'degraded',
+    app: "VK Banker's & Finance API",
     whatsapp: getWhatsAppStatus().status,
     timestamp: new Date().toISOString(),
   });
@@ -108,9 +132,12 @@ app.get('/api/health', (req, res) => {
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/sync', syncRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/loans', loanRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/dailyClosings', dailyClosingRoutes);
+app.use('/api/daily-closings', dailyClosingRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);

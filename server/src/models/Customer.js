@@ -2,6 +2,16 @@ import mongoose from 'mongoose';
 
 const customerSchema = new mongoose.Schema(
   {
+    clientId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.Mixed,
+      default: 'owner',
+    },
     name: {
       type: String,
       required: [true, 'Customer name is required'],

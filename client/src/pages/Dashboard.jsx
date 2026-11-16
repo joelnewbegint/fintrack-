@@ -102,6 +102,11 @@ export const Dashboard = ({
 
   useEffect(() => {
     loadData();
+    const handleSyncUpdate = () => {
+      loadData();
+    };
+    window.addEventListener('fintrack:data-updated', handleSyncUpdate);
+    return () => window.removeEventListener('fintrack:data-updated', handleSyncUpdate);
   }, []);
 
   // Skeleton Loader

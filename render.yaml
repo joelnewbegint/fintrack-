@@ -13,8 +13,8 @@ services:
         value: 10000
       - key: NODE_ENV
         value: production
-      - key: MONGODB_URI
-        value: mongodb://tjoelnewbegin03_db_user:z2wec4J1R5amU25x@ac-rfl6lwp-shard-00-00.ibksuvq.mongodb.net:27017,ac-rfl6lwp-shard-00-01.ibksuvq.mongodb.net:27017,ac-rfl6lwp-shard-00-02.ibksuvq.mongodb.net:27017/fintrack?ssl=true&replicaSet=atlas-oz1rmn-shard-0&authSource=admin
+      - key: MONGO_URI
+        sync: false
       - key: JWT_SECRET
         value: fintrack_super_secure_jwt_secret_key_2026_tamilnadu_finance
       - key: JWT_EXPIRES_IN

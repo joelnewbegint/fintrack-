@@ -2,6 +2,16 @@ import mongoose from 'mongoose';
 
 const investmentSchema = new mongoose.Schema(
   {
+    clientId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.Mixed,
+      default: 'owner',
+    },
     investorName: {
       type: String,
       required: [true, 'Investor name is required'],
@@ -60,9 +70,9 @@ const investmentSchema = new mongoose.Schema(
       default: '',
     },
     addedBy: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.Mixed,
       ref: 'User',
-      required: true,
+      default: 'owner',
     },
   },
   {

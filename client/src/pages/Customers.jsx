@@ -64,6 +64,11 @@ export const Customers = ({ onViewCustomer }) => {
 
   useEffect(() => {
     fetchCustomers();
+    const handleSyncUpdate = () => {
+      fetchCustomers();
+    };
+    window.addEventListener('fintrack:data-updated', handleSyncUpdate);
+    return () => window.removeEventListener('fintrack:data-updated', handleSyncUpdate);
   }, [selectedArea, search]);
 
   const handleDelete = async (id, name) => {

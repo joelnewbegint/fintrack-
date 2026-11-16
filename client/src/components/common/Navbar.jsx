@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -22,6 +23,9 @@ import {
   Smartphone,
   PanelLeftClose,
   PanelLeftOpen,
+  CheckCircle2,
+  RefreshCw,
+  CloudOff,
 } from 'lucide-react';
 
 export const Navbar = ({
@@ -42,6 +46,16 @@ export const Navbar = ({
   const { isLaptop, isTablet, isMobile } = useDeviceMode();
   const { isInstalled, promptInstall } = usePWA();
 
+  const [syncState, setSyncState] = useState(() => api.getSyncStatus?.() || { status: 'synced', pendingCount: 0 });
+
+  useEffect(() => {
+    const handleStatus = (e) => {
+      if (e.detail) setSyncState(e.detail);
+    };
+    window.addEventListener('fintrack:sync-status', handleStatus);
+    return () => window.removeEventListener('fintrack:sync-status', handleStatus);
+  }, []);
+
   // ----------------------------------------------------
   // MOBILE HEADER (Max 56px, glass, safe-area-inset-top)
   // ----------------------------------------------------
@@ -60,7 +74,27 @@ export const Navbar = ({
           </div>
 
           {/* Right: Install (if applicable) + Bell + Avatar Button */}
-          <div className="flex items-center space-x-2 shrink-0">
+          <div className="flex items-center space-x-1.5 shrink-0">
+            {/* Mobile Cloud Sync Indicator */}
+            <button
+              onClick={() => {
+                if (api.flushOfflineQueue) api.flushOfflineQueue();
+              }}
+              className={`p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border transition active:scale-95 shadow-sm ${
+                syncState.status === 'synced'
+                  ? 'border-emerald-300/80 dark:border-emerald-700/60 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30'
+                  : syncState.status === 'syncing'
+                  ? 'border-sky-300/80 dark:border-sky-700/60 text-sky-600 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/30'
+                  : 'border-amber-300/80 dark:border-amber-700/60 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30'
+              }`}
+              title="Cloud Sync Status"
+              aria-label="Cloud Sync"
+            >
+              {syncState.status === 'synced' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+              {syncState.status === 'syncing' && <RefreshCw className="w-4 h-4 text-sky-500 animate-spin" />}
+              {syncState.status === 'offline' && <CloudOff className="w-4 h-4 text-amber-500" />}
+            </button>
+
             {/* WhatsApp Hub Button */}
             <button
               onClick={onOpenWhatsAppHub}
@@ -204,6 +238,34 @@ export const Navbar = ({
 
         {/* Action Controls & Device Switcher */}
         <div className="flex items-center space-x-1.5 sm:space-x-2.5">
+          {/* Cloud Sync Status Pill */}
+          <button
+            onClick={() => {
+              if (api.flushOfflineQueue) api.flushOfflineQueue();
+            }}
+            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition active:scale-95 shadow-xs ${
+              syncState.status === 'synced'
+                ? 'bg-emerald-50/80 dark:bg-emerald-950/50 border-emerald-300/80 dark:border-emerald-700/60 text-emerald-700 dark:text-emerald-300'
+                : syncState.status === 'syncing'
+                ? 'bg-sky-50/80 dark:bg-sky-950/50 border-sky-300/80 dark:border-sky-700/60 text-sky-700 dark:text-sky-300'
+                : 'bg-amber-50/80 dark:bg-amber-950/50 border-amber-300/80 dark:border-amber-700/60 text-amber-700 dark:text-amber-300'
+            }`}
+            title="MongoDB Atlas Cloud Sync (Click to flush queue)"
+          >
+            {syncState.status === 'synced' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+            {syncState.status === 'syncing' && <RefreshCw className="w-3.5 h-3.5 text-sky-600 animate-spin shrink-0" />}
+            {syncState.status === 'offline' && <CloudOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+            <span className="hidden md:inline">
+              {syncState.status === 'synced'
+                ? lang === 'ta' ? 'இணைக்கப்பட்டது' : 'Synced'
+                : syncState.status === 'syncing'
+                ? lang === 'ta' ? 'ஒத்திசைக்கிறது...' : 'Syncing...'
+                : syncState.pendingCount > 0
+                ? `${lang === 'ta' ? 'ஆஃப்லைன்' : 'Offline'} (${syncState.pendingCount})`
+                : lang === 'ta' ? 'ஆஃப்லைன்' : 'Offline'}
+            </span>
+          </button>
+
           {/* Display Mode Switcher (Mobile / Tablet / Laptop / Auto) */}
           <DisplayModeSwitcher compact={false} />
 

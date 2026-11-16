@@ -142,7 +142,9 @@ export const getCustomers = async (req, res, next) => {
 
 export const getCustomerById = async (req, res, next) => {
   try {
-    const customer = await Customer.findById(req.params.id);
+    const id = req.params.id;
+    const isObjId = mongoose.Types.ObjectId.isValid(id);
+    const customer = isObjId ? await Customer.findById(id) : await Customer.findOne({ clientId: id });
     if (!customer) {
       return res.status(404).json({
         success: false,
@@ -152,11 +154,14 @@ export const getCustomerById = async (req, res, next) => {
 
     // Fetch customer's loans
     const loanConditions = [{ customerId: customer._id }];
+    if (customer.clientId) loanConditions.push({ customerId: customer.clientId });
     if (customer.phone) loanConditions.push({ customerPhone: customer.phone });
     const loans = await Loan.find({ $or: loanConditions }).sort({ createdAt: -1 });
 
     // Fetch customer's payments
-    const payments = await Payment.find({ customerId: customer._id })
+    const payments = await Payment.find({
+      $or: [{ customerId: customer._id }, { customerId: customer.clientId }],
+    })
       .populate('collectedBy', 'name role')
       .populate('loanId', 'loanNo financeType')
       .sort({ date: -1 });
@@ -187,7 +192,30 @@ export const createCustomer = async (req, res, next) => {
       notes,
     } = req.body;
 
+    const clientId = req.body.clientId || req.body._id || req.body.id || `cust_${Date.now()}`;
+    const createdBy = req.user ? req.user._id : 'owner';
+
+    // If customer with same clientId already exists, update and return it
+    const existing = await Customer.findOne({ $or: [{ clientId }, { phone, name }] });
+    if (existing) {
+      existing.name = name || existing.name;
+      existing.phone = phone || existing.phone;
+      existing.address = address || existing.address;
+      existing.area = area || existing.area;
+      if (guarantor) existing.guarantor = guarantor;
+      if (idProofType) existing.idProofType = idProofType;
+      if (idProofNumber) existing.idProofNumber = idProofNumber;
+      await existing.save();
+      return res.status(200).json({
+        success: true,
+        message: 'Customer updated successfully',
+        customer: existing,
+      });
+    }
+
     const newCustomer = await Customer.create({
+      clientId,
+      createdBy,
       name,
       phone,
       address,
@@ -200,14 +228,16 @@ export const createCustomer = async (req, res, next) => {
       notes: notes || '',
     });
 
-    await AuditLog.create({
-      userId: req.user._id,
-      userName: req.user.name,
-      action: 'CREATE_CUSTOMER',
-      entity: 'Customer',
-      entityId: newCustomer._id.toString(),
-      after: newCustomer.toObject(),
-    });
+    if (req.user) {
+      await AuditLog.create({
+        userId: req.user._id,
+        userName: req.user.name,
+        action: 'CREATE_CUSTOMER',
+        entity: 'Customer',
+        entityId: newCustomer._id.toString(),
+        after: newCustomer.toObject(),
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -221,7 +251,11 @@ export const createCustomer = async (req, res, next) => {
 
 export const updateCustomer = async (req, res, next) => {
   try {
-    const customer = await Customer.findById(req.params.id);
+    const id = req.params.id;
+    const isObjId = mongoose.Types.ObjectId.isValid(id);
+    const query = isObjId ? { _id: id } : { clientId: id };
+
+    const customer = await Customer.findOne(query);
     if (!customer) {
       return res.status(404).json({
         success: false,
@@ -230,20 +264,22 @@ export const updateCustomer = async (req, res, next) => {
     }
 
     const before = customer.toObject();
-    const updated = await Customer.findByIdAndUpdate(req.params.id, req.body, {
+    const updated = await Customer.findOneAndUpdate(query, req.body, {
       new: true,
       runValidators: true,
     });
 
-    await AuditLog.create({
-      userId: req.user._id,
-      userName: req.user.name,
-      action: 'UPDATE_CUSTOMER',
-      entity: 'Customer',
-      entityId: updated._id.toString(),
-      before,
-      after: updated.toObject(),
-    });
+    if (req.user) {
+      await AuditLog.create({
+        userId: req.user._id,
+        userName: req.user.name,
+        action: 'UPDATE_CUSTOMER',
+        entity: 'Customer',
+        entityId: updated._id.toString(),
+        before,
+        after: updated.toObject(),
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -257,7 +293,11 @@ export const updateCustomer = async (req, res, next) => {
 
 export const deleteCustomer = async (req, res, next) => {
   try {
-    const customer = await Customer.findById(req.params.id);
+    const id = req.params.id;
+    const isObjId = mongoose.Types.ObjectId.isValid(id);
+    const query = isObjId ? { _id: id } : { clientId: id };
+
+    const customer = await Customer.findOne(query);
     if (!customer) {
       return res.status(404).json({
         success: false,
@@ -267,7 +307,7 @@ export const deleteCustomer = async (req, res, next) => {
 
     // Check if customer has active loans
     const activeLoans = await Loan.countDocuments({
-      customerId: customer._id,
+      $or: [{ customerId: customer._id }, { customerId: customer.clientId }],
       status: { $in: ['active', 'overdue'] },
     });
 
@@ -278,16 +318,18 @@ export const deleteCustomer = async (req, res, next) => {
       });
     }
 
-    await Customer.findByIdAndDelete(req.params.id);
+    await Customer.findOneAndDelete(query);
 
-    await AuditLog.create({
-      userId: req.user._id,
-      userName: req.user.name,
-      action: 'DELETE_CUSTOMER',
-      entity: 'Customer',
-      entityId: req.params.id,
-      before: customer.toObject(),
-    });
+    if (req.user) {
+      await AuditLog.create({
+        userId: req.user._id,
+        userName: req.user.name,
+        action: 'DELETE_CUSTOMER',
+        entity: 'Customer',
+        entityId: String(customer._id),
+        before: customer.toObject(),
+      });
+    }
 
     res.status(200).json({
       success: true,

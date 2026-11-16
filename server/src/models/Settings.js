@@ -2,6 +2,16 @@ import mongoose from 'mongoose';
 
 const settingsSchema = new mongoose.Schema(
   {
+    clientId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.Mixed,
+      default: 'owner',
+    },
     businessName: {
       type: String,
       default: "VK BANKER'S & FINANCE",

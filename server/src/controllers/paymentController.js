@@ -7,7 +7,11 @@ export const recordPayment = async (req, res, next) => {
   try {
     const { loanId, amount, mode, date, notes } = req.body;
 
-    const loan = await Loan.findById(loanId).populate('customerId');
+    const isObjId = mongoose.Types.ObjectId.isValid(loanId);
+    const loan = isObjId
+      ? await Loan.findById(loanId).populate('customerId')
+      : await Loan.findOne({ $or: [{ clientId: loanId }, { loanNo: loanId }] }).populate('customerId');
+
     if (!loan) {
       return res.status(404).json({
         success: false,
@@ -34,12 +38,18 @@ export const recordPayment = async (req, res, next) => {
 
     // Unique Receipt Number: RCP-YY-XXXXXX
     const randomHex = Math.floor(100000 + Math.random() * 900000);
-    const receiptNo = `RCP-${new Date().getFullYear().toString().slice(-2)}-${randomHex}`;
+    const receiptNo = req.body.receiptNo || `RCP-${new Date().getFullYear().toString().slice(-2)}-${randomHex}`;
+    const clientId = req.body.clientId || req.body._id || req.body.id || `pay_${Date.now()}`;
+    const createdBy = req.user ? req.user._id : 'owner';
+
+    const custId = loan.customerId ? (loan.customerId._id || loan.customerId) : req.body.customerId;
 
     const newPayment = await Payment.create({
+      clientId,
+      createdBy,
       receiptNo,
-      loanId: loan._id,
-      customerId: loan.customerId._id,
+      loanId: loan._id || loan.clientId,
+      customerId: custId,
       amount: payAmount,
       date: paymentDate,
       mode: mode || 'cash',
