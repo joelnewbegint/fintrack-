@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import BackgroundOrbs from '../components/common/BackgroundOrbs';
+import api from '../services/api';
 import {
   Wallet,
   Lock,
@@ -36,14 +37,10 @@ export const Login = () => {
   const checkServer = async () => {
     setServerStatus('checking');
     try {
-      const res = await fetch('/api/health');
-      const ct = res.headers.get('content-type') || '';
-      if (res.ok && ct.includes('application/json')) {
-        const data = await res.json();
-        if (data.status === 'online') {
-          setServerStatus('online');
-          return true;
-        }
+      const res = await api.checkBackendHealth();
+      if (res && res.online) {
+        setServerStatus('online');
+        return true;
       }
       setServerStatus('offline');
       return false;

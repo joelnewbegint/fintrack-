@@ -139,3 +139,4 @@ export const initSyncManager = ({ checkBackendHealth, safeFetchJson, getHeaders,
     if (syncInterval) clearInterval(syncInterval);
   };
 };
+

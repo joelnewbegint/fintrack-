@@ -27,9 +27,17 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
   const isEdit = Boolean(customer);
   const { isMobile } = useDeviceMode();
   const fileInputRef = useRef(null);
+  const formScrollRef = useRef(null);
 
   // Tab State: 'profile' (Step 1) or 'loan' (Step 2)
   const [activeTab, setActiveTab] = useState('profile');
+
+  // Always reset scroll to top when changing tabs so top fields are clearly visible
+  React.useEffect(() => {
+    if (formScrollRef.current) {
+      formScrollRef.current.scrollTop = 0;
+    }
+  }, [activeTab]);
 
   // ---------------------------------------------------------------------------
   // Customer Profile State
@@ -563,7 +571,7 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
           /* =========================================================================
               STATE B: INTEGRATED CUSTOMER + LOAN FORM
           ========================================================================= */
-          <form onSubmit={handleSubmit} className="mt-3 flex-1 overflow-y-auto space-y-4 pr-1">
+          <form ref={formScrollRef} onSubmit={handleSubmit} className="mt-3 flex-1 overflow-y-auto space-y-4 pr-1 scroll-smooth">
             {/* ---------------------------------------------------------------------
                 VIEW 1: CUSTOMER / BORROWER PROFILE TAB
             --------------------------------------------------------------------- */}

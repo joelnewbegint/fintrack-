@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getApiBaseUrl } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -40,10 +41,23 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   });
-  const [loading, setLoading] = useState(true);
+
+  // Fast-start: if we already have a saved user in localStorage, never block the UI with a spinner!
+  const [loading, setLoading] = useState(() => {
+    try {
+      const saved = localStorage.getItem('fintrack_user');
+      const savedTok = localStorage.getItem('fintrack_token');
+      if (savedTok && saved && saved !== 'undefined' && saved !== 'null') {
+        return false;
+      }
+      return false; // Even without token, render login immediately rather than blank screen
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
-    // If token exists, verify current session with server
+    // If token exists, verify current session with server in background
     const verifyUser = async () => {
       if (token) {
         const savedUser = localStorage.getItem('fintrack_user');
@@ -62,19 +76,27 @@ export const AuthProvider = ({ children }) => {
         }
 
         try {
-          const res = await fetch('/api/auth/me', {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3500);
+          const baseUrl = getApiBaseUrl();
+
+          const res = await fetch(`${baseUrl}/api/auth/me`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            signal: controller.signal,
           });
+          clearTimeout(timeoutId);
+
           const data = await safeParseJson(res);
           if (data && !data.__isHtml && data.success && data.user) {
             setUser(data.user);
             localStorage.setItem('fintrack_user', JSON.stringify(data.user));
-          } else if (data && !data.__isHtml && data.success === false) {
+          } else if (data && !data.__isHtml && data.success === false && res.status === 401) {
+            // Explicitly unauthorized / token expired
             logout();
           } else if (savedUser) {
-            // Static host or backend unreachable, retain current session
+            // Server starting up or temporary degraded state, retain cached user
             try {
               if (savedUser !== 'undefined' && savedUser !== 'null') {
                 setUser(JSON.parse(savedUser));
@@ -84,7 +106,7 @@ export const AuthProvider = ({ children }) => {
             }
           }
         } catch (err) {
-          console.warn('Session verification notice:', err.message);
+          console.warn('Session background verification note:', err.message);
           if (savedUser) {
             try {
               if (savedUser !== 'undefined' && savedUser !== 'null') {
@@ -106,16 +128,22 @@ export const AuthProvider = ({ children }) => {
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPass = (password || '').trim();
 
-    // 1. Try real server authentication first
+    // 1. Try real server authentication first with 6s timeout
     let apiSuccess = false;
     try {
-      const res = await fetch('/api/auth/login', {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const baseUrl = getApiBaseUrl();
+
+      const res = await fetch(`${baseUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email: cleanEmail, password: cleanPass }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       const data = await safeParseJson(res);
       if (data && !data.__isHtml) {

@@ -20,15 +20,6 @@ export const getApiBase = () => {
   return 'https://fintrack-backend.onrender.com';
 };
 
-const _fetch = window.fetch.bind(window);
-window.fetch = (url, opts) => {
-  if (typeof url === 'string' && url.startsWith('/api')) {
-    const base = getApiBase();
-    return _fetch(base ? `${base}${url}` : url, opts);
-  }
-  return _fetch(url, opts);
-};
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';

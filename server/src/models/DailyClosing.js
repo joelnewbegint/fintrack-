@@ -68,3 +68,4 @@ dailyClosingSchema.index({ date: -1 });
 
 export const DailyClosing = mongoose.model('DailyClosing', dailyClosingSchema);
 export default DailyClosing;
+

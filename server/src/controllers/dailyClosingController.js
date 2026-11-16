@@ -84,3 +84,4 @@ export const deleteDailyClosing = async (req, res, next) => {
     next(err);
   }
 };
+

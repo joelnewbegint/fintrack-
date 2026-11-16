@@ -19,3 +19,4 @@ router.put('/:id', updateDailyClosing);
 router.delete('/:id', restrictTo('owner'), deleteDailyClosing);
 
 export default router;
+
