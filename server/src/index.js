@@ -137,7 +137,8 @@ app.get('/', (req, res) => {
 
   if (!acceptsHtml) {
     return res.status(200).json({
-      name: "VK Banker's & Finance Backend API",
+      name: "VK Banker's & Finance Backend API (v3.5.3)",
+      version: '3.5.3',
       status: 'online',
       db: isConnected ? 'connected' : 'disconnected',
       health: '/api/health',
