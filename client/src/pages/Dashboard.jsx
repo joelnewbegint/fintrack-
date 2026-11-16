@@ -165,6 +165,11 @@ export const Dashboard = ({
   const completedTodayList = stats?.completedTodayList || [];
   const completedLoansList = stats?.completedLoansList || [];
 
+  // Sum of Active Interest + Realized Profit from settled loans
+  const activeInterestVal = Number(cards.activeInterest || 0);
+  const settledProfitVal = Number(cards.profitFromSettled ?? cards.profitEarned ?? 0);
+  const sumInterestAndProfit = activeInterestVal + settledProfitVal;
+
   // Filter completed collections list
   const filteredCompletedList = completedTodayList.filter((item) => {
     const q = (filterQuery || completedSearch).toLowerCase();
@@ -663,7 +668,7 @@ export const Dashboard = ({
       {dashboardView === 'settled' && (
         <div className="space-y-6 animate-fade-in">
           {/* Top KPI Cards for Settled Accounts */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
             <div className="glass rounded-3xl p-5 border border-teal-200/80 dark:border-teal-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full">
               <div>
                 <div className="flex items-center justify-between">
@@ -699,6 +704,27 @@ export const Dashboard = ({
               </div>
               <p className="text-[11px] text-slate-400 mt-2">
                 {lang === 'ta' ? 'நடப்பு வட்டியிலிருந்து மாற்றப்பட்டு பெற்ற லாபம்' : 'Realized profit transferred from active interest'}
+              </p>
+            </div>
+
+            <div className="glass rounded-3xl p-5 border border-purple-200/80 dark:border-purple-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full bg-gradient-to-br from-purple-50/40 via-indigo-50/20 to-transparent dark:from-purple-950/20 dark:via-indigo-950/10 dark:to-transparent">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-purple-600 dark:text-purple-300 font-bold uppercase tracking-wider truncate">
+                    {lang === 'ta' ? 'மொத்த வட்டி & லாபம்' : 'Sum of Interest & Profit'}
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-600 shrink-0">
+                    <Coins className="w-4 h-4 text-purple-500" />
+                  </div>
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-300 mt-2 tabular-nums whitespace-nowrap">
+                  +{formatCurrency(sumInterestAndProfit)}
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2 truncate">
+                {lang === 'ta'
+                  ? `நடப்பு: ${formatCurrency(activeInterestVal)} + ஈட்டியது: ${formatCurrency(settledProfitVal)}`
+                  : `Active: ${formatCurrency(activeInterestVal)} + Settled: ${formatCurrency(settledProfitVal)}`}
               </p>
             </div>
 
@@ -963,6 +989,26 @@ export const Dashboard = ({
                   </p>
                   <p className="text-[10px] text-emerald-500 mt-0.5">
                     {lang === 'ta' ? 'முடிந்த கணக்குகளின் நிகர லாபம்' : 'Realized profit from settled'}
+                  </p>
+                </div>
+
+                {/* 7. Total Sum of Interest and Profit */}
+                <div className="w-[82%] shrink-0 snap-center glass rounded-3xl p-4 border border-purple-300/80 dark:border-purple-800/60 shadow-md bg-gradient-to-br from-purple-50/70 via-indigo-50/40 to-violet-50/70 dark:from-purple-950/30 dark:via-indigo-950/20 dark:to-violet-950/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wide">
+                      {lang === 'ta' ? 'மொத்த வட்டி & லாபம்' : 'Total Interest & Profit'}
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-600">
+                      <TrendingUp className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <p className="text-xl font-black text-purple-700 dark:text-purple-300 tabular-nums mt-1 whitespace-nowrap">
+                    +{formatCurrency(sumInterestAndProfit)}
+                  </p>
+                  <p className="text-[10px] text-purple-600/90 dark:text-purple-400 mt-0.5 truncate">
+                    {lang === 'ta'
+                      ? `நடப்பு: ${formatCurrency(activeInterestVal)} + ஈட்டியது: ${formatCurrency(settledProfitVal)}`
+                      : `Active: ${formatCurrency(activeInterestVal)} + Settled: ${formatCurrency(settledProfitVal)}`}
                   </p>
                 </div>
               </div>
@@ -1494,7 +1540,7 @@ export const Dashboard = ({
                 className={`grid ${
                   isTablet
                     ? 'grid-cols-2 gap-4'
-                    : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'
+                    : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
                 } items-stretch`}
               >
                 <StatCard
@@ -1571,6 +1617,19 @@ export const Dashboard = ({
                   icon={Award}
                   gradient="from-emerald-500 to-green-600"
                   delay={0.35}
+                  onClick={() => setDashboardView('settled')}
+                />
+                <StatCard
+                  title={t('totalInterestAndProfit')}
+                  amount={sumInterestAndProfit}
+                  subtitle={
+                    lang === 'ta'
+                      ? `நடப்பு: ${formatCurrency(activeInterestVal)} + ஈட்டியது: ${formatCurrency(settledProfitVal)}`
+                      : `Active: ${formatCurrency(activeInterestVal)} + Settled: ${formatCurrency(settledProfitVal)}`
+                  }
+                  icon={TrendingUp}
+                  gradient="from-purple-500 via-indigo-600 to-violet-700"
+                  delay={0.4}
                   onClick={() => setDashboardView('settled')}
                 />
               </div>
