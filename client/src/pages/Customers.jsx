@@ -44,9 +44,11 @@ export const Customers = ({ onViewCustomer }) => {
   const [statementCustomerData, setStatementCustomerData] = useState(null);
   const [loadingStatementId, setLoadingStatementId] = useState(null);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground && customers.length === 0) {
+        setLoading(true);
+      }
       const res = await api.getCustomers({
         area: selectedArea,
         search,
@@ -63,13 +65,16 @@ export const Customers = ({ onViewCustomer }) => {
   };
 
   useEffect(() => {
-    fetchCustomers();
+    fetchCustomers(false);
     const handleSyncUpdate = () => {
-      fetchCustomers();
+      // Do not interrupt if user is actively filling out a modal
+      if (!showAddModal && !editingCustomer) {
+        fetchCustomers(true);
+      }
     };
     window.addEventListener('fintrack:data-updated', handleSyncUpdate);
     return () => window.removeEventListener('fintrack:data-updated', handleSyncUpdate);
-  }, [selectedArea, search]);
+  }, [selectedArea, search, showAddModal, editingCustomer]);
 
   const handleDelete = async (id, name) => {
     if (window.confirm(`Are you sure you want to delete customer ${name}? All active loans must be cleared first.`)) {

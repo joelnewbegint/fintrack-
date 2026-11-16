@@ -86,9 +86,11 @@ export const Dashboard = ({
   const [showTrendChart, setShowTrendChart] = useState(false);
   const [showSplitChart, setShowSplitChart] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground && !stats) {
+        setLoading(true);
+      }
       const res = await api.getDashboardStats();
       if (res.success) {
         setStats(res);
@@ -101,9 +103,10 @@ export const Dashboard = ({
   };
 
   useEffect(() => {
-    loadData();
+    loadData(false);
     const handleSyncUpdate = () => {
-      loadData();
+      // Background silent refresh without triggering skeleton loader
+      loadData(true);
     };
     window.addEventListener('fintrack:data-updated', handleSyncUpdate);
     return () => window.removeEventListener('fintrack:data-updated', handleSyncUpdate);

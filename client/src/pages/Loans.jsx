@@ -54,9 +54,11 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
   const [selectedFormLoan, setSelectedFormLoan] = useState(null);
   const [editingLoan, setEditingLoan] = useState(null);
 
-  const fetchLoans = async () => {
+  const fetchLoans = async (isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground && loans.length === 0) {
+        setLoading(true);
+      }
       const res = await api.getLoans({
         financeType: typeFilter,
         status: statusFilter,
@@ -88,14 +90,17 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
   }, []);
 
   useEffect(() => {
-    fetchLoans();
+    fetchLoans(false);
     const handleSyncUpdate = () => {
-      fetchLoans();
-      fetchCustomers();
+      // Do not disrupt active editing / payment modals
+      if (!showAddModal && !payLoanItem && !editingLoan && !showFormModal) {
+        fetchLoans(true);
+        fetchCustomers();
+      }
     };
     window.addEventListener('fintrack:data-updated', handleSyncUpdate);
     return () => window.removeEventListener('fintrack:data-updated', handleSyncUpdate);
-  }, [typeFilter, statusFilter, search]);
+  }, [typeFilter, statusFilter, search, showAddModal, payLoanItem, editingLoan, showFormModal]);
 
   const resolveCustomer = (loan) => {
     if (loan.customerId && typeof loan.customerId === 'object' && loan.customerId.name) {

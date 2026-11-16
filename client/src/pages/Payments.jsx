@@ -36,9 +36,11 @@ export const Payments = () => {
   const [visibleCount, setVisibleCount] = useState(10);
   const [whatsappHistoryItem, setWhatsappHistoryItem] = useState(null);
 
-  const fetchPayments = async () => {
+  const fetchPayments = async (isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground && payments.length === 0) {
+        setLoading(true);
+      }
       const res = await api.getPayments({
         mode: modeFilter,
       });
@@ -53,8 +55,15 @@ export const Payments = () => {
   };
 
   useEffect(() => {
-    fetchPayments();
-  }, [modeFilter]);
+    fetchPayments(false);
+    const handleSyncUpdate = () => {
+      if (!showPaymentModal) {
+        fetchPayments(true);
+      }
+    };
+    window.addEventListener('fintrack:data-updated', handleSyncUpdate);
+    return () => window.removeEventListener('fintrack:data-updated', handleSyncUpdate);
+  }, [modeFilter, showPaymentModal]);
 
   const handleUndoPayment = async (payment) => {
     if (

@@ -30,9 +30,10 @@ export const getSyncStatus = () => ({
 });
 
 export const notifyStatus = (status, count = pendingCount) => {
+  const hasChanged = currentStatus !== status || pendingCount !== count;
   currentStatus = status;
   pendingCount = count;
-  if (typeof window !== 'undefined') {
+  if (hasChanged && typeof window !== 'undefined') {
     window.dispatchEvent(
       new CustomEvent('fintrack:sync-status', {
         detail: { status, pendingCount: count, timestamp: Date.now(), isServerOnline },
@@ -148,12 +149,15 @@ export const clearStuckSyncQueue = async () => {
 };
 
 /**
- * Initialize 5-second polling loop and network listeners
+ * Initialize background sync manager and network listeners
  */
 export const initSyncManager = ({ checkBackendHealth, safeFetchJson, getHeaders, onDataRefreshed }) => {
   if (typeof window === 'undefined') return;
 
   const runSyncCycle = async () => {
+    // Only run if tab is visible to avoid unnecessary background battery & network drain
+    if (typeof document !== 'undefined' && document.hidden) return;
+
     try {
       const queueRemaining = await getQueueCount();
       pendingCount = queueRemaining;
@@ -168,29 +172,37 @@ export const initSyncManager = ({ checkBackendHealth, safeFetchJson, getHeaders,
         return;
       }
 
-      // If there are pending mutations, flush them
-      if (queueRemaining > 0) {
-        await flushOfflineQueue(safeFetchJson, getHeaders);
+      // If there are pending mutations, flush them to the server
+      let hadMutationsToFlush = queueRemaining > 0;
+      if (hadMutationsToFlush) {
+        const flushRes = await flushOfflineQueue(safeFetchJson, getHeaders);
+        const remainingAfterFlush = flushRes?.remaining ?? (await getQueueCount());
+        // Only trigger screen refresh if mutations were actually pushed to backend
+        if (remainingAfterFlush < queueRemaining) {
+          if (onDataRefreshed) onDataRefreshed();
+          window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+        }
       } else {
         notifyStatus('synced', 0);
       }
-
-      // Trigger data sync notification so active screens re-fetch data
-      if (onDataRefreshed) {
-        onDataRefreshed();
-      }
-      window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
     } catch {
       notifyStatus(isServerOnline ? 'synced' : 'offline', pendingCount);
     }
   };
 
-  // Immediate cycle
-  setTimeout(runSyncCycle, 1000);
+  // Immediate initial check after startup
+  setTimeout(runSyncCycle, 1500);
 
-  // Poll every 5 seconds for cross-device sync
+  // Poll server every 15 seconds (prevents 5s jitter/flicker)
   if (syncInterval) clearInterval(syncInterval);
-  syncInterval = setInterval(runSyncCycle, 5000);
+  syncInterval = setInterval(runSyncCycle, 15000);
+
+  // Resume immediately when tab becomes visible again
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      runSyncCycle();
+    }
+  });
 
   // Event listeners for connection changes
   window.addEventListener('online', () => {
