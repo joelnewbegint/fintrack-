@@ -101,7 +101,7 @@ export const getApiBaseUrl = () => {
   }
 
   // Production Render cloud backend
-  return 'https://fintrack-backend.onrender.com';
+  return 'https://fintrack-30zs.onrender.com';
 };
 
 export const setApiBaseUrl = (url) => {
@@ -284,6 +284,30 @@ export const api = {
       }))
       .sort((a, b) => new Date(b.date) - new Date(a.date));
 
+    // Compute Finance Types breakdown (Daily Thandal, Weekly, Monthly)
+    const financeTypesMap = {
+      daily: { type: 'daily', title: 'Daily Thandal (தினசரி)', activeLoans: 0, lent: 0, collected: 0, pending: 0, count: 0 },
+      weekly: { type: 'weekly', title: 'Weekly Finance (வாரத்தவணை)', activeLoans: 0, lent: 0, collected: 0, pending: 0, count: 0 },
+      monthly: { type: 'monthly', title: 'Monthly Finance (மாதத்தவணை)', activeLoans: 0, lent: 0, collected: 0, pending: 0, count: 0 },
+    };
+
+    loans.forEach((l) => {
+      const type = (l.financeType || 'daily').toLowerCase();
+      const target = financeTypesMap[type] || financeTypesMap.daily;
+      target.count += 1;
+      const rem = Number(l.balanceAmount != null ? l.balanceAmount : l.remainingBalance) || 0;
+      const isActive = l.status === 'active' || l.status === 'overdue' || rem > 0;
+      if (isActive) {
+        target.activeLoans += 1;
+      }
+      const lent = Number(l.principalAmount || l.principal || 0);
+      const collected = Number(l.totalPaid || l.totalCollected || 0);
+      const pending = rem > 0 ? rem : Math.max(0, (l.totalRepayable || l.totalPayable || lent) - collected);
+      target.lent += lent;
+      target.collected += collected;
+      target.pending += pending;
+    });
+
     return {
       success: true,
       cards: {
@@ -302,6 +326,12 @@ export const api = {
         overdueLoans: overdueLoans.length,
         completedLoans: completedLoans.length,
       },
+      financeTypes: financeTypesMap,
+      financeTypeSplit: [
+        { name: 'Daily (தினசரி)', key: 'daily', value: financeTypesMap.daily.lent, count: financeTypesMap.daily.activeLoans, color: '#f59e0b' },
+        { name: 'Weekly (வாரத்தவணை)', key: 'weekly', value: financeTypesMap.weekly.lent, count: financeTypesMap.weekly.activeLoans, color: '#3b82f6' },
+        { name: 'Monthly (மாதத்தவணை)', key: 'monthly', value: financeTypesMap.monthly.lent, count: financeTypesMap.monthly.activeLoans, color: '#10b981' },
+      ],
       todayDueList: todayDueFormatted,
       overdueLoans: overdueLoans.map((l) => ({
         _id: l._id,
@@ -365,6 +395,7 @@ export const api = {
     const query = new URLSearchParams(params).toString();
     const result = await safeFetchJson(`/api/customers?${query}`, { headers: getHeaders() });
     if (result.ok && result.data && Array.isArray(result.data.customers)) {
+      setStored(STORAGE_KEYS.CUSTOMERS, result.data.customers);
       return result.data;
     }
 
@@ -583,7 +614,10 @@ export const api = {
   getLoans: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
     const result = await safeFetchJson(`/api/loans?${query}`, { headers: getHeaders() });
-    if (result.ok && result.data && Array.isArray(result.data.loans)) return result.data;
+    if (result.ok && result.data && Array.isArray(result.data.loans)) {
+      setStored(STORAGE_KEYS.LOANS, result.data.loans);
+      return result.data;
+    }
 
     let loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
     const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
@@ -714,14 +748,21 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(loanData),
     });
-    if (result.ok) return result.data;
+
+    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+    if (result.ok && result.data) {
+      if (result.data.loan) {
+        loans.unshift(result.data.loan);
+        setStored(STORAGE_KEYS.LOANS, loans);
+      }
+      return result.data;
+    }
 
     // If server responded with a specific API/validation error, do not silently swallow it
     if (result.error && !result.isHtml) {
       throw new Error(result.error);
     }
 
-    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
     const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);
     const targetCust = customers.find((c) => c._id === loanData.customerId);
     const typePrefix = (loanData.financeType || 'daily')[0].toUpperCase();
@@ -786,7 +827,16 @@ export const api = {
       targetCust.photoUrl = loanData.borrowerPhoto;
       setStored(STORAGE_KEYS.CUSTOMERS, customers);
     }
-    return { success: true, loan: newLoan };
+
+    // Queue offline sync
+    await addToSyncQueue({
+      endpoint: '/api/loans',
+      method: 'POST',
+      data: newLoan,
+      clientId: newLoan._id,
+    });
+
+    return { success: true, loan: newLoan, isOffline: true };
   },
 
   updateLoan: async (id, loanData) => {

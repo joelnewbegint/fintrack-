@@ -95,7 +95,7 @@ export const getDashboardStats = async (req, res, next) => {
                     { $in: ['$status', ['active', 'overdue', 'Active', 'Overdue']] },
                     {
                       $and: [
-                        { $nin: ['$status', ['completed', 'closed', 'Completed', 'Closed']] },
+                        { $not: [{ $in: ['$status', ['completed', 'closed', 'Completed', 'Closed']] }] },
                         { $gt: [{ $ifNull: ['$remainingBalance', '$principal'] }, 0] },
                       ],
                     },
@@ -193,11 +193,20 @@ export const getDashboardStats = async (req, res, next) => {
     const typeBreakdown = await Loan.aggregate([
       {
         $group: {
-          _id: '$financeType',
+          _id: { $toLower: { $ifNull: ['$financeType', 'daily'] } },
           count: { $sum: 1 },
           activeLoans: {
             $sum: {
-              $cond: [{ $in: ['$status', ['active', 'overdue']] }, 1, 0],
+              $cond: [
+                {
+                  $or: [
+                    { $in: ['$status', ['active', 'overdue', 'Active', 'Overdue']] },
+                    { $gt: [{ $ifNull: ['$remainingBalance', 0] }, 0] },
+                  ],
+                },
+                1,
+                0,
+              ],
             },
           },
           lent: { $sum: '$principal' },

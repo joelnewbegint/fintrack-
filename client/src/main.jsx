@@ -28,7 +28,7 @@ export const getApiBase = () => {
       return 'http://localhost:5000';
     }
   }
-  return 'https://fintrack-backend.onrender.com';
+  return 'https://fintrack-30zs.onrender.com';
 };
 
 // Global Error Boundary to prevent any blank screen crash

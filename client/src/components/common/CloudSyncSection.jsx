@@ -239,7 +239,7 @@ export const CloudSyncSection = () => {
                 type="url"
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
-                placeholder="https://fintrack-backend.onrender.com or http://localhost:5000"
+                placeholder="https://fintrack-30zs.onrender.com or http://localhost:5000"
                 className="flex-1 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-sky-500"
               />
 
@@ -319,7 +319,7 @@ export const CloudSyncSection = () => {
             <strong>எளிய வழிமுறை:</strong> மேலே உள்ள பட்டனை கிளிக் செய்யவும் → Render-ல் உங்கள் GitHub-ஐ லாகின் செய்யவும் → <strong>"Apply"</strong> கொடுத்தால் 2 நிமிடத்தில் உங்கள் சர்வர் தயாராகிவிடும்.
           </p>
           <p>
-            அதில் வரும் URL-ஐ (e.g. <code className="font-mono text-indigo-600 font-bold">https://fintrack-backend.onrender.com</code>) உங்கள் அனைத்து போன் & உலாவிகளிலும் உள்ளிட்டால் போதுமானது!
+            அதில் வரும் URL-ஐ (e.g. <code className="font-mono text-indigo-600 font-bold">https://fintrack-30zs.onrender.com</code>) உங்கள் அனைத்து போன் & உலாவிகளிலும் உள்ளிட்டால் போதுமானது!
           </p>
         </div>
       </div>
