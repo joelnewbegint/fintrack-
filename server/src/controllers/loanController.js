@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Loan from '../models/Loan.js';
 import Customer from '../models/Customer.js';
 import Payment from '../models/Payment.js';
@@ -131,22 +132,32 @@ export const createLoan = async (req, res, next) => {
       }
     }
 
-    await AuditLog.create({
-      userId: req.user._id,
-      userName: req.user.name,
-      action: 'CREATE_LOAN',
-      entity: 'Loan',
-      entityId: newLoan._id.toString(),
-      after: {
-        loanNo: newLoan.loanNo,
-        customer: customer.name,
-        principal: newLoan.principal,
-        financeType: newLoan.financeType,
-        totalPayable: newLoan.totalPayable,
-      },
-    });
+    try {
+      await AuditLog.create({
+        userId: req.user?._id || 'owner',
+        userName: req.user?.name || 'Owner',
+        action: 'CREATE_LOAN',
+        entity: 'Loan',
+        entityId: newLoan._id.toString(),
+        after: {
+          loanNo: newLoan.loanNo,
+          customer: customer?.name || customerName || 'Borrower',
+          principal: newLoan.principal,
+          financeType: newLoan.financeType,
+          totalPayable: newLoan.totalPayable,
+        },
+      });
+    } catch (auditErr) {
+      console.warn('[LoanController] AuditLog error:', auditErr.message);
+    }
 
-    await newLoan.populate('customerId', 'name phone area address photoUrl photo');
+    try {
+      if (newLoan.customerId) {
+        await newLoan.populate('customerId', 'name phone area address photoUrl photo');
+      }
+    } catch (popErr) {
+      console.warn('[LoanController] Populate customer error:', popErr.message);
+    }
 
     res.status(201).json({
       success: true,

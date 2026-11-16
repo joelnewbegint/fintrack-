@@ -317,7 +317,7 @@ app.get('/', (req, res) => {
         <div class="status-label">API Status</div>
         <div class="status-val">
           <span style="color: #34d399">●</span>
-          Healthy (v3.5.1)
+          Healthy (v3.5.2)
         </div>
       </div>
     </div>
