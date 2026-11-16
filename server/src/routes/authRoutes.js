@@ -1,6 +1,6 @@
 import express from 'express';
 import { z } from 'zod';
-import { login, getMe, registerUser, getAgents, updateProfile } from '../controllers/authController.js';
+import { login, getMe, registerUser, getAgents, updateProfile, refreshToken } from '../controllers/authController.js';
 import { protect, restrictTo } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 
@@ -44,6 +44,7 @@ const allowClientOrOwner = (req, res, next) => {
 };
 
 router.post('/login', validate(loginSchema), login);
+router.post('/refresh', refreshToken);
 router.get('/me', protect, getMe);
 router.put('/me', protect, updateProfile);
 router.put('/profile', protect, updateProfile);

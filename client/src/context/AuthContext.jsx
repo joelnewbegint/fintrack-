@@ -158,6 +158,9 @@ export const AuthProvider = ({ children }) => {
           setUser(data.user);
           localStorage.setItem('fintrack_token', data.token);
           localStorage.setItem('fintrack_user', JSON.stringify(data.user));
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('fintrack:auth-success', { detail: data.user }));
+          }
           apiSuccess = true;
           return data.user;
         } else if (res.status === 400 || res.status === 401) {
@@ -197,6 +200,9 @@ export const AuthProvider = ({ children }) => {
       setUser(ownerUser);
       localStorage.setItem('fintrack_token', sessionToken);
       localStorage.setItem('fintrack_user', JSON.stringify(ownerUser));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:auth-success', { detail: ownerUser }));
+      }
       return ownerUser;
     }
 
@@ -215,6 +221,9 @@ export const AuthProvider = ({ children }) => {
       setUser(agentUser);
       localStorage.setItem('fintrack_token', sessionToken);
       localStorage.setItem('fintrack_user', JSON.stringify(agentUser));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:auth-success', { detail: agentUser }));
+      }
       return agentUser;
     }
 

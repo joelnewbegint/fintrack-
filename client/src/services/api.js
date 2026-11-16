@@ -60,12 +60,16 @@ const setStored = (key, data) => {
 };
 
 const getHeaders = () => {
-  const token = localStorage.getItem('fintrack_token');
+  let token = null;
+  try {
+    token = localStorage.getItem('fintrack_token');
+  } catch (e) {}
+
   const headers = {
     'Content-Type': 'application/json',
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (token && token.trim() && token !== 'undefined' && token !== 'null') {
+    headers['Authorization'] = `Bearer ${token.trim()}`;
   }
   return headers;
 };
@@ -122,18 +126,70 @@ export const setApiBaseUrl = (url) => {
 };
 
 // Check if response is valid JSON; returns { ok: true, data } or { ok: false, error, isOffline }
-const safeFetchJson = async (url, options = {}) => {
+const safeFetchJson = async (url, options = {}, isRetry = false) => {
   try {
     const baseUrl = getApiBaseUrl();
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 9000);
+
+    // Always fetch fresh headers directly at request time
+    const headers = { ...getHeaders(), ...(options.headers || {}) };
 
     const res = await fetch(fullUrl, {
       ...options,
+      headers,
       signal: options.signal || controller.signal,
     });
     clearTimeout(timeoutId);
+
+    // Central Auth Interceptor: If 401 Unauthorized, attempt refresh once
+    if (res.status === 401 && !isRetry && !url.includes('/api/auth/login') && !url.includes('/api/auth/refresh')) {
+      try {
+        const currentToken = localStorage.getItem('fintrack_token');
+        if (currentToken) {
+          const refreshRes = await fetch(`${baseUrl}/api/auth/refresh`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${currentToken}`,
+            },
+            body: JSON.stringify({ token: currentToken }),
+          });
+          const refreshData = await refreshRes.json();
+          if (refreshRes.ok && refreshData.success && refreshData.token) {
+            localStorage.setItem('fintrack_token', refreshData.token);
+            if (refreshData.user) {
+              localStorage.setItem('fintrack_user', JSON.stringify(refreshData.user));
+            }
+            // Retry the original request once with the new fresh token
+            const retryHeaders = {
+              ...(options.headers || {}),
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${refreshData.token}`,
+            };
+            return await safeFetchJson(url, { ...options, headers: retryHeaders }, true);
+          }
+        }
+      } catch (refreshErr) {
+        console.warn('Central API token refresh attempt note:', refreshErr);
+      }
+
+      // If refresh failed: notify app & return user-friendly message
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('fintrack:session-expired', {
+            detail: { url, message: 'Your session has expired. Please log in again.' },
+          })
+        );
+      }
+      return {
+        ok: false,
+        status: 401,
+        isAuthError: true,
+        error: 'Your session has expired. Please log in again to continue.',
+      };
+    }
 
     const contentType = res.headers.get('content-type') || '';
     const text = await res.text();
@@ -143,7 +199,12 @@ const safeFetchJson = async (url, options = {}) => {
       if (res.ok && json.success !== false) {
         return { ok: true, data: json, status: res.status };
       }
-      return { ok: false, error: json.message || `Request failed with status ${res.status}`, status: res.status };
+      return {
+        ok: false,
+        error: json.message || `Request failed with status ${res.status}`,
+        status: res.status,
+        isAuthError: res.status === 401,
+      };
     }
     // Server returned HTML (e.g. Firebase static hosting or 404/502)
     return { ok: false, isHtml: true, isOffline: true, status: res.status };
@@ -1779,6 +1840,24 @@ export const api = {
       } catch (e) {}
     }
     throw new Error(result.error || 'Failed to update profile');
+  },
+
+  refreshToken: async () => {
+    const currentToken = localStorage.getItem('fintrack_token');
+    if (!currentToken) return null;
+    const res = await safeFetchJson('/api/auth/refresh', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ token: currentToken }),
+    });
+    if (res.ok && res.data?.token) {
+      localStorage.setItem('fintrack_token', res.data.token);
+      if (res.data.user) {
+        localStorage.setItem('fintrack_user', JSON.stringify(res.data.user));
+      }
+      return res.data;
+    }
+    return null;
   },
 
   getSyncStatus,

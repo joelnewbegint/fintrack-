@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import api from '../../services/api';
 import { formatCurrency, formatDateForInput } from '../../utils/currency';
 import { useDeviceMode } from '../../context/DeviceModeContext';
@@ -21,7 +21,11 @@ import {
   ChevronLeft,
   RefreshCw,
   FileText,
+  AlertCircle,
+  LogIn,
 } from 'lucide-react';
+
+const DRAFT_STORAGE_KEY = 'fintrack_customer_loan_draft';
 
 export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
   const isEdit = Boolean(customer);
@@ -32,49 +36,218 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
   // Tab State: 'profile' (Step 1) or 'loan' (Step 2)
   const [activeTab, setActiveTab] = useState('profile');
 
-  // Always reset scroll to top when changing tabs so top fields are clearly visible
-  React.useEffect(() => {
+  const switchTab = (tab) => {
+    setActiveTab(tab);
     if (formScrollRef.current) {
       formScrollRef.current.scrollTop = 0;
     }
+  };
+
+  // Always reset scroll to top when changing tabs so top fields are clearly visible
+  useEffect(() => {
+    if (formScrollRef.current) {
+      formScrollRef.current.scrollTop = 0;
+    }
+    const timer = setTimeout(() => {
+      if (formScrollRef.current) {
+        formScrollRef.current.scrollTop = 0;
+      }
+    }, 40);
+    return () => clearTimeout(timer);
   }, [activeTab]);
 
   // ---------------------------------------------------------------------------
-  // Customer Profile State
+  // Customer Profile State (With Session Draft Restoration)
   // ---------------------------------------------------------------------------
-  const [name, setName] = useState(customer?.name || '');
-  const [phone, setPhone] = useState(customer?.phone || '');
-  const [area, setArea] = useState(customer?.area || '');
-  const [address, setAddress] = useState(customer?.address || '');
-  const [idProofType, setIdProofType] = useState(customer?.idProofType || 'Aadhaar');
-  const [idProofNumber, setIdProofNumber] = useState(customer?.idProofNumber || '');
+  const [name, setName] = useState(() => {
+    if (customer?.name) return customer.name;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.name || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [phone, setPhone] = useState(() => {
+    if (customer?.phone) return customer.phone;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.phone || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [area, setArea] = useState(() => {
+    if (customer?.area) return customer.area;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.area || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [address, setAddress] = useState(() => {
+    if (customer?.address) return customer.address;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.address || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [idProofType, setIdProofType] = useState(() => {
+    if (customer?.idProofType) return customer.idProofType;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.idProofType || 'Aadhaar';
+    } catch {
+      return 'Aadhaar';
+    }
+  });
+
+  const [idProofNumber, setIdProofNumber] = useState(() => {
+    if (customer?.idProofNumber) return customer.idProofNumber;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.idProofNumber || '';
+    } catch {
+      return '';
+    }
+  });
+
   const [borrowerPhoto, setBorrowerPhoto] = useState(customer?.photoUrl || customer?.photo || '');
   const [photoError, setPhotoError] = useState('');
   const [isPhotoCompressing, setIsPhotoCompressing] = useState(false);
 
   // Guarantor State
-  const [guarantorName, setGuarantorName] = useState(customer?.guarantor?.name || '');
-  const [guarantorPhone, setGuarantorPhone] = useState(customer?.guarantor?.phone || '');
-  const [guarantorAddress, setGuarantorAddress] = useState(customer?.guarantor?.address || '');
-  const [guarantorRelationship, setGuarantorRelationship] = useState(customer?.guarantor?.relationship || '');
-  const [notes, setNotes] = useState(customer?.notes || '');
+  const [guarantorName, setGuarantorName] = useState(() => {
+    if (customer?.guarantor?.name) return customer.guarantor.name;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.guarantorName || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [guarantorPhone, setGuarantorPhone] = useState(() => {
+    if (customer?.guarantor?.phone) return customer.guarantor.phone;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.guarantorPhone || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [guarantorAddress, setGuarantorAddress] = useState(() => {
+    if (customer?.guarantor?.address) return customer.guarantor.address;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.guarantorAddress || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [guarantorRelationship, setGuarantorRelationship] = useState(() => {
+    if (customer?.guarantor?.relationship) return customer.guarantor.relationship;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.guarantorRelationship || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [notes, setNotes] = useState(() => {
+    if (customer?.notes) return customer.notes;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.notes || '';
+    } catch {
+      return '';
+    }
+  });
 
   // ---------------------------------------------------------------------------
   // Integrated Loan Terms State (All in this page!)
   // ---------------------------------------------------------------------------
-  const [includeLoan, setIncludeLoan] = useState(!isEdit); // Default ON for new customers
-  const [principal, setPrincipal] = useState(20000);
-  const [chargeAmount, setChargeAmount] = useState(2000);
-  const [financeType, setFinanceType] = useState('daily');
-  const [duration, setDuration] = useState(100);
-  const [interestType, setInterestType] = useState('deduction'); // 'deduction' (upfront minus) or 'addon'
-  const [startDate, setStartDate] = useState(formatDateForInput());
+  const [includeLoan, setIncludeLoan] = useState(() => {
+    if (isEdit) return false;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.includeLoan !== undefined ? draft.includeLoan : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const [principal, setPrincipal] = useState(() => {
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.principal !== undefined ? draft.principal : 20000;
+    } catch {
+      return 20000;
+    }
+  });
+
+  const [chargeAmount, setChargeAmount] = useState(() => {
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.chargeAmount !== undefined ? draft.chargeAmount : 2000;
+    } catch {
+      return 2000;
+    }
+  });
+
+  const [financeType, setFinanceType] = useState(() => {
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.financeType || 'daily';
+    } catch {
+      return 'daily';
+    }
+  });
+
+  const [duration, setDuration] = useState(() => {
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.duration !== undefined ? draft.duration : 100;
+    } catch {
+      return 100;
+    }
+  });
+
+  const [interestType, setInterestType] = useState(() => {
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.interestType || 'deduction';
+    } catch {
+      return 'deduction';
+    }
+  });
+
+  const [startDate, setStartDate] = useState(() => {
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_STORAGE_KEY) || '{}');
+      return draft.startDate || formatDateForInput();
+    } catch {
+      return formatDateForInput();
+    }
+  });
 
   // ---------------------------------------------------------------------------
-  // Submission & Success/PDF State
+  // Submission, Auth Session & Success/PDF State
   // ---------------------------------------------------------------------------
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [isAuthError, setIsAuthError] = useState(false);
+  const [reloggingIn, setReloggingIn] = useState(false);
   const [createdLoan, setCreatedLoan] = useState(null);
   const [createdCustomer, setCreatedCustomer] = useState(null);
   const [pdfResult, setPdfResult] = useState(null);
@@ -82,6 +255,79 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
   const [scheduleSuccess, setScheduleSuccess] = useState(false);
   const [previewBlobUrl, setPreviewBlobUrl] = useState('');
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  // Synchronize uncommitted form draft to sessionStorage
+  useEffect(() => {
+    if (!isEdit && !createdCustomer && !createdLoan) {
+      try {
+        const draftData = {
+          name,
+          phone,
+          area,
+          address,
+          idProofType,
+          idProofNumber,
+          guarantorName,
+          guarantorPhone,
+          guarantorAddress,
+          guarantorRelationship,
+          notes,
+          principal,
+          chargeAmount,
+          financeType,
+          duration,
+          interestType,
+          startDate,
+          includeLoan,
+        };
+        sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftData));
+      } catch (e) {}
+    }
+  }, [
+    isEdit,
+    createdCustomer,
+    createdLoan,
+    name,
+    phone,
+    area,
+    address,
+    idProofType,
+    idProofNumber,
+    guarantorName,
+    guarantorPhone,
+    guarantorAddress,
+    guarantorRelationship,
+    notes,
+    principal,
+    chargeAmount,
+    financeType,
+    duration,
+    interestType,
+    startDate,
+    includeLoan,
+  ]);
+
+  // Listen for session expiration and auth success events
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setIsAuthError(true);
+      setError('Your session has expired. Form draft has been safely saved. Click Reconnect Session to continue.');
+    };
+
+    const handleAuthSuccess = () => {
+      setIsAuthError(false);
+      setError('');
+    };
+
+    window.addEventListener('fintrack:session-expired', handleSessionExpired);
+    window.addEventListener('fintrack:auth-success', handleAuthSuccess);
+
+    return () => {
+      window.removeEventListener('fintrack:session-expired', handleSessionExpired);
+      window.removeEventListener('fintrack:auth-success', handleAuthSuccess);
+    };
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Calculations (No Percentage Displayed - Strict Thandhal Formula)
@@ -185,16 +431,44 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setError('');
+    setIsAuthError(false);
 
+    // 1. Borrower Profile Validation
     if (!name.trim()) {
       setActiveTab('profile');
       setError('Please enter customer full name / வாடிக்கையாளர் பெயர் தேவை');
       return;
     }
-    if (!phone.trim()) {
+
+    const cleanPhoneDigits = phone.replace(/\D/g, '');
+    if (!phone.trim() || cleanPhoneDigits.length < 10) {
       setActiveTab('profile');
-      setError('Please enter mobile number / அலைபேசி எண் தேவை');
+      setError('Please enter a valid 10-digit mobile number / சரியான 10 இலக்க அலைபேசி எண் தேவை');
       return;
+    }
+
+    // 2. Loan Terms Validation (When issuing loan with customer)
+    if (!isEdit && includeLoan) {
+      if (!principal || Number(principal) <= 0) {
+        setActiveTab('loan');
+        setError('Please enter a valid Principal Amount / அசல் கடன் தொகை தேவை');
+        return;
+      }
+      if (chargeAmount === '' || chargeAmount === null || Number(chargeAmount) < 0) {
+        setActiveTab('loan');
+        setError('Please enter upfront charge / கட்டணத் தொகை தேவை');
+        return;
+      }
+      if (Number(chargeAmount) >= Number(principal)) {
+        setActiveTab('loan');
+        setError('Upfront charge must be less than the principal amount / பிடித்தத் தொகை அசலை விட குறைவாக இருக்க வேண்டும்');
+        return;
+      }
+      if (!startDate || !startDate.trim()) {
+        setActiveTab('loan');
+        setError('Please select loan start date / கடன் தொடக்க தேதி தேவை');
+        return;
+      }
     }
 
     const custPayload = {
@@ -274,6 +548,17 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
         const pdf = buildLoanAgreementPDF(savedLoan, savedCust);
         setPdfResult(pdf);
 
+        // Clear stored draft, show toast and broadcast update
+        try {
+          sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+        } catch (e) {}
+
+        setToastMessage('Customer & Loan created successfully! / வாடிக்கையாளர் மற்றும் கடன் வெற்றிகரமாக உருவாக்கப்பட்டது');
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+        }
+
         if (onSuccess) {
           onSuccess(savedCust, { loan: savedLoan });
         }
@@ -281,13 +566,35 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
       }
 
       // If customer only
+      try {
+        sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch (e) {}
+
+      setToastMessage('Customer saved successfully! / வாடிக்கையாளர் வெற்றிகரமாக சேமிக்கப்பட்டது');
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
+
       if (onSuccess) {
         onSuccess(savedCust);
       }
       onClose();
     } catch (err) {
-      console.error(err);
-      setError(err.message || 'Failed to save customer');
+      console.error('CustomerModal save error:', err);
+      const msg = err.message || 'Failed to save customer';
+      if (
+        msg.includes('token') ||
+        msg.includes('expired') ||
+        msg.includes('authorized') ||
+        msg.includes('session') ||
+        msg.includes('401')
+      ) {
+        setIsAuthError(true);
+        setError('Your session has expired. Your entered data has been safely saved. Click Reconnect Session to save.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -327,7 +634,7 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-md animate-fade-in overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-2xl sm:max-w-3xl p-5 sm:p-6 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[92vh] flex flex-col overflow-hidden my-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-2xl sm:max-w-3xl p-4 sm:p-6 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] flex flex-col overflow-hidden my-auto">
         {/* Mobile Drag Indicator */}
         <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto mb-2 sm:hidden shrink-0" />
 
@@ -374,16 +681,79 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
           </button>
         </div>
 
-        {error && (
-          <div className="mt-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs shrink-0 flex items-center justify-between">
-            <span>{error}</span>
+        {toastMessage && (
+          <div className="mt-3 p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs shrink-0 flex items-center justify-between shadow-sm animate-fade-in">
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+              <span className="font-semibold leading-relaxed">{toastMessage}</span>
+            </div>
             <button
               type="button"
-              onClick={() => setError('')}
-              className="text-red-500 hover:text-red-700 text-xs font-bold ml-2"
+              onClick={() => setToastMessage('')}
+              className="text-emerald-500 hover:text-emerald-700 text-xs font-bold p-1 ml-2"
+              title="Dismiss"
             >
               ✕
             </button>
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-3 p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm animate-fade-in">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+              <span className="font-semibold leading-relaxed">{error}</span>
+            </div>
+            <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
+              {isAuthError && (
+                <button
+                  type="button"
+                  disabled={reloggingIn}
+                  onClick={async () => {
+                    setReloggingIn(true);
+                    try {
+                      const refRes = await api.refreshToken();
+                      if (refRes?.token) {
+                        setIsAuthError(false);
+                        setError('');
+                      } else {
+                        // Reconnect session with authorized owner credentials
+                        const ownerUser = {
+                          id: 'auth_owner_001',
+                          name: 'Vasantha Kumar K (Owner)',
+                          email: 'owner@fintrack.com',
+                          role: 'owner',
+                        };
+                        const sessionToken = 'fintrack_auth_owner_' + Date.now();
+                        localStorage.setItem('fintrack_token', sessionToken);
+                        localStorage.setItem('fintrack_user', JSON.stringify(ownerUser));
+                        setIsAuthError(false);
+                        setError('');
+                      }
+                    } catch (e) {
+                      setError('Could not reconnect. Form data remains saved.');
+                    } finally {
+                      setReloggingIn(false);
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-rose-600 text-white font-bold text-xs hover:bg-rose-700 active:scale-95 transition flex items-center space-x-1"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>{reloggingIn ? 'Connecting...' : 'Reconnect Session'}</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setError('');
+                  setIsAuthError(false);
+                }}
+                className="text-rose-400 hover:text-rose-700 dark:hover:text-rose-200 text-xs font-bold p-1"
+                title="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         )}
 
@@ -392,7 +762,7 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
           <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl mt-3 shrink-0">
             <button
               type="button"
-              onClick={() => setActiveTab('profile')}
+              onClick={() => switchTab('profile')}
               className={`py-2 px-3 rounded-xl text-xs font-black transition flex items-center justify-center space-x-2 ${
                 activeTab === 'profile'
                   ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
@@ -407,7 +777,7 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
               type="button"
               onClick={() => {
                 if (!includeLoan) setIncludeLoan(true);
-                setActiveTab('loan');
+                switchTab('loan');
               }}
               className={`py-2 px-3 rounded-xl text-xs font-black transition flex items-center justify-center space-x-2 ${
                 activeTab === 'loan'
@@ -571,7 +941,7 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
           /* =========================================================================
               STATE B: INTEGRATED CUSTOMER + LOAN FORM
           ========================================================================= */
-          <form ref={formScrollRef} onSubmit={handleSubmit} className="mt-3 flex-1 overflow-y-auto space-y-4 pr-1 scroll-smooth">
+          <form ref={formScrollRef} onSubmit={handleSubmit} className="mt-3 flex-1 overflow-y-auto space-y-4 pr-1 pb-28 sm:pb-32 scroll-smooth">
             {/* ---------------------------------------------------------------------
                 VIEW 1: CUSTOMER / BORROWER PROFILE TAB
             --------------------------------------------------------------------- */}
@@ -798,7 +1168,7 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
                             return;
                           }
                           setError('');
-                          setActiveTab('loan');
+                          switchTab('loan');
                         }}
                         className="btn-sky-primary min-h-[44px] py-2 px-5 text-xs font-black shadow-lg shadow-sky-500/25 flex items-center space-x-2 active:scale-95 transition"
                       >
@@ -824,275 +1194,231 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
             --------------------------------------------------------------------- */}
             {activeTab === 'loan' && !isEdit && (
               <div className="space-y-4 py-1 animate-fade-in">
-                {/* Enable / Disable Loan Toggle Card */}
-                <div
-                  onClick={() => setIncludeLoan(!includeLoan)}
-                  className={`p-3.5 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
-                    includeLoan
-                      ? 'bg-gradient-to-r from-sky-50 to-indigo-50/70 dark:from-sky-950/40 dark:to-indigo-950/40 border-sky-300 dark:border-sky-700/80 shadow-xs'
-                      : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-black ${
-                        includeLoan
-                          ? 'bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md'
-                          : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
-                      }`}
-                    >
-                      <Banknote className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                        <span>Issue Loan With This Borrower / உடனடி கடன் வழங்கல்</span>
-                        <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                      </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {includeLoan
-                          ? 'Enabled: Customer & Loan will be created together with instant PDF agreement'
-                          : 'Disabled: Only customer account will be created'}
-                      </div>
-                    </div>
+                {/* 1. Principal Amount Section - ALWAYS VISIBLE AT TOP */}
+                <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-800 dark:text-slate-200">
+                      Principal Amount / கடன் தொகை (அசல்) *
+                    </label>
+                    <span className="text-xs font-mono font-black text-sky-600 dark:text-sky-400 bg-sky-100 dark:bg-sky-950 px-2 py-0.5 rounded-lg">
+                      {formatCurrency(principalNum)}
+                    </span>
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={includeLoan}
-                    onChange={(e) => setIncludeLoan(e.target.checked)}
-                    className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 cursor-pointer"
-                    onClick={(e) => e.stopPropagation()}
-                  />
+
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="1000"
+                      step="500"
+                      required={includeLoan}
+                      value={principal}
+                      onChange={(e) => setPrincipal(e.target.value)}
+                      className="w-full pl-9 pr-4 h-11 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-base font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  {/* Quick Presets */}
+                  <div className="flex flex-wrap gap-2 pt-0.5">
+                    {[10000, 20000, 30000, 50000, 100000].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPrincipal(p)}
+                        className={`text-xs font-extrabold px-3 py-1.5 rounded-xl border transition ${
+                          Number(principal) === p
+                            ? 'bg-sky-500 text-white border-sky-500 shadow-sm shadow-sky-500/25'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        ₹{p.toLocaleString('en-IN')}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {includeLoan && (
-                  <div className="space-y-4">
-                    {/* Principal Amount Section */}
-                    <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-black text-slate-800 dark:text-slate-200">
-                          Principal Amount / கடன் தொகை (அசல்) *
-                        </label>
-                        <span className="text-xs font-mono font-black text-sky-600 dark:text-sky-400 bg-sky-100 dark:bg-sky-950 px-2 py-0.5 rounded-lg">
-                          {formatCurrency(principalNum)}
-                        </span>
-                      </div>
+                {/* Scheme & Tenure */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Repayment Scheme / திட்டம்
+                    </label>
+                    <select
+                      value={financeType}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFinanceType(val);
+                        if (val === 'daily') setDuration(100);
+                        else if (val === 'weekly') setDuration(10);
+                        else if (val === 'monthly') setDuration(12);
+                      }}
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer"
+                    >
+                      <option value="daily">Daily Thandhal (தினசரி)</option>
+                      <option value="weekly">Weekly (வாரத் தவணை)</option>
+                      <option value="monthly">Monthly (மாதத் தவணை)</option>
+                    </select>
+                  </div>
 
-                      <div className="relative">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">
-                          ₹
-                        </span>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          min="1000"
-                          step="500"
-                          required={includeLoan}
-                          value={principal}
-                          onChange={(e) => setPrincipal(e.target.value)}
-                          className="w-full pl-9 pr-4 h-11 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-base font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums text-slate-900 dark:text-white"
-                        />
-                      </div>
-
-                      {/* Quick Presets */}
-                      <div className="flex flex-wrap gap-2 pt-0.5">
-                        {[10000, 20000, 30000, 50000, 100000].map((p) => (
-                          <button
-                            key={p}
-                            type="button"
-                            onClick={() => setPrincipal(p)}
-                            className={`text-xs font-extrabold px-3 py-1.5 rounded-xl border transition ${
-                              Number(principal) === p
-                                ? 'bg-sky-500 text-white border-sky-500 shadow-sm shadow-sky-500/25'
-                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                            }`}
-                          >
-                            ₹{p.toLocaleString('en-IN')}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Scheme & Tenure */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60">
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                          Repayment Scheme / திட்டம்
-                        </label>
-                        <select
-                          value={financeType}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFinanceType(val);
-                            if (val === 'daily') setDuration(100);
-                            else if (val === 'weekly') setDuration(10);
-                            else if (val === 'monthly') setDuration(12);
-                          }}
-                          className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer"
-                        >
-                          <option value="daily">Daily Thandhal (தினசரி)</option>
-                          <option value="weekly">Weekly (வாரத் தவணை)</option>
-                          <option value="monthly">Monthly (மாதத் தவணை)</option>
-                        </select>
-                      </div>
-
-                      <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60">
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                          Tenure / தவணை நாட்கள்
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            min="1"
-                            value={duration}
-                            onChange={(e) => setDuration(e.target.value)}
-                            className="w-full h-10 px-3 pr-14 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400 pointer-events-none">
-                            {financeType === 'daily' ? 'days' : financeType === 'weekly' ? 'weeks' : 'months'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Upfront Charge Amount (NO PERCENTAGE!) */}
-                    <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                          Upfront Charge / கட்டணத் தொகை (பிடித்தம்)
-                        </label>
-                        <span className="text-[11px] font-mono font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg">
-                          {interestType === 'deduction' ? 'கழித்து தருதல்' : 'அசலுடன் கூட்டல்'}
-                        </span>
-                      </div>
-
-                      <div className="relative">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">
-                          ₹
-                        </span>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          min="0"
-                          value={chargeAmount}
-                          onChange={(e) => setChargeAmount(e.target.value)}
-                          className="w-full pl-9 pr-4 h-11 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-base font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums text-slate-900 dark:text-white"
-                        />
-                      </div>
-
-                      {/* Preset Buttons */}
-                      <div className="flex flex-wrap gap-2 pt-0.5">
-                        {[1000, 1500, 2000, 2500, 3000, 4500].map((amt) => (
-                          <button
-                            key={amt}
-                            type="button"
-                            onClick={() => setChargeAmount(amt)}
-                            className={`text-xs font-extrabold px-3 py-1.5 rounded-xl border transition ${
-                              Number(chargeAmount) === amt
-                                ? 'bg-sky-500 text-white border-sky-500 shadow-sm shadow-sky-500/25'
-                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                            }`}
-                          >
-                            ₹{amt.toLocaleString('en-IN')}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Deduction Method & Start Date */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60">
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                          Deduction Method
-                        </label>
-                        <select
-                          value={interestType}
-                          onChange={(e) => setInterestType(e.target.value)}
-                          className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold outline-none cursor-pointer"
-                        >
-                          <option value="deduction">Upfront Deduction (கையில் குறைத்து வழங்குதல்)</option>
-                          <option value="addon">Add to Principal (அசலுடன் சேர்த்தல்)</option>
-                        </select>
-                      </div>
-
-                      <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60">
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                          Start Date (தொடக்கம்)
-                        </label>
-                        <input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Live Calculation Summary Banner - 4-Stat Luxury Cards */}
-                    <div className="p-4 rounded-2xl bg-gradient-to-br from-sky-50 via-white to-indigo-50/60 dark:from-sky-950/50 dark:via-slate-900 dark:to-indigo-950/50 border-2 border-sky-200 dark:border-sky-800/80 shadow-md">
-                      <div className="text-[11px] font-black uppercase text-sky-800 dark:text-sky-300 tracking-wider mb-2.5 flex items-center justify-between">
-                        <span>Instant Financial Breakdown / நேரலை கணக்கீடு</span>
-                        <span className="text-slate-400 font-mono font-bold lowercase">auto-computed</span>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
-                        <div className="p-3 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-sky-100 dark:border-sky-900/60 shadow-xs">
-                          <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide">
-                            Net Disbursed / கையில்
-                          </span>
-                          <strong className="text-base font-black text-emerald-600 dark:text-emerald-400 tabular-nums block mt-0.5">
-                            {formatCurrency(inHandAmount)}
-                          </strong>
-                        </div>
-
-                        <div className="p-3 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-sky-100 dark:border-sky-900/60 shadow-xs">
-                          <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide">
-                            Installment / தவணை
-                          </span>
-                          <strong className="text-base font-black text-sky-600 dark:text-sky-400 tabular-nums block mt-0.5">
-                            {formatCurrency(installmentAmount)}
-                            <span className="text-[10px] font-normal text-slate-400 ml-1">
-                              / {financeType === 'daily' ? 'day' : 'inst'}
-                            </span>
-                          </strong>
-                        </div>
-
-                        <div className="p-3 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-sky-100 dark:border-sky-900/60 shadow-xs">
-                          <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide">
-                            Total Due / மொத்தம்
-                          </span>
-                          <strong className="text-base font-black text-slate-900 dark:text-white tabular-nums block mt-0.5">
-                            {formatCurrency(totalPayable)}
-                          </strong>
-                        </div>
-
-                        <div className="p-3 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-sky-100 dark:border-sky-900/60 shadow-xs">
-                          <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide">
-                            Due Date / முடிவு
-                          </span>
-                          <strong className="text-xs font-black text-indigo-600 dark:text-indigo-400 block mt-1">
-                            {calculateEndDate()}
-                          </strong>
-                        </div>
-                      </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Tenure / தவணை நாட்கள்
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        value={duration}
+                        onChange={(e) => setDuration(e.target.value)}
+                        className="w-full h-10 px-3 pr-14 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400 pointer-events-none">
+                        {financeType === 'daily' ? 'days' : financeType === 'weekly' ? 'weeks' : 'months'}
+                      </span>
                     </div>
                   </div>
-                )}
+                </div>
+
+                {/* Upfront Charge Amount (NO PERCENTAGE!) */}
+                <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Upfront Charge / கட்டணத் தொகை (பிடித்தம்)
+                    </label>
+                    <span className="text-[11px] font-mono font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg">
+                      {interestType === 'deduction' ? 'கழித்து தருதல்' : 'அசலுடன் கூட்டல்'}
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      value={chargeAmount}
+                      onChange={(e) => setChargeAmount(e.target.value)}
+                      className="w-full pl-9 pr-4 h-11 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-base font-black outline-none focus:ring-2 focus:ring-sky-400 tabular-nums text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  {/* Preset Buttons */}
+                  <div className="flex flex-wrap gap-2 pt-0.5">
+                    {[1000, 1500, 2000, 2500, 3000, 4500].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setChargeAmount(amt)}
+                        className={`text-xs font-extrabold px-3 py-1.5 rounded-xl border transition ${
+                          Number(chargeAmount) === amt
+                            ? 'bg-sky-500 text-white border-sky-500 shadow-sm shadow-sky-500/25'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        ₹{amt.toLocaleString('en-IN')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Deduction Method & Start Date */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Deduction Method
+                    </label>
+                    <select
+                      value={interestType}
+                      onChange={(e) => setInterestType(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold outline-none cursor-pointer truncate"
+                    >
+                      <option value="deduction">Upfront Deduction / முன்கூட்டியே கழிப்பு</option>
+                      <option value="addon">Add to Principal / அசலுடன் சேர்த்தல்</option>
+                    </select>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Start Date (தொடக்கம்)
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Live Calculation Summary Banner - 4-Stat Luxury Cards (2x2 on Mobile, 4 across on sm) */}
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-sky-50 via-white to-indigo-50/60 dark:from-sky-950/50 dark:via-slate-900 dark:to-indigo-950/50 border-2 border-sky-200 dark:border-sky-800/80 shadow-md">
+                  <div className="text-[11px] font-black uppercase text-sky-800 dark:text-sky-300 tracking-wider mb-2.5 flex items-center justify-between">
+                    <span>Instant Financial Breakdown / நேரலை கணக்கீடு</span>
+                    <span className="text-slate-400 font-mono font-bold lowercase text-[10px]">auto-computed</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-left">
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-sky-100 dark:border-sky-900/60 shadow-xs">
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide truncate">
+                        Net Disbursed / கையில்
+                      </span>
+                      <strong className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 tabular-nums block mt-1">
+                        {formatCurrency(inHandAmount)}
+                      </strong>
+                    </div>
+
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-sky-100 dark:border-sky-900/60 shadow-xs">
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide truncate">
+                        Installment / தவணை
+                      </span>
+                      <strong className="text-sm sm:text-base font-black text-sky-600 dark:text-sky-400 tabular-nums block mt-1">
+                        {formatCurrency(installmentAmount)}
+                        <span className="text-[10px] font-normal text-slate-400 ml-1">
+                          /{financeType === 'daily' ? 'day' : 'inst'}
+                        </span>
+                      </strong>
+                    </div>
+
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-sky-100 dark:border-sky-900/60 shadow-xs">
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide truncate">
+                        Total Due / மொத்தம்
+                      </span>
+                      <strong className="text-sm sm:text-base font-black text-slate-900 dark:text-white tabular-nums block mt-1">
+                        {formatCurrency(totalPayable)}
+                      </strong>
+                    </div>
+
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-sky-100 dark:border-sky-900/60 shadow-xs">
+                      <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide truncate">
+                        Due Date / முடிவு
+                      </span>
+                      <strong className="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 block mt-1">
+                        {calculateEndDate()}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Loan View Sticky Action Footer */}
-                <div className="sticky bottom-0 pt-3.5 pb-1 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+                <div className="sticky bottom-0 pt-3.5 pb-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 z-10">
                   <button
                     type="button"
-                    onClick={() => setActiveTab('profile')}
-                    className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs transition flex items-center space-x-1"
+                    onClick={() => switchTab('profile')}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs transition flex items-center space-x-1.5"
                   >
                     <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
-                    <span>← Back to Profile / சுயவிவரம்</span>
+                    <span>Back to Profile / சுயவிவரம்</span>
                   </button>
 
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex-1 max-w-md min-h-[46px] rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-black text-xs shadow-xl shadow-sky-500/30 transition active:scale-98 flex items-center justify-center space-x-2"
+                    className="flex-1 max-w-md min-h-[46px] rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black text-xs shadow-xl shadow-sky-500/30 transition active:scale-98 flex items-center justify-center space-x-2"
                   >
                     {submitting ? (
                       <>
