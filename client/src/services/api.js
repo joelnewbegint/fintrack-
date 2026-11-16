@@ -1748,6 +1748,33 @@ export const api = {
     return api.exportBackupJSON();
   },
 
+  downloadExcelBackup: async () => {
+    const baseUrl = getApiBaseUrl();
+    const token = localStorage.getItem('fintrack_token');
+    const headers = {};
+    if (token && token.trim() && token !== 'undefined' && token !== 'null') {
+      headers['Authorization'] = `Bearer ${token.trim()}`;
+    }
+
+    const res = await fetch(`${baseUrl}/api/backup/excel`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      if (res.status === 403) {
+        throw new Error('Access denied: Only the owner account can download database backups.');
+      }
+      if (res.status === 401) {
+        throw new Error('Session expired or unauthorized. Please log in again.');
+      }
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.message || `Failed to download backup (HTTP ${res.status})`);
+    }
+
+    return await res.blob();
+  },
+
   restoreBackup: async (jsonOrObject) => {
     let data = jsonOrObject;
     if (typeof data === 'string') {

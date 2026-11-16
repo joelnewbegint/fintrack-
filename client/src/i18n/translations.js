@@ -138,6 +138,8 @@ export const translations = {
     // Smart Features
     whatsappReminder: 'Send WhatsApp Reminder',
     downloadBackup: 'Download Full JSON Backup',
+    downloadExcelBackup: 'Download Full Backup (Excel)',
+    preparingBackup: 'Preparing backup...',
     exportExcel: 'Export to Excel / CSV',
     theme: 'Theme',
     language: 'Language',
@@ -282,6 +284,8 @@ export const translations = {
     // Smart Features
     whatsappReminder: 'வாட்ஸ்அப் நினைவூட்டல்',
     downloadBackup: 'முழு டேட்டா பேக்அப் (JSON)',
+    downloadExcelBackup: 'முழு காப்புப்பிரதி (Excel)',
+    preparingBackup: 'தயாராகிறது...',
     exportExcel: 'எக்செல் ஏற்றுமதி (Excel)',
     theme: 'தீம்',
     language: 'மொழி',

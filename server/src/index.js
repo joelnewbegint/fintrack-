@@ -42,6 +42,7 @@ import investmentRoutes from './routes/investmentRoutes.js';
 import expenseRoutes from './routes/expenseRoutes.js';
 import dailyClosingRoutes from './routes/dailyClosingRoutes.js';
 import syncRoutes from './routes/syncRoutes.js';
+import backupRoutes from './routes/backup.js';
 
 // WhatsApp Service import
 import { initWhatsApp, getWhatsAppStatus } from './services/whatsapp.service.js';
@@ -349,6 +350,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/investments', investmentRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/backup', backupRoutes);
 
 // Fallback for unknown routes
 app.use('*', (req, res) => {

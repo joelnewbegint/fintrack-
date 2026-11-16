@@ -30,6 +30,9 @@ import {
   Phone,
   Mail,
   MapPin,
+  Loader2,
+  Trash2,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 export const Settings = () => {
@@ -58,6 +61,8 @@ export const Settings = () => {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileError, setProfileError] = useState('');
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
+  const [backupError, setBackupError] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -156,6 +161,32 @@ export const Settings = () => {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       alert(err.message || 'Failed to download backup');
+    }
+  };
+
+  const handleDownloadExcelBackup = async () => {
+    try {
+      setDownloadingExcel(true);
+      setBackupError('');
+      const blob = await api.downloadExcelBackup();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      // Format IST Date YYYY-MM-DD
+      const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+      const istDate = nowIST.toISOString().split('T')[0];
+      a.download = `VK-Backup-${istDate}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download Excel backup:', err);
+      const msg = err.message || (lang === 'ta' ? 'காப்புப்பிரதி பதிவிறக்கம் தோல்வியடைந்தது' : 'Failed to download Excel backup');
+      setBackupError(msg);
+      alert(msg);
+    } finally {
+      setDownloadingExcel(false);
     }
   };
 
@@ -714,6 +745,56 @@ export const Settings = () => {
       {/* 3. Audit Trail & Backup Tab */}
       {activeSection === 'audit' && isOwner && (
         <div className="space-y-6">
+          {backupError && (
+            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center justify-between">
+              <span>{backupError}</span>
+              <button
+                type="button"
+                onClick={() => setBackupError('')}
+                className="text-rose-500 hover:text-rose-700 ml-2 font-black text-sm"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {/* Full Database Backup (Excel) */}
+          <div className="glass-card rounded-3xl p-5 border border-emerald-200/80 dark:border-emerald-800/80 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+                  Excel (.xlsx)
+                </span>
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                  {lang === 'ta' ? 'முழு காப்புப்பிரதி (Excel)' : 'Full Database Backup (Excel)'}
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {lang === 'ta'
+                  ? 'அனைத்து வாடிக்கையாளர்கள், கடன்கள், தவணைகள், வசூல்கள் மற்றும் அறிக்கைகளை எக்செல் கோப்பாக பதிவிறக்கவும்.'
+                  : 'Download complete multi-sheet workbook (.xlsx) containing Customers, Loans, Installments, Payments, Daily Closings, and Expenses.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDownloadExcelBackup}
+              disabled={downloadingExcel}
+              className="flex items-center space-x-2 py-3 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition shrink-0"
+            >
+              {downloadingExcel ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>{t('preparingBackup')}</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>{t('downloadExcelBackup')}</span>
+                </>
+              )}
+            </button>
+          </div>
+
           <div className="glass-card rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800/80 shadow-md flex items-center justify-between">
             <div>
               <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
