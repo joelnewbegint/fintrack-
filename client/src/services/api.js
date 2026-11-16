@@ -85,7 +85,7 @@ export const getApiBaseUrl = () => {
     if (userUrl && userUrl.trim()) {
       return userUrl.trim().replace(/\/+$/, '');
     }
-  } catch (e) { }
+  } catch (e) {}
 
   const envUrl = import.meta.env.VITE_API_BASE_URL;
   if (envUrl && envUrl.trim() && !envUrl.includes('YOUR-API')) {
@@ -1007,7 +1007,7 @@ export const api = {
       };
       const exIdx = loans[index].holidays.findIndex(
         (h) => (holidayData.installmentNo && Number(h.installmentNo) === Number(holidayData.installmentNo)) ||
-          (h.date && h.date.split('T')[0] === item.date)
+               (h.date && h.date.split('T')[0] === item.date)
       );
       if (exIdx >= 0) loans[index].holidays[exIdx] = item;
       else loans[index].holidays.push(item);
@@ -1031,7 +1031,7 @@ export const api = {
     if (index !== -1 && Array.isArray(loans[index].holidays)) {
       loans[index].holidays = loans[index].holidays.filter(
         (h) => !(holidayData.installmentNo && Number(h.installmentNo) === Number(holidayData.installmentNo)) &&
-          !(holidayData.date && h.date && h.date.split('T')[0] === holidayData.date.split('T')[0])
+               !(holidayData.date && h.date && h.date.split('T')[0] === holidayData.date.split('T')[0])
       );
       setStored(STORAGE_KEYS.LOANS, loans);
       return { success: true, loan: loans[index] };
@@ -1741,20 +1741,20 @@ export const api = {
       try {
         const names = await caches.keys();
         await Promise.all(names.map((n) => caches.delete(n)));
-      } catch (e) { }
+      } catch (e) {}
     }
     try {
       await safeFetchJson('/api/settings/clear-all-data', {
         method: 'POST',
         headers: getHeaders(),
       });
-    } catch (e) { }
+    } catch (e) {}
     return { success: true };
   },
 
   getSyncStatus,
   flushOfflineQueue: () => flushOfflineQueue(safeFetchJson, getHeaders),
-  cleanseDumpData: () => { },
+  cleanseDumpData: () => {},
   getLocalCounts,
   getApiBaseUrl,
   setApiBaseUrl,
