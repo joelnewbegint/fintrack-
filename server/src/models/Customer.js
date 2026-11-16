@@ -57,7 +57,15 @@ const customerSchema = new mongoose.Schema(
     },
     idProofType: {
       type: String,
-      enum: ['Aadhaar', 'Voter ID', 'Driving License', 'Ration Card', 'Other'],
+      set: function (v) {
+        if (!v) return 'Aadhaar';
+        const lower = String(v).toLowerCase();
+        if (lower.includes('aadhaar')) return 'Aadhaar';
+        if (lower.includes('voter')) return 'Voter ID';
+        if (lower.includes('license') || lower.includes('driving')) return 'Driving License';
+        if (lower.includes('ration')) return 'Ration Card';
+        return v;
+      },
       default: 'Aadhaar',
     },
     idProofNumber: {
