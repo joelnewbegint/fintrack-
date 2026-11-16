@@ -117,10 +117,19 @@ export const LoanDetail = ({ loanId, onBack }) => {
               onClick={() =>
                 setPayModalItem({
                   loanId: loan._id,
+                  _id: loan._id,
                   loanNo: loan.loanNo,
                   customerName: customer.name,
+                  customerPhone: customer.phone,
+                  customerArea: customer.area,
+                  principal: loan.principal,
+                  totalPayable: loan.totalPayable,
+                  totalCollected: loan.totalCollected || 0,
+                  remainingBalance: loan.remainingBalance,
                   installmentAmount: loan.installmentAmount,
                   dueAmount: loan.installmentAmount,
+                  financeType: loan.financeType,
+                  duration: loan.duration,
                 })
               }
               className="btn-sky-primary flex items-center space-x-1.5 h-11 px-4 rounded-xl text-xs font-black shadow-lg shadow-sky-500/25 active:scale-95 transition"
@@ -373,10 +382,19 @@ export const LoanDetail = ({ loanId, onBack }) => {
                           onClick={() =>
                             setPayModalItem({
                               loanId: loan._id,
+                              _id: loan._id,
                               loanNo: loan.loanNo,
                               customerName: customer.name,
+                              customerPhone: customer.phone,
+                              customerArea: customer.area,
+                              principal: loan.principal,
+                              totalPayable: loan.totalPayable,
+                              totalCollected: loan.totalCollected || 0,
+                              remainingBalance: loan.remainingBalance,
                               installmentAmount: inst.amount,
                               dueAmount: inst.amount - (inst.paidAmount || 0),
+                              financeType: loan.financeType,
+                              duration: loan.duration,
                             })
                           }
                           className="btn-sky-primary min-h-[44px] px-4 py-2 text-xs font-black shadow-sm flex items-center space-x-1"
@@ -440,10 +458,19 @@ export const LoanDetail = ({ loanId, onBack }) => {
                             onClick={() =>
                               setPayModalItem({
                                 loanId: loan._id,
+                                _id: loan._id,
                                 loanNo: loan.loanNo,
                                 customerName: customer.name,
+                                customerPhone: customer.phone,
+                                customerArea: customer.area,
+                                principal: loan.principal,
+                                totalPayable: loan.totalPayable,
+                                totalCollected: loan.totalCollected || 0,
+                                remainingBalance: loan.remainingBalance,
                                 installmentAmount: inst.amount,
                                 dueAmount: inst.amount - (inst.paidAmount || 0),
+                                financeType: loan.financeType,
+                                duration: loan.duration,
                               })
                             }
                             className="btn-sky-primary px-2.5 py-1 text-[10px] font-black active:scale-95 transition"

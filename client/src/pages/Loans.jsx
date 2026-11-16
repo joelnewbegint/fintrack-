@@ -318,10 +318,19 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                           onClick={() =>
                             setPayLoanItem({
                               loanId: loan._id,
+                              _id: loan._id,
                               loanNo: loan.loanNo,
                               customerName: cust.name,
+                              customerPhone: cust.phone,
+                              customerArea: cust.area,
+                              principal: loan.principal,
+                              totalPayable: loan.totalPayable,
+                              totalCollected: loan.totalCollected || 0,
+                              remainingBalance: loan.remainingBalance,
                               installmentAmount: loan.installmentAmount,
                               dueAmount: loan.installmentAmount,
+                              financeType: loan.financeType,
+                              duration: loan.duration,
                             })
                           }
                           className="btn-sky-primary min-h-[40px] py-1.5 px-3 text-xs font-black shadow-md shadow-sky-500/20 flex items-center justify-center space-x-1.5 active:scale-95 transition"
@@ -534,10 +543,19 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                                 onClick={() =>
                                   setPayLoanItem({
                                     loanId: loan._id,
+                                    _id: loan._id,
                                     loanNo: loan.loanNo,
                                     customerName: cust.name,
+                                    customerPhone: cust.phone,
+                                    customerArea: cust.area,
+                                    principal: loan.principal,
+                                    totalPayable: loan.totalPayable,
+                                    totalCollected: loan.totalCollected || 0,
+                                    remainingBalance: loan.remainingBalance,
                                     installmentAmount: loan.installmentAmount,
                                     dueAmount: loan.installmentAmount,
+                                    financeType: loan.financeType,
+                                    duration: loan.duration,
                                   })
                                 }
                                 className="btn-sky-primary py-1.5 px-3 text-xs font-bold shadow-sm"
