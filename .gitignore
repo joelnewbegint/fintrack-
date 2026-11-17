@@ -34,3 +34,5 @@ Thumbs.db
 .idea/
 .agents/
 skills-lock.json
+backups/
+*.xlsx

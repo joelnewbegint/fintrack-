@@ -379,9 +379,9 @@ export const buildWorkbook = async () => {
  * Builds the workbook buffer and emails it via Gmail to BACKUP_TO
  */
 export const emailBackup = async () => {
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD;
-  const backupTo = process.env.BACKUP_TO || gmailUser;
+  const gmailUser = (process.env.GMAIL_USER || '').trim();
+  const gmailPass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '').trim();
+  const backupTo = (process.env.BACKUP_TO || gmailUser).trim();
 
   if (!gmailUser || !gmailPass) {
     throw new Error(
