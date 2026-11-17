@@ -18,7 +18,6 @@ export const FloatingPaymentButton = ({
   onAddLoan,
   onAddCustomer,
   onAddInvestment,
-  onOpenQuickEntry,
 }) => {
   const { isMobile } = useDeviceMode();
   const { isOwner } = useAuth();
@@ -77,30 +76,6 @@ export const FloatingPaymentButton = ({
             </div>
 
             <div className="grid grid-cols-1 gap-2 pt-1">
-              {/* Option 0: One-Click Master Entry */}
-              <button
-                onClick={() => {
-                  setShowSheet(false);
-                  if (onOpenQuickEntry) onOpenQuickEntry();
-                }}
-                className="w-full min-h-[52px] p-3.5 rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 text-white flex items-center justify-between shadow-md shadow-sky-500/25 active:scale-98 transition text-left"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
-                    <Zap className="w-5 h-5 fill-current" />
-                  </div>
-                  <div>
-                    <p className="font-black text-xs">
-                      {lang === 'ta' ? '⚡ ஒட்டுமொத்த விரைவு உள்ளீடு' : '⚡ One-Click Overall Entry'}
-                    </p>
-                    <p className="text-[10px] text-sky-100 font-medium">
-                      {lang === 'ta' ? 'அனைத்து பதிவுகளையும் ஒரே கிளிக்கில் துவங்க' : 'Launch any payment, loan, investment, or expense'}
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-sky-100 shrink-0" />
-              </button>
-
               {/* Option 1: Record Payment */}
               <button
                 onClick={() => {

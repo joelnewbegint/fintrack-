@@ -7,6 +7,7 @@ import { useDeviceMode } from '../../context/DeviceModeContext';
 import { openWhatsApp, generateReceiptMessage } from '../../utils/whatsapp';
 import SmartNameInput from './SmartNameInput';
 import { saveRecentName } from '../../utils/nameCorrection';
+import { saveRecentNumber } from '../../utils/numberCorrection';
 import {
   X,
   Check,
@@ -109,6 +110,12 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
     const cust = loan.customerId || {};
     if (cust.name) {
       saveRecentName(cust.name);
+    }
+    if (cust.phone) {
+      saveRecentNumber(cust.phone, cust.name, 'phone');
+    }
+    if (loan.loanNo) {
+      saveRecentNumber(loan.loanNo, cust.name || '', 'loan');
     }
     const formatted = {
       loanId: loan._id,

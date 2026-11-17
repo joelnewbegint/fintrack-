@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import api from '../../services/api';
 import { formatCurrency, formatDateForInput } from '../../utils/currency';
 import { X, Check, Landmark, DollarSign, ArrowDownLeft, ShieldCheck, Edit3 } from 'lucide-react';
+import SmartNameInput from './SmartNameInput';
+import SmartNumberInput from './SmartNumberInput';
+import { saveRecentName } from '../../utils/nameCorrection';
+import { saveRecentNumber } from '../../utils/numberCorrection';
 
 export const InvestmentModal = ({ onClose, onSuccess, initialReturnItem = null, initialEditItem = null }) => {
   const isReturnMode = Boolean(initialReturnItem);
@@ -50,6 +54,8 @@ export const InvestmentModal = ({ onClose, onSuccess, initialReturnItem = null, 
 
     try {
       setSubmitting(true);
+      if (investorName) saveRecentName(investorName);
+      if (phone) saveRecentNumber(phone, investorName, 'phone');
       if (isEditMode) {
         await api.updateInvestment(initialEditItem._id, {
           investorName,
@@ -167,13 +173,12 @@ export const InvestmentModal = ({ onClose, onSuccess, initialReturnItem = null, 
                 <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">
                   Investor / Source Name (முதலீட்டாளர் பெயர்)
                 </label>
-                <input
-                  type="text"
+                <SmartNameInput
+                  value={investorName}
+                  onChange={setInvestorName}
                   required
                   placeholder="e.g. K. Subramanian (Self) or Partner Name"
-                  value={investorName}
-                  onChange={(e) => setInvestorName(e.target.value)}
-                  className="w-full px-3.5 h-12 rounded-2xl glass border border-sky-200/80 dark:border-sky-800/60 text-xs font-medium outline-none focus:ring-2 focus:ring-sky-400"
+                  inputClassName="w-full px-3.5 h-12 rounded-2xl glass border border-sky-200/80 dark:border-sky-800/60 text-xs font-medium outline-none focus:ring-2 focus:ring-sky-400"
                 />
               </div>
 
@@ -183,12 +188,12 @@ export const InvestmentModal = ({ onClose, onSuccess, initialReturnItem = null, 
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Phone (Optional)
                   </label>
-                  <input
-                    type="tel"
-                    placeholder="9842100000"
+                  <SmartNumberInput
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-3.5 h-11 rounded-xl glass border border-sky-200/80 dark:border-sky-800/60 text-xs font-mono outline-none focus:ring-2 focus:ring-sky-400"
+                    onChange={setPhone}
+                    placeholder="9842100000"
+                    numberType="phone"
+                    inputClassName="w-full px-3.5 h-11 rounded-xl glass border border-sky-200/80 dark:border-sky-800/60 text-xs font-mono outline-none focus:ring-2 focus:ring-sky-400"
                   />
                 </div>
 

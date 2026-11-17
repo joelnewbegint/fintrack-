@@ -33,7 +33,6 @@ export const Navbar = ({
   onToggleMobileMenu,
   onOpenSearch,
   onAddPayment,
-  onOpenQuickEntry,
   onOpenMoreSheet,
   onOpenNotifications,
   onOpenLoanForm,
@@ -98,16 +97,6 @@ export const Navbar = ({
 
           {/* Right: Install (if applicable) + Bell + Avatar Button */}
           <div className="flex items-center space-x-1.5 shrink-0">
-            {/* Mobile ⚡ Quick Entry Button */}
-            <button
-              onClick={onOpenQuickEntry}
-              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white shadow-md active:scale-95"
-              title={lang === 'ta' ? 'ஒட்டுமொத்த விரைவு உள்ளீடு' : 'One-Click Quick Entry'}
-              aria-label="Quick Entry"
-            >
-              <Zap className="w-4 h-4 fill-current text-amber-300" />
-            </button>
-
             {/* Mobile Cloud Sync Indicator */}
             <button
               onClick={handleSyncClick}
@@ -269,18 +258,6 @@ export const Navbar = ({
 
         {/* Action Controls & Device Switcher */}
         <div className="flex items-center space-x-1.5 sm:space-x-2.5">
-          {/* ⚡ One-Click Quick Entry Master Button */}
-          <button
-            onClick={onOpenQuickEntry}
-            className="flex items-center space-x-1.5 px-3 py-1.5 min-h-[40px] rounded-xl bg-gradient-to-r from-sky-500 via-sky-600 to-indigo-600 text-white text-xs font-black shadow-md shadow-sky-500/25 hover:shadow-lg hover:scale-[1.02] transition active:scale-95"
-            title={lang === 'ta' ? 'ஒட்டுமொத்த விரைவு உள்ளீடு (One-Click Entry)' : 'One-Click Overall Quick Entry'}
-          >
-            <Zap className="w-3.5 h-3.5 fill-current text-amber-300 shrink-0" />
-            <span className="hidden sm:inline">
-              {lang === 'ta' ? '⚡ விரைவு பதிவு' : '⚡ Quick Enter'}
-            </span>
-          </button>
-
           {/* Cloud Sync Status Pill */}
           <button
             onClick={handleSyncClick}

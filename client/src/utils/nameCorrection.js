@@ -260,6 +260,81 @@ export const getSpellingSuggestion = (typedName, existingCustomerNames = []) => 
 };
 
 /**
+ * Fully auto-corrects both name capitalization grammar AND spelling of typos.
+ * Example:
+ * - "Murugn" -> "Murugan"
+ * - "k.murugn" -> "K. Murugan"
+ * - "karthk r" -> "Karthik R."
+ * - "thilagvathi" -> "Thilagavathi"
+ * - "m.magmaidoss" -> "M. Magimaidoss"
+ * - "subramanien" -> "Subramanian"
+ * - "joel new begin .t" -> "Joel New Begin T."
+ */
+export const autoCorrectNameAndSpelling = (rawName, existingCustomerNames = []) => {
+  if (!rawName || typeof rawName !== 'string') return '';
+  let formatted = autoCorrectNameCasing(rawName);
+  if (!formatted) return '';
+
+  // Preserve parentheses content if bilingual e.g. "K. Murugan (முருகன்)"
+  const parenMatch = formatted.match(/^(.*?)\s*(\(.*?\)|\[.*?\])$/);
+  let mainPart = parenMatch ? parenMatch[1].trim() : formatted;
+  const suffixPart = parenMatch ? ` ${parenMatch[2].trim()}` : '';
+
+  const words = mainPart.split(/\s+/);
+  const candidatePool = new Set([
+    ...COMMON_NAMES,
+    ...existingCustomerNames
+      .map((n) =>
+        (n || '')
+          .replace(/[\(\)\[\]\.]/g, ' ')
+          .split(/\s+/)
+          .filter((w) => w.length > 2)
+      )
+      .flat(),
+  ]);
+
+  const correctedWords = words.map((w) => {
+    // If it's an initial like "K." or "A.R." or short word, keep as is
+    if (
+      /^[a-zA-Z]\.$/.test(w) ||
+      /^[a-zA-Z]\.[a-zA-Z]\.?$/i.test(w) ||
+      w.length < 3
+    ) {
+      return w;
+    }
+
+    const lowerW = w.toLowerCase();
+    // If exact match already in dictionary
+    for (const c of candidatePool) {
+      if (c.toLowerCase() === lowerW) {
+        return c;
+      }
+    }
+
+    // Fuzzy typo match
+    let best = null;
+    let minDist = Infinity;
+    for (const c of candidatePool) {
+      const lowerC = c.toLowerCase();
+      const dist = getLevenshteinDistance(lowerW, lowerC);
+      const maxAllowed = lowerC.length > 5 ? 2 : 1;
+      if (dist <= maxAllowed && dist < minDist) {
+        minDist = dist;
+        best = c;
+      }
+    }
+
+    if (best && minDist <= (best.length > 5 ? 2 : 1)) {
+      return best;
+    }
+
+    return w;
+  });
+
+  return autoCorrectNameCasing(correctedWords.join(' ')) + suffixPart;
+};
+
+/**
  * Retrieves list of previously entered / searched names from localStorage
  */
 export const getRecentNames = () => {

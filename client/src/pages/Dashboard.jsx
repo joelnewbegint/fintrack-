@@ -67,7 +67,6 @@ export const Dashboard = ({
   onOpenInvestment,
   onOpenExpenses,
   onOpenNewCustomer,
-  onOpenQuickEntry,
 }) => {
   const { t, lang } = useLanguage();
   const { user, isOwner, isClient } = useAuth();
@@ -857,14 +856,6 @@ export const Dashboard = ({
                   </p>
                 </div>
                 <div className="flex items-center space-x-1.5 shrink-0">
-                  <button
-                    onClick={onOpenQuickEntry}
-                    className="flex items-center space-x-1 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-sky-500 via-sky-600 to-indigo-600 text-white font-black text-xs shadow-md shadow-sky-500/25 active:scale-95 transition"
-                    title={lang === 'ta' ? 'ஒட்டுமொத்த விரைவு உள்ளீடு' : 'One-Click Quick Entry'}
-                  >
-                    <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
-                    <span>{lang === 'ta' ? 'விரைவு பதிவு' : 'Quick Enter'}</span>
-                  </button>
                   <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
                     {user?.role === 'owner' ? 'Owner' : user?.role === 'client' ? 'Client' : 'Agent'}
                   </span>
@@ -1474,41 +1465,6 @@ export const Dashboard = ({
                DESKTOP & TABLET DASHBOARD (Rich Multi-pane Layout)
             ======================================================== */
             <div className="space-y-6">
-              {/* Master One-Click Overall Quick Entry Card */}
-              <div
-                onClick={onOpenQuickEntry}
-                className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-sky-500 via-indigo-600 to-purple-600 text-white cursor-pointer shadow-xl shadow-indigo-500/25 hover:shadow-2xl hover:scale-[1.008] active:scale-[0.99] transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-white/20 relative overflow-hidden"
-              >
-                <div className="flex items-center space-x-3.5 relative z-10">
-                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 shadow-inner">
-                    <Zap className="w-6 h-6 text-amber-300 fill-amber-300" />
-                  </div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-black text-base sm:text-lg tracking-tight">
-                        {lang === 'ta' ? '⚡ ஒட்டுமொத்த விரைவு உள்ளீடு (One-Click Quick Entry)' : '⚡ One-Click Overall Quick Entry'}
-                      </h3>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-900 shadow-xs">
-                        Instant
-                      </span>
-                    </div>
-                    <p className="text-xs text-sky-100 font-medium mt-0.5">
-                      {lang === 'ta'
-                        ? 'ஒரே கிளிக்கில் வசூல், புதிய கடன், வாடிக்கையாளர், மூலதன முதலீடு மற்றும் அலுவலக செலவு பதிவுகளைத் துவங்கவும்'
-                        : 'Launch payments, issue loans, add customers, record capital investments, or log expenses in 1 click'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto relative z-10">
-                  <span className="px-4 py-2 rounded-xl bg-white text-indigo-700 font-black text-xs shadow-md hover:bg-sky-50 transition">
-                    {lang === 'ta' ? 'உள்ளீடு செய்க' : 'Open Quick Entry'}
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                    <ChevronRight className="w-4 h-4 text-white" />
-                  </div>
-                </div>
-              </div>
-
               {/* Quick Action Bar (Add Payment for Admin & Agent, New Loan & Investment for Owner) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div

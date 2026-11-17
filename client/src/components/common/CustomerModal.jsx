@@ -4,7 +4,9 @@ import { formatCurrency, formatDateForInput } from '../../utils/currency';
 import { useDeviceMode } from '../../context/DeviceModeContext';
 import { buildLoanAgreementPDF, downloadRepaymentSchedulePDF } from '../../utils/loanAgreementPdf';
 import SmartNameInput from './SmartNameInput';
-import { saveRecentName } from '../../utils/nameCorrection';
+import SmartNumberInput from './SmartNumberInput';
+import { saveRecentName, autoCorrectNameAndSpelling } from '../../utils/nameCorrection';
+import { saveRecentNumber } from '../../utils/numberCorrection';
 import {
   X,
   UserPlus,
@@ -484,8 +486,12 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
       }
     }
 
+    const existingNames = existingCustomers.map((c) => c.name).filter(Boolean);
+    const cleanName = autoCorrectNameAndSpelling(name, existingNames);
+    const cleanGuarantor = guarantorName ? autoCorrectNameAndSpelling(guarantorName, existingNames) : '';
+
     const custPayload = {
-      name: name.trim(),
+      name: cleanName || name.trim(),
       phone: phone.trim(),
       area: area.trim() || 'Town Circle',
       address: address.trim() || 'Tamil Nadu',
@@ -494,7 +500,7 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
       photoUrl: borrowerPhoto || '',
       photo: borrowerPhoto || '',
       guarantor: {
-        name: guarantorName.trim(),
+        name: cleanGuarantor || guarantorName.trim(),
         phone: guarantorPhone.trim(),
         address: guarantorAddress.trim(),
         relationship: guarantorRelationship.trim(),
@@ -517,6 +523,8 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
       // Persist customer name and guarantor name to recent search/entry history
       if (name) saveRecentName(name);
       if (guarantorName) saveRecentName(guarantorName);
+      if (phone) saveRecentNumber(phone, name, 'phone');
+      if (guarantorPhone) saveRecentNumber(guarantorPhone, guarantorName, 'phone');
 
       setCreatedCustomer(savedCust);
 
@@ -995,14 +1003,20 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Phone / அலைபேசி *
                     </label>
-                    <input
-                      type="tel"
-                      inputMode="tel"
+                    <SmartNumberInput
+                      value={phone}
+                      onChange={setPhone}
                       required
                       placeholder="9842100000"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full min-h-[46px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-base sm:text-xs outline-none focus:ring-2 focus:ring-sky-400"
+                      numberType="phone"
+                      existingRecords={existingCustomers}
+                      onSelectRecord={(rec) => {
+                        if (rec.name && !name) setName(rec.name);
+                        if (rec.area && !area) setArea(rec.area);
+                        if (rec.address && !address) setAddress(rec.address);
+                        if (rec.idNumber && !idNumber) setIdNumber(rec.idNumber);
+                      }}
+                      inputClassName="w-full min-h-[46px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-base sm:text-xs outline-none focus:ring-2 focus:ring-sky-400"
                     />
                   </div>
                 </div>
@@ -1136,13 +1150,13 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
                       existingCustomers={existingCustomers}
                       inputClassName="w-full min-h-[44px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-base sm:text-xs outline-none"
                     />
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      placeholder="Guarantor Phone / எண்"
+                    <SmartNumberInput
                       value={guarantorPhone}
-                      onChange={(e) => setGuarantorPhone(e.target.value)}
-                      className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-base sm:text-xs outline-none"
+                      onChange={setGuarantorPhone}
+                      placeholder="Guarantor Phone / எண்"
+                      numberType="phone"
+                      existingRecords={existingCustomers}
+                      inputClassName="w-full min-h-[44px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-base sm:text-xs outline-none"
                     />
                     <input
                       type="text"

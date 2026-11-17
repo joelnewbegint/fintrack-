@@ -681,3 +681,4 @@ export const downloadFullDatabasePDF = (dataset = {}) => {
   doc.save(filename);
   return filename;
 };
+

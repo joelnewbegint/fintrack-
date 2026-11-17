@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import {
   autoCorrectNameCasing,
+  autoCorrectNameAndSpelling,
   getSpellingSuggestion,
   getRecentNames,
   saveRecentName,
@@ -109,17 +110,18 @@ export default function SmartNameInput({
     setHighlightedIndex(-1);
   };
 
-  // Smart casing on blur
+  // Smart auto-correction for spelling and casing on blur
   const handleBlur = () => {
     if (value && typeof value === 'string' && value.trim()) {
-      const formatted = autoCorrectNameCasing(value);
-      if (formatted !== value) {
-        onChange(formatted);
+      const corrected = autoCorrectNameAndSpelling(value, existingNamesPool);
+      if (corrected && corrected !== value) {
+        onChange(corrected);
+        saveRecentName(corrected);
       }
     }
   };
 
-  // Handle typing space: auto-capitalize the preceding completed word/initial
+  // Handle typing space: auto-correct spelling and capitalization of preceding word
   const handleKeyDownInternal = (e) => {
     if (onKeyDown) onKeyDown(e);
 
@@ -154,22 +156,22 @@ export default function SmartNameInput({
       return;
     }
 
-    // Auto-casing on Space key
+    // Auto-casing & spell auto-correction on Space key
     if (e.key === ' ') {
       const cursorPos = e.target.selectionStart;
       const textBefore = value.slice(0, cursorPos);
       const textAfter = value.slice(cursorPos);
 
-      // Auto-format the text before space
-      const formattedBefore = autoCorrectNameCasing(textBefore);
-      if (formattedBefore !== textBefore) {
+      // Auto-correct spelling and grammar before space
+      const correctedBefore = autoCorrectNameAndSpelling(textBefore, existingNamesPool);
+      if (correctedBefore && correctedBefore !== textBefore) {
         e.preventDefault();
-        const updated = formattedBefore + ' ' + textAfter;
+        const updated = correctedBefore + ' ' + textAfter;
         onChange(updated);
         // Defer cursor placement after state update
         setTimeout(() => {
           if (inputRef.current) {
-            const newPos = formattedBefore.length + 1;
+            const newPos = correctedBefore.length + 1;
             inputRef.current.setSelectionRange(newPos, newPos);
           }
         }, 0);
@@ -416,3 +418,4 @@ export default function SmartNameInput({
     </div>
   );
 }
+

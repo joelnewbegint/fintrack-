@@ -7,6 +7,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { buildLoanAgreementPDF, downloadRepaymentSchedulePDF } from '../../utils/loanAgreementPdf';
 import SmartNameInput from './SmartNameInput';
 import { saveRecentName } from '../../utils/nameCorrection';
+import { saveRecentNumber } from '../../utils/numberCorrection';
 import {
   X,
   PlusCircle,
@@ -675,6 +676,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                               onClick={() => {
                                 setCustomerId(c._id);
                                 saveRecentName(c.name);
+                                if (c.phone) saveRecentNumber(c.phone, c.name, 'phone');
                                 if (custPhoto) setBorrowerPhoto(custPhoto);
                               }}
                               className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
