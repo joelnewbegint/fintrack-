@@ -467,3 +467,37 @@ export const emailBackup = async () => {
   console.log(`[BackupService] Email successfully delivered to ${backupTo}. MessageId: ${info.messageId}`);
   return { ok: true, messageId: info.messageId, filename, date: istDate };
 };
+
+/**
+ * Returns complete database collections as structured JSON for the formal Master PDF report
+ */
+export const getFullBackupData = async () => {
+  const [
+    customers,
+    loans,
+    payments,
+    dailyClosings,
+    expenses,
+    investments,
+    auditLogs,
+  ] = await Promise.all([
+    Customer.find().lean(),
+    Loan.find().populate('customerId', 'name phone area idNumber').lean(),
+    Payment.find().populate('customerId', 'name phone area').populate('loanId', 'loanNo financeType').lean(),
+    DailyClosing.find().lean(),
+    Expense.find().lean(),
+    Investment.find().lean(),
+    AuditLog.find().sort({ createdAt: -1 }).limit(100).lean(),
+  ]);
+
+  return {
+    customers: customers || [],
+    loans: loans || [],
+    payments: payments || [],
+    dailyClosings: dailyClosings || [],
+    expenses: expenses || [],
+    investments: investments || [],
+    auditLogs: auditLogs || [],
+    exportedAt: new Date().toISOString(),
+  };
+};

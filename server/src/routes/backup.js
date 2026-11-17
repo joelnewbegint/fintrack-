@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect, restrictTo } from '../middleware/auth.js';
-import { buildWorkbook, emailBackup, getISTDateString } from '../services/backupService.js';
+import { buildWorkbook, emailBackup, getISTDateString, getFullBackupData } from '../services/backupService.js';
 
 const router = express.Router();
 
@@ -35,6 +35,22 @@ router.get('/excel', protect, restrictTo('owner'), async (req, res) => {
         error: err.message,
       });
     }
+  }
+});
+
+/**
+ * GET /api/backup/data
+ * Returns complete database collections as structured JSON for the formal Master PDF report.
+ * Protected: JWT auth required, role must be 'owner'.
+ */
+router.get('/data', protect, restrictTo('owner'), async (req, res) => {
+  try {
+    console.log(`[BackupRoute] Owner (${req.user?.name || req.user?._id}) requested full backup data extract...`);
+    const data = await getFullBackupData();
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('❌ [BackupRoute] Error extracting full backup data:', err);
+    res.status(500).json({ success: false, message: 'Failed to extract backup data', error: err.message });
   }
 });
 

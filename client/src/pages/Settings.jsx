@@ -8,6 +8,7 @@ import WhatsAppConnect from '../components/common/WhatsAppConnect';
 import ComfortSettings from '../components/common/ComfortSettings';
 import CloudSyncSection from '../components/common/CloudSyncSection';
 import { usePWA } from '../context/PWAContext';
+import { downloadFullDatabasePDF } from '../utils/fullDatabasePdf';
 import {
   Settings as SettingsIcon,
   Shield,
@@ -62,6 +63,7 @@ export const Settings = () => {
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileError, setProfileError] = useState('');
   const [downloadingExcel, setDownloadingExcel] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [backupError, setBackupError] = useState('');
 
   useEffect(() => {
@@ -187,6 +189,20 @@ export const Settings = () => {
       alert(msg);
     } finally {
       setDownloadingExcel(false);
+    }
+  };
+
+  const handleDownloadPdfReport = async () => {
+    try {
+      setDownloadingPdf(true);
+      const dataset = await api.getFullBackupData();
+      downloadFullDatabasePDF(dataset);
+    } catch (err) {
+      console.error('Failed to generate full database PDF report:', err);
+      const msg = err.message || (lang === 'ta' ? 'PDF அறிக்கை தயாரிப்பதில் பிழை' : 'Failed to generate PDF report');
+      alert(msg);
+    } finally {
+      setDownloadingPdf(false);
     }
   };
 
@@ -813,31 +829,40 @@ export const Settings = () => {
             </button>
           </div>
 
-          <div className="glass-card rounded-3xl p-5 border border-red-200 dark:border-red-900/60 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          {/* Full Database Formal Audit Report (PDF) */}
+          <div className="glass-card rounded-3xl p-5 border border-sky-200/80 dark:border-sky-800/80 bg-sky-50/20 dark:bg-sky-950/10 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h3 className="font-extrabold text-base text-red-600 dark:text-red-400">
-                Reset All Financial Data / முழு தரவையும் அழிக்க
-              </h3>
-              <p className="text-xs text-slate-500">
-                Completely purge all customers, loans, repayments, and expenses to start as a 100% brand new clean site.
+              <div className="flex items-center space-x-2">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">
+                  PDF Audit Report
+                </span>
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                  {lang === 'ta' ? 'முழு வரலாற்று தணிக்கை அறிக்கை (PDF)' : 'Full Data & History Audit Report (PDF)'}
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {lang === 'ta'
+                  ? 'அனைத்து வாடிக்கையாளர்கள், முழு கடன் வரலாறு, வசூல் தவணைகள், மூலதன முதலீடுகள் மற்றும் செலவுகளின் முறையான PDF அறிக்கை.'
+                  : 'Download formally formatted, audit-grade master PDF containing full customer directory, loan portfolio, collection history, capital, and expense ledgers.'}
               </p>
             </div>
             <button
-              onClick={async () => {
-                if (
-                  window.confirm(
-                    'Are you sure you want to permanently erase ALL customers, loans, and payments? This will reset FinTrack to a brand new clean site!'
-                  )
-                ) {
-                  await api.clearAllData();
-                  alert('All data has been cleared! FinTrack is now a brand new clean site.');
-                  window.location.reload();
-                }
-              }}
-              className="flex items-center space-x-2 py-3 px-5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md shadow-red-500/20 active:scale-95 transition shrink-0"
+              type="button"
+              onClick={handleDownloadPdfReport}
+              disabled={downloadingPdf}
+              className="flex items-center space-x-2 py-3 px-5 rounded-2xl bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-sky-500/20 active:scale-95 transition shrink-0"
             >
-              <Trash2 className="w-4 h-4" />
-              <span>Reset & Clear All Data</span>
+              {downloadingPdf ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>{lang === 'ta' ? 'அறிக்கை தயாராகிறது...' : 'Generating PDF...'}</span>
+                </>
+              ) : (
+                <>
+                  <FileText className="w-4 h-4" />
+                  <span>{lang === 'ta' ? 'முழு அறிக்கை (PDF)' : 'Download All Data (PDF)'}</span>
+                </>
+              )}
             </button>
           </div>
 

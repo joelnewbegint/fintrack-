@@ -1815,6 +1815,49 @@ export const api = {
     return await res.blob();
   },
 
+  getFullBackupData: async () => {
+    const baseUrl = getApiBaseUrl();
+    const token = localStorage.getItem('fintrack_token');
+    const headers = {};
+    if (token && token.trim() && token !== 'undefined' && token !== 'null') {
+      headers['Authorization'] = `Bearer ${token.trim()}`;
+    }
+
+    try {
+      const res = await fetch(`${baseUrl}/api/backup/data`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          return json.data;
+        }
+      }
+    } catch (e) {
+      console.warn('Backend /api/backup/data error, using aggregated client collections:', e);
+    }
+
+    // Fallback: compile from existing client API queries / local storage
+    const [customersRes, loansRes, paymentsRes, investmentsRes, expensesRes] = await Promise.all([
+      api.getCustomers().catch(() => ({ customers: [] })),
+      api.getLoans({ limit: 10000 }).catch(() => ({ loans: [] })),
+      api.getPayments({ limit: 20000 }).catch(() => ({ payments: [] })),
+      api.getInvestments().catch(() => ({ investments: [] })),
+      api.getExpenses().catch(() => ({ expenses: [] })),
+    ]);
+
+    return {
+      customers: customersRes?.customers || getStored(STORAGE_KEYS.CUSTOMERS, []),
+      loans: loansRes?.loans || getStored(STORAGE_KEYS.LOANS, []),
+      payments: paymentsRes?.payments || getStored(STORAGE_KEYS.PAYMENTS, []),
+      investments: investmentsRes?.investments || getStored(STORAGE_KEYS.INVESTMENTS, []),
+      expenses: expensesRes?.expenses || getStored(STORAGE_KEYS.EXPENSES, []),
+      exportedAt: new Date().toISOString(),
+    };
+  },
+
   restoreBackup: async (jsonOrObject) => {
     let data = jsonOrObject;
     if (typeof data === 'string') {
