@@ -53,19 +53,27 @@ export const OverviewDashboard = ({
   }, []);
 
   // Aggregated Totals
-  const totalLentLoans = loanStats?.totalLent || 0;
+  const totalLentLoans = loanStats?.cards?.totalLent || loanStats?.totalLent || 0;
   const totalLentEMI = emiStats?.totalPrincipalLent || 0;
   const combinedTotalLent = totalLentLoans + totalLentEMI;
 
-  const collectedTodayLoans = loanStats?.collectedToday || 0;
+  const collectedTodayLoans =
+    loanStats?.cards?.collectedToday ||
+    loanStats?.cards?.netCollectionInHand ||
+    loanStats?.cards?.totalCollected ||
+    loanStats?.collectedToday ||
+    0;
   const collectedTodayEMI = emiStats?.collectedToday || 0;
   const combinedCollectedToday = collectedTodayLoans + collectedTodayEMI;
 
-  const outstandingLoans = loanStats?.totalOutstanding || 0;
+  const outstandingLoans = loanStats?.cards?.totalOutstanding || loanStats?.totalOutstanding || 0;
   const outstandingEMI = emiStats?.pendingBalance || 0;
   const combinedOutstanding = outstandingLoans + outstandingEMI;
 
-  const activeBorrowersLoans = (loanStats?.loans || []).filter(l => l.status === 'active').length;
+  const activeBorrowersLoans =
+    loanStats?.cards?.activeLoans ||
+    (loanStats?.loans || []).filter((l) => l.status === 'active').length ||
+    0;
   const activeBorrowersEMI = emiStats?.activeLoansCount || 0;
   const combinedBorrowers = activeBorrowersLoans + activeBorrowersEMI;
 

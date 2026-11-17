@@ -36,3 +36,5 @@ Thumbs.db
 skills-lock.json
 backups/
 *.xlsx
+*.csv
+original_backup_data.csv
