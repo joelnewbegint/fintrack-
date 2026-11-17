@@ -11,6 +11,7 @@ import { protect, restrictTo } from '../middleware/auth.js';
 const router = express.Router();
 
 router.use(protect);
+router.use(restrictTo('owner', 'loan_agent'));
 
 router.get('/', getDailyClosings);
 router.get('/:id', getDailyClosingById);

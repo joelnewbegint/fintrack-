@@ -431,7 +431,7 @@ export const Navbar = ({
                   {user?.name || 'Vasantha'}
                 </span>
                 <span className="text-[9.5px] text-emerald-600 dark:text-emerald-400 font-semibold block capitalize">
-                  {user?.role === 'owner' ? 'Owner' : user?.role === 'client' ? 'Client' : 'Agent'}
+                  {user?.role === 'owner' ? 'Owner' : user?.role === 'emi_agent' ? 'EMI Agent' : user?.role === 'loan_agent' || user?.role === 'agent' ? 'Loan Agent' : user?.role === 'client' ? 'Client' : 'Staff'}
                 </span>
               </div>
             </div>

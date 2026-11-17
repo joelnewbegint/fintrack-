@@ -1,0 +1,467 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
+import api from '../../services/api';
+import {
+  X,
+  Calculator,
+  Calendar,
+  User,
+  Shield,
+  FileText,
+  DollarSign,
+  ChevronRight,
+  Plus,
+} from 'lucide-react';
+
+export const NewEMILoanModal = ({
+  isOpen,
+  onClose,
+  onSuccess,
+}) => {
+  const { user, isOwner } = useAuth();
+  const { lang } = useLanguage();
+
+  const [customers, setCustomers] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerArea, setCustomerArea] = useState('');
+  const [assignedAgentId, setAssignedAgentId] = useState('');
+
+  // Form Fields
+  const [principal, setPrincipal] = useState(50000);
+  const [interestRate, setInterestRate] = useState(14); // 14% p.a.
+  const [interestType, setInterestType] = useState('reducing'); // 'reducing' | 'flat'
+  const [tenureMonths, setTenureMonths] = useState(12);
+  const [docCharges, setDocCharges] = useState(500);
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [notes, setNotes] = useState('');
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Live Calculated Numbers
+  const [monthlyEMI, setMonthlyEMI] = useState(0);
+  const [totalPayable, setTotalPayable] = useState(0);
+  const [totalInterest, setTotalInterest] = useState(0);
+  const [schedulePreview, setSchedulePreview] = useState([]);
+
+  // Fetch customers and agents
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const loadData = async () => {
+      try {
+        const custRes = await api.getEMICustomers();
+        if (custRes.success) setCustomers(custRes.customers || []);
+
+        if (isOwner) {
+          const agentRes = await api.getAgentsList();
+          if (agentRes.success) {
+            const emiAgents = (agentRes.agents || []).filter(a => a.role === 'emi_agent' || a.role === 'agent');
+            setAgents(emiAgents);
+          }
+        }
+      } catch (e) {}
+    };
+
+    loadData();
+  }, [isOpen, isOwner]);
+
+  // Handle Customer Selection
+  const handleCustomerSelect = (id) => {
+    setSelectedCustomerId(id);
+    const c = customers.find(item => item._id === id);
+    if (c) {
+      setCustomerName(c.name);
+      setCustomerPhone(c.phone);
+      setCustomerArea(c.area);
+    }
+  };
+
+  // Live EMI Calculator
+  useEffect(() => {
+    const p = Number(principal) || 0;
+    const r = (Number(interestRate) || 0) / 100;
+    const n = Number(tenureMonths) || 1;
+
+    if (p <= 0 || n <= 0) return;
+
+    if (interestType === 'flat') {
+      const totInt = Math.round(p * r * (n / 12));
+      const totPay = p + totInt;
+      const emi = Math.round(totPay / n);
+      setMonthlyEMI(emi);
+      setTotalInterest(totInt);
+      setTotalPayable(totPay);
+
+      // Generate preview schedule
+      const sched = [];
+      const start = new Date(startDate);
+      const monthlyInt = Math.round(totInt / n);
+      const monthlyPrin = emi - monthlyInt;
+      for (let i = 1; i <= Math.min(n, 6); i++) {
+        const d = new Date(start);
+        d.setMonth(d.getMonth() + i);
+        sched.push({ installmentNo: i, dueDate: d, amount: emi, principal: monthlyPrin, interest: monthlyInt });
+      }
+      setSchedulePreview(sched);
+    } else {
+      // Reducing Balance EMI: P * r * (1+r)^n / ((1+r)^n - 1)
+      const monthlyR = r / 12;
+      if (monthlyR === 0) {
+        const emi = Math.round(p / n);
+        setMonthlyEMI(emi);
+        setTotalInterest(0);
+        setTotalPayable(p);
+      } else {
+        const emi = Math.round((p * monthlyR * Math.pow(1 + monthlyR, n)) / (Math.pow(1 + monthlyR, n) - 1));
+        const totPay = emi * n;
+        const totInt = totPay - p;
+        setMonthlyEMI(emi);
+        setTotalInterest(totInt);
+        setTotalPayable(totPay);
+
+        const sched = [];
+        const start = new Date(startDate);
+        let currBal = p;
+        for (let i = 1; i <= Math.min(n, 6); i++) {
+          const d = new Date(start);
+          d.setMonth(d.getMonth() + i);
+          const instInt = Math.round(currBal * monthlyR);
+          const instPrin = i === n ? currBal : (emi - instInt);
+          currBal = Math.max(0, currBal - instPrin);
+          sched.push({ installmentNo: i, dueDate: d, amount: emi, principal: instPrin, interest: instInt });
+        }
+        setSchedulePreview(sched);
+      }
+    }
+  }, [principal, interestRate, interestType, tenureMonths, startDate]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!selectedCustomerId && !customerName) {
+      setError('Please select or enter customer name');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await api.createEMILoan({
+        customerId: selectedCustomerId || 'temp_cust',
+        customerName,
+        customerPhone,
+        customerArea,
+        assignedAgentId: assignedAgentId || (isOwner ? undefined : user?._id),
+        principal: Number(principal),
+        interestRatePercent: Number(interestRate),
+        interestCalculationType: interestType,
+        tenureMonths: Number(tenureMonths),
+        documentationCharges: Number(docCharges) || 0,
+        startDate,
+        notes,
+      });
+
+      if (res.success) {
+        if (onSuccess) onSuccess(res.loan);
+        if (onClose) onClose();
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to sanction EMI loan');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto animate-fadeIn">
+      <div
+        className="max-w-2xl w-full my-auto rounded-3xl p-5 sm:p-7 border relative space-y-5"
+        style={{
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(24px)',
+          borderColor: 'rgba(255, 255, 255, 0.95)',
+          boxShadow: '0 25px 50px -12px rgba(249, 115, 22, 0.25)',
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b pb-3.5">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+              <Calculator className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-slate-800">
+                {lang === 'ta' ? 'புதிய மாத தவணை கடன்' : 'Sanction New Monthly EMI Loan'}
+              </h2>
+              <p className="text-xs text-slate-500">Live reducing/flat rate amortization calculator</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Customer Selection */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Select Customer / வாடிக்கையாளர்
+              </label>
+              <select
+                value={selectedCustomerId}
+                onChange={(e) => handleCustomerSelect(e.target.value)}
+                className="w-full h-11 px-3 rounded-xl border border-slate-200 text-xs font-bold bg-white text-slate-800 outline-none focus:border-orange-500"
+              >
+                <option value="">-- Choose Existing Borrower --</option>
+                {customers.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name} ({c.area}) - {c.phone}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Or Borrower Name (Manual)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. S. Ramanathan"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="w-full h-11 px-3 rounded-xl border border-slate-200 text-xs font-medium bg-white text-slate-800 outline-none focus:border-orange-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
+              <input
+                type="text"
+                placeholder="10-digit mobile"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Area / Location</label>
+              <input
+                type="text"
+                placeholder="e.g. Gandhipuram / Ukkadam"
+                value={customerArea}
+                onChange={(e) => setCustomerArea(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs bg-white"
+              />
+            </div>
+          </div>
+
+          {/* Principal & Rate */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-100">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Principal (₹)
+              </label>
+              <input
+                type="number"
+                step="500"
+                min="500"
+                value={principal}
+                onChange={(e) => setPrincipal(e.target.value)}
+                className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm font-black text-slate-900 bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Annual Rate (%)
+              </label>
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                value={interestRate}
+                onChange={(e) => setInterestRate(e.target.value)}
+                className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm font-black text-slate-900 bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Interest Method
+              </label>
+              <select
+                value={interestType}
+                onChange={(e) => setInterestType(e.target.value)}
+                className="w-full h-11 px-2.5 rounded-xl border border-slate-200 text-xs font-bold bg-white text-slate-800"
+              >
+                <option value="reducing">Reducing Balance</option>
+                <option value="flat">Flat Interest</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Tenure (Months)
+              </label>
+              <select
+                value={tenureMonths}
+                onChange={(e) => setTenureMonths(e.target.value)}
+                className="w-full h-11 px-2.5 rounded-xl border border-slate-200 text-xs font-bold bg-white text-slate-800"
+              >
+                <option value="6">6 Months</option>
+                <option value="10">10 Months</option>
+                <option value="12">12 Months (1 Yr)</option>
+                <option value="18">18 Months</option>
+                <option value="24">24 Months (2 Yrs)</option>
+                <option value="36">36 Months</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Doc Charges, Start Date, Assigned Agent */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Documentation Fee (₹)
+              </label>
+              <input
+                type="number"
+                value={docCharges}
+                onChange={(e) => setDocCharges(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs bg-white"
+              />
+            </div>
+
+            {isOwner && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Assign EMI Agent</label>
+                <select
+                  value={assignedAgentId}
+                  onChange={(e) => setAssignedAgentId(e.target.value)}
+                  className="w-full h-10 px-2.5 rounded-xl border border-slate-200 text-xs font-bold bg-white"
+                >
+                  <option value="">Unassigned (Office)</option>
+                  {agents.map((a) => (
+                    <option key={a._id} value={a._id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Live Loan Calculation Summary Banner */}
+          <div className="p-4 rounded-2xl bg-orange-50 border border-orange-200 grid grid-cols-3 gap-2 text-center">
+            <div>
+              <span className="text-[10px] text-orange-700 font-bold uppercase block">Monthly EMI</span>
+              <span className="text-xl font-black text-orange-900">
+                ₹{monthlyEMI.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] text-orange-700 font-bold uppercase block">Total Interest</span>
+              <span className="text-xl font-black text-slate-800">
+                ₹{totalInterest.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] text-orange-700 font-bold uppercase block">Total Payback</span>
+              <span className="text-xl font-black text-slate-900">
+                ₹{totalPayable.toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
+
+          {/* First 6 Months Schedule Preview Table */}
+          {schedulePreview.length > 0 && (
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-slate-500">
+                Schedule Preview (First {schedulePreview.length} Months):
+              </span>
+              <div className="max-h-32 overflow-y-auto rounded-xl border border-slate-200 bg-white">
+                <table className="w-full text-[11px] text-left">
+                  <thead className="bg-slate-50 text-slate-600 font-bold border-b">
+                    <tr>
+                      <th className="py-1 px-2.5">Inst.</th>
+                      <th className="py-1 px-2.5">Due Date</th>
+                      <th className="py-1 px-2.5">EMI (₹)</th>
+                      <th className="py-1 px-2.5">Principal</th>
+                      <th className="py-1 px-2.5">Interest</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {schedulePreview.map((s) => (
+                      <tr key={s.installmentNo} className="border-b last:border-0 hover:bg-slate-50/50">
+                        <td className="py-1 px-2.5 font-bold">#{s.installmentNo}</td>
+                        <td className="py-1 px-2.5">{s.dueDate.toLocaleDateString()}</td>
+                        <td className="py-1 px-2.5 font-bold">₹{s.amount}</td>
+                        <td className="py-1 px-2.5">₹{s.principal}</td>
+                        <td className="py-1 px-2.5 text-slate-500">₹{s.interest}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Submit Buttons */}
+          <div className="flex items-center space-x-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-2 w-full h-11 rounded-xl text-xs font-black text-white shadow-md transition active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+              }}
+            >
+              {loading ? 'Sanctioning EMI...' : 'Confirm & Sanction EMI Loan'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default NewEMILoanModal;
+

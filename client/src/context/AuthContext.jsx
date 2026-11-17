@@ -15,68 +15,42 @@ const safeParseJson = async (res) => {
     }
   }
 
-  // Detected HTML (e.g. <!DOCTYPE html> from static host / Firebase)
   return { __isHtml: true, status: res.status, text };
 };
 
+const getStoredToken = () => {
+  try {
+    const local = localStorage.getItem('fintrack_token');
+    if (local && local !== 'undefined' && local !== 'null') return local;
+    const session = sessionStorage.getItem('fintrack_token');
+    if (session && session !== 'undefined' && session !== 'null') return session;
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const getStoredUser = () => {
+  try {
+    const local = localStorage.getItem('fintrack_user');
+    if (local && local !== 'undefined' && local !== 'null') return JSON.parse(local);
+    const session = sessionStorage.getItem('fintrack_user');
+    if (session && session !== 'undefined' && session !== 'null') return JSON.parse(session);
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => {
-    try {
-      const saved = localStorage.getItem('fintrack_token');
-      if (!saved || saved === 'undefined' || saved === 'null') return null;
-      return saved;
-    } catch {
-      localStorage.removeItem('fintrack_token');
-      return null;
-    }
-  });
-
-  const [user, setUser] = useState(() => {
-    try {
-      const savedTok = localStorage.getItem('fintrack_token');
-      if (!savedTok || savedTok === 'undefined' || savedTok === 'null') {
-        localStorage.removeItem('fintrack_user');
-        return null;
-      }
-      const saved = localStorage.getItem('fintrack_user');
-      if (!saved || saved === 'undefined' || saved === 'null') return null;
-      return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Corrupted fintrack_user in localStorage, clearing:', e);
-      localStorage.removeItem('fintrack_user');
-      return null;
-    }
-  });
-
-  // If token exists in storage but user has not been deserialized yet, verify first
-  const [loading, setLoading] = useState(() => {
-    try {
-      const savedTok = localStorage.getItem('fintrack_token');
-      const savedUser = localStorage.getItem('fintrack_user');
-      if (savedTok && (!savedUser || savedUser === 'undefined' || savedUser === 'null')) {
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
-    }
-  });
+  const [token, setToken] = useState(getStoredToken);
+  const [user, setUser] = useState(getStoredUser);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // If token exists, verify current session with server in background
     const verifyUser = async () => {
       if (token) {
-        const savedUser = localStorage.getItem('fintrack_user');
-        
-        // If this is an authorized offline session, keep it active
-        if (token.startsWith('fintrack_auth_') && savedUser) {
-          try {
-            if (savedUser !== 'undefined' && savedUser !== 'null') {
-              setUser(JSON.parse(savedUser));
-            }
-          } catch {
-            logout();
-          }
+        if (token.startsWith('fintrack_auth_')) {
           setLoading(false);
           return;
         }
@@ -97,31 +71,17 @@ export const AuthProvider = ({ children }) => {
           const data = await safeParseJson(res);
           if (data && !data.__isHtml && data.success && data.user) {
             setUser(data.user);
-            localStorage.setItem('fintrack_user', JSON.stringify(data.user));
-          } else if (data && !data.__isHtml && data.success === false && res.status === 401) {
-            // Explicitly unauthorized / token expired
-            logout();
-          } else if (savedUser) {
-            // Server starting up or temporary degraded state, retain cached user
-            try {
-              if (savedUser !== 'undefined' && savedUser !== 'null') {
-                setUser(JSON.parse(savedUser));
-              }
-            } catch {
-              logout();
+            const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+            if (isRemembered) {
+              localStorage.setItem('fintrack_user', JSON.stringify(data.user));
+            } else {
+              sessionStorage.setItem('fintrack_user', JSON.stringify(data.user));
             }
+          } else if (data && !data.__isHtml && data.success === false && res.status === 401) {
+            logout();
           }
         } catch (err) {
           console.warn('Session background verification note:', err.message);
-          if (savedUser) {
-            try {
-              if (savedUser !== 'undefined' && savedUser !== 'null') {
-                setUser(JSON.parse(savedUser));
-              }
-            } catch {
-              logout();
-            }
-          }
         }
       }
       setLoading(false);
@@ -130,11 +90,10 @@ export const AuthProvider = ({ children }) => {
     verifyUser();
   }, [token]);
 
-  const login = async (email, password) => {
-    const cleanEmail = (email || '').trim().toLowerCase();
+  const login = async (identifier, password, rememberMe = true) => {
+    const cleanId = (identifier || '').trim().toLowerCase();
     const cleanPass = (password || '').trim();
 
-    // 1. Try real server authentication first with 6s timeout
     let apiSuccess = false;
     try {
       const controller = new AbortController();
@@ -146,7 +105,11 @@ export const AuthProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: cleanEmail, password: cleanPass }),
+        body: JSON.stringify({
+          loginId: cleanId,
+          password: cleanPass,
+          rememberMe: !!rememberMe,
+        }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -156,39 +119,56 @@ export const AuthProvider = ({ children }) => {
         if (res.ok && data.success && data.token && data.user) {
           setToken(data.token);
           setUser(data.user);
-          localStorage.setItem('fintrack_token', data.token);
-          localStorage.setItem('fintrack_user', JSON.stringify(data.user));
+
+          if (rememberMe) {
+            localStorage.setItem('fintrack_token', data.token);
+            localStorage.setItem('fintrack_user', JSON.stringify(data.user));
+            localStorage.setItem('fintrack_remember', 'true');
+            sessionStorage.removeItem('fintrack_token');
+            sessionStorage.removeItem('fintrack_user');
+          } else {
+            sessionStorage.setItem('fintrack_token', data.token);
+            sessionStorage.setItem('fintrack_user', JSON.stringify(data.user));
+            localStorage.removeItem('fintrack_token');
+            localStorage.removeItem('fintrack_user');
+            localStorage.removeItem('fintrack_remember');
+          }
+
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('fintrack:auth-success', { detail: data.user }));
           }
           apiSuccess = true;
           return data.user;
-        } else if (res.status === 400 || res.status === 401) {
-          throw new Error(data.message || 'Invalid email or password');
+        } else if (res.status === 400 || res.status === 401 || res.status === 403) {
+          throw new Error(data.message || 'Invalid username/email or password');
         }
       }
-      // If server returned HTML (Firebase Hosting) or error, fallback to authorized check below
     } catch (apiErr) {
-      if (apiErr.message === 'Invalid email or password') {
+      if (apiErr.message.includes('Invalid') || apiErr.message.includes('locked') || apiErr.message.includes('Account')) {
         throw apiErr;
       }
-      console.warn('Server API not directly responding with JSON, falling back to authorized login...', apiErr.message);
+      console.warn('Server API not responding directly, checking offline authorization...', apiErr.message);
     }
 
     if (apiSuccess) return;
 
-    // 2. Failsafe Local Authorized Authentication (Works on Firebase Hosting, offline, or standalone)
+    // Failsafe Local Authorized Authentication (Offline or Standalone Demo)
     const isOwnerMatch =
-      (cleanEmail === 'owner@fintrack.com' || cleanEmail === 'owner@fintrack.tn' || cleanEmail === 'owner') &&
+      (cleanId === 'owner@fintrack.com' || cleanId === 'owner' || cleanId === 'vasantha') &&
       cleanPass === 'admin123';
-    const isAgentMatch =
-      (cleanEmail === 'agent@fintrack.com' || cleanEmail === 'agent@fintrack.tn' || cleanEmail === 'agent') &&
-      cleanPass === 'agent123';
+    const isLoanAgentMatch =
+      (cleanId === 'loanagent@fintrack.com' || cleanId === 'agent@fintrack.com' || cleanId === 'loanagent' || cleanId === 'agent') &&
+      (cleanPass === 'loan123' || cleanPass === 'agent123');
+    const isEmiAgentMatch =
+      (cleanId === 'emiagent@fintrack.com' || cleanId === 'emiagent') &&
+      cleanPass === 'emi123';
 
     if (isOwnerMatch) {
       const ownerUser = {
         id: 'auth_owner_001',
+        _id: 'auth_owner_001',
         name: 'Vasantha Kumar K (Owner)',
+        username: 'owner',
         email: 'owner@fintrack.com',
         phone: '9842112345',
         role: 'owner',
@@ -196,38 +176,66 @@ export const AuthProvider = ({ children }) => {
         isAuthorizedLocal: true,
       };
       const sessionToken = 'fintrack_auth_owner_' + Date.now();
-      setToken(sessionToken);
-      setUser(ownerUser);
-      localStorage.setItem('fintrack_token', sessionToken);
-      localStorage.setItem('fintrack_user', JSON.stringify(ownerUser));
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('fintrack:auth-success', { detail: ownerUser }));
-      }
+      saveSession(sessionToken, ownerUser, rememberMe);
       return ownerUser;
     }
 
-    if (isAgentMatch) {
-      const agentUser = {
-        id: 'auth_agent_001',
-        name: 'Magimaidoss M (Collection Agent)',
-        email: 'agent@fintrack.com',
-        phone: '9789054321',
-        role: 'agent',
+    if (isLoanAgentMatch) {
+      const loanAgentUser = {
+        id: 'auth_loan_agent_001',
+        _id: 'auth_loan_agent_001',
+        name: 'K. Saravanan (Loan Agent)',
+        username: 'loanagent',
+        email: 'loanagent@fintrack.com',
+        phone: '9842199887',
+        role: 'loan_agent',
         assignedAreas: ['Gandhipuram', 'RS Puram', 'Town Hall'],
         isAuthorizedLocal: true,
       };
-      const sessionToken = 'fintrack_auth_agent_' + Date.now();
-      setToken(sessionToken);
-      setUser(agentUser);
-      localStorage.setItem('fintrack_token', sessionToken);
-      localStorage.setItem('fintrack_user', JSON.stringify(agentUser));
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('fintrack:auth-success', { detail: agentUser }));
-      }
-      return agentUser;
+      const sessionToken = 'fintrack_auth_loanagent_' + Date.now();
+      saveSession(sessionToken, loanAgentUser, rememberMe);
+      return loanAgentUser;
     }
 
-    throw new Error('Invalid credentials. Use owner@fintrack.com (admin123) or agent@fintrack.com (agent123).');
+    if (isEmiAgentMatch) {
+      const emiAgentUser = {
+        id: 'auth_emi_agent_001',
+        _id: 'auth_emi_agent_001',
+        name: 'R. Vignesh (EMI Agent)',
+        username: 'emiagent',
+        email: 'emiagent@fintrack.com',
+        phone: '9789123456',
+        role: 'emi_agent',
+        assignedAreas: ['Ukkadam', 'Singanallur', 'Simmakkal'],
+        isAuthorizedLocal: true,
+      };
+      const sessionToken = 'fintrack_auth_emiagent_' + Date.now();
+      saveSession(sessionToken, emiAgentUser, rememberMe);
+      return emiAgentUser;
+    }
+
+    throw new Error('Invalid credentials. Use: owner (admin123), loanagent (loan123), or emiagent (emi123).');
+  };
+
+  const saveSession = (tok, usr, remember) => {
+    setToken(tok);
+    setUser(usr);
+    if (remember) {
+      localStorage.setItem('fintrack_token', tok);
+      localStorage.setItem('fintrack_user', JSON.stringify(usr));
+      localStorage.setItem('fintrack_remember', 'true');
+      sessionStorage.removeItem('fintrack_token');
+      sessionStorage.removeItem('fintrack_user');
+    } else {
+      sessionStorage.setItem('fintrack_token', tok);
+      sessionStorage.setItem('fintrack_user', JSON.stringify(usr));
+      localStorage.removeItem('fintrack_token');
+      localStorage.removeItem('fintrack_user');
+      localStorage.removeItem('fintrack_remember');
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('fintrack:auth-success', { detail: usr }));
+    }
   };
 
   const logout = () => {
@@ -235,6 +243,9 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem('fintrack_token');
     localStorage.removeItem('fintrack_user');
+    localStorage.removeItem('fintrack_remember');
+    sessionStorage.removeItem('fintrack_token');
+    sessionStorage.removeItem('fintrack_user');
   };
 
   const updateProfile = async (profileData) => {
@@ -254,7 +265,12 @@ export const AuthProvider = ({ children }) => {
       const data = await safeParseJson(res);
       if (res.ok && data?.success && data?.user) {
         setUser(data.user);
-        localStorage.setItem('fintrack_user', JSON.stringify(data.user));
+        const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+        if (isRemembered) {
+          localStorage.setItem('fintrack_user', JSON.stringify(data.user));
+        } else {
+          sessionStorage.setItem('fintrack_user', JSON.stringify(data.user));
+        }
         return data.user;
       } else if (data?.message) {
         throw new Error(data.message);
@@ -266,15 +282,21 @@ export const AuthProvider = ({ children }) => {
       console.warn('Network update failed, updating local profile cache...', err);
     }
 
-    // Local update fallback if offline / standalone
     const updated = { ...user, ...profileData };
     setUser(updated);
-    localStorage.setItem('fintrack_user', JSON.stringify(updated));
+    const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+    if (isRemembered) {
+      localStorage.setItem('fintrack_user', JSON.stringify(updated));
+    } else {
+      sessionStorage.setItem('fintrack_user', JSON.stringify(updated));
+    }
     return updated;
   };
 
-  const isOwner = user?.role === 'owner';
-  const isAgent = user?.role === 'agent';
+  const isOwner = user?.role === 'owner' || user?.role === 'admin';
+  const isLoanAgent = user?.role === 'loan_agent' || user?.role === 'agent';
+  const isEmiAgent = user?.role === 'emi_agent';
+  const isAgent = isLoanAgent || isEmiAgent;
   const isClient = user?.role === 'client';
 
   return (
@@ -287,6 +309,8 @@ export const AuthProvider = ({ children }) => {
         logout,
         updateProfile,
         isOwner,
+        isLoanAgent,
+        isEmiAgent,
         isAgent,
         isClient,
       }}

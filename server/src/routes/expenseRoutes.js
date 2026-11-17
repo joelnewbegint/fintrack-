@@ -10,6 +10,7 @@ import { protect, restrictTo } from '../middleware/auth.js';
 const router = express.Router();
 
 router.use(protect);
+router.use(restrictTo('owner'));
 
 router.get('/', getExpenses);
 router.get('/summary', getExpenseSummary);

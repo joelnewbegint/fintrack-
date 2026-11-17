@@ -1,58 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { useTheme } from '../context/ThemeContext';
-import BackgroundOrbs from '../components/common/BackgroundOrbs';
-import api from '../services/api';
 import {
   Wallet,
   Lock,
-  Mail,
+  User,
   ArrowRight,
   ShieldCheck,
-  UserCheck,
   Globe,
-  Sun,
-  Moon,
   Eye,
   EyeOff,
-  Server,
-  RefreshCw,
+  Briefcase,
+  Layers,
+  Check,
 } from 'lucide-react';
 
 export const Login = () => {
   const { login } = useAuth();
-  const { t, lang, toggleLanguage } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
+  const { lang, toggleLanguage } = useLanguage();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [serverStatus, setServerStatus] = useState('checking'); // 'online' | 'offline' | 'checking'
-  const [showServerConfig, setShowServerConfig] = useState(false);
-  const [customApiUrl, setCustomApiUrl] = useState(() => localStorage.getItem('fintrack_api_url') || '');
-
-  const checkServer = async () => {
-    setServerStatus('checking');
-    try {
-      const res = await api.checkBackendHealth();
-      if (res && res.online) {
-        setServerStatus('online');
-        return true;
-      }
-      setServerStatus('offline');
-      return false;
-    } catch {
-      setServerStatus('offline');
-      return false;
-    }
-  };
-
-  useEffect(() => {
-    checkServer();
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,7 +32,7 @@ export const Login = () => {
 
     try {
       setLoading(true);
-      await login(email, password);
+      await login(identifier, password, rememberMe);
     } catch (err) {
       setError(err.message || 'Login failed. Please check credentials.');
     } finally {
@@ -68,105 +40,140 @@ export const Login = () => {
     }
   };
 
-  const handleQuickLogin = async (role) => {
+  const handleQuickRole = (roleType) => {
     setError('');
-    const targetEmail = role === 'owner' ? 'owner@fintrack.com' : 'agent@fintrack.com';
-    const targetPass = role === 'owner' ? 'admin123' : 'agent123';
-    setEmail(targetEmail);
-    setPassword(targetPass);
-
-    try {
-      setLoading(true);
-      await login(targetEmail, targetPass);
-    } catch (err) {
-      setError(err.message || 'Login failed. Please check credentials.');
-    } finally {
-      setLoading(false);
+    if (roleType === 'owner') {
+      setIdentifier('owner');
+      setPassword('admin123');
+    } else if (roleType === 'loan_agent') {
+      setIdentifier('loanagent');
+      setPassword('loan123');
+    } else if (roleType === 'emi_agent') {
+      setIdentifier('emiagent');
+      setPassword('emi123');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Blurred Floating Sky Orbs */}
-      <BackgroundOrbs />
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(135deg, #FFF7F2 0%, #FFF3EC 50%, #F5F9FD 100%)',
+      }}
+    >
+      {/* Soft Sky-Blue & Peach Ambient Glass Orbs */}
+      <div
+        className="absolute -top-24 -left-24 w-96 h-96 rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(186, 230, 253, 0.65) 0%, rgba(186, 230, 253, 0) 70%)',
+          filter: 'blur(50px)',
+        }}
+      />
+      <div
+        className="absolute -bottom-28 -right-24 w-96 h-96 rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(254, 215, 170, 0.7) 0%, rgba(254, 215, 170, 0) 70%)',
+          filter: 'blur(60px)',
+        }}
+      />
+      <div
+        className="absolute top-1/2 left-3/4 -translate-y-1/2 w-80 h-80 rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(224, 242, 254, 0.5) 0%, rgba(224, 242, 254, 0) 70%)',
+          filter: 'blur(45px)',
+        }}
+      />
 
-      {/* Top right language & theme toggle */}
+      {/* Top right language toggle */}
       <div className="absolute top-4 right-4 flex items-center space-x-2 z-20">
         <button
           onClick={toggleLanguage}
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-sky-400 transition active:scale-95 shadow-sm"
+          type="button"
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white/70 backdrop-blur-md border border-orange-200/60 text-xs font-bold text-slate-700 hover:border-orange-400 hover:bg-white transition active:scale-95 shadow-sm"
         >
-          <Globe className="w-3.5 h-3.5 text-sky-500" />
+          <Globe className="w-3.5 h-3.5 text-orange-500" />
           <span>{lang === 'ta' ? 'English' : 'தமிழ்'}</span>
-        </button>
-
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-slate-700 dark:text-slate-200 hover:text-amber-500 transition active:scale-95 shadow-sm"
-        >
-          {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-sky-600" />}
         </button>
       </div>
 
-      <div className="max-w-md w-full glass rounded-3xl p-6 sm:p-8 border border-white/80 dark:border-sky-800/50 shadow-2xl space-y-5 relative z-10">
-        {/* Brand header */}
+      {/* Main Peach + Sky Glass Card */}
+      <div
+        className="max-w-md w-full rounded-3xl p-6 sm:p-8 relative z-10 border space-y-5"
+        style={{
+          background: 'rgba(255, 255, 255, 0.78)',
+          backdropFilter: 'blur(20px) saturate(140%)',
+          borderColor: 'rgba(255, 255, 255, 0.95)',
+          boxShadow: '0 20px 45px -12px rgba(249, 115, 22, 0.12), 0 4px 16px -2px rgba(186, 230, 253, 0.2)',
+        }}
+      >
+        {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex p-3 rounded-2xl bg-gradient-to-tr from-sky-400 via-sky-500 to-sky-600 shadow-xl shadow-sky-500/25 border border-white/60">
+          <div className="inline-flex p-3.5 rounded-2xl bg-gradient-to-tr from-orange-400 via-amber-400 to-sky-400 shadow-lg shadow-orange-500/20 border border-white">
             <Wallet className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-sky-600 to-sky-500 dark:from-sky-300 dark:to-sky-400 bg-clip-text text-transparent">
-            VK BANKER'S & FINANCE
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800">
+              VK BANKER'S & FINANCE
+            </h1>
+            <p className="text-xs text-orange-600 font-semibold tracking-wide mt-0.5">
+              வி.கே. பேங்கர்ஸ் & பைனான்ஸ்
+            </p>
+          </div>
+          <p className="text-xs text-slate-500 font-medium">
             {lang === 'ta'
-              ? 'வி.கே. பேங்கர்ஸ் & பைனான்ஸ் கடன் மேலாண்மை செயலி'
-              : "VK Banker's Private Finance & Lending Management"}
+              ? 'நிதி மற்றும் மாத தவணை மேலாண்மை - Staff & Agent Login'
+              : 'Finance & Monthly EMI Management System'}
           </p>
         </div>
 
         {error && (
-          <div className="p-3.5 rounded-2xl bg-red-100/90 dark:bg-red-950/70 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-semibold leading-relaxed">
-            <div className="font-bold text-red-800 dark:text-red-200 mb-0.5">⚠️ Authentication / Connection Error:</div>
+          <div className="p-3.5 rounded-2xl bg-red-50/90 border border-red-200 text-red-700 text-xs font-semibold leading-relaxed animate-shake">
+            <div className="font-bold text-red-800 flex items-center space-x-1.5 mb-0.5">
+              <span>⚠️</span>
+              <span>Authentication Error:</span>
+            </div>
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Email Address / மின்னஞ்சல்
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Username or Email / பயனர்பெயர்
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-sky-500" />
+              <User className="w-4 h-4 absolute left-3.5 top-3.5 text-orange-400" />
               <input
-                type="email"
+                type="text"
                 required
-                placeholder="owner@fintrack.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 h-12 rounded-2xl glass border border-sky-200/80 dark:border-sky-800/60 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-sky-400 transition"
+                autoComplete="username"
+                placeholder="owner / loanagent / emiagent"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                className="w-full pl-10 pr-4 h-12 rounded-xl bg-white/90 border border-orange-200/80 text-slate-900 text-xs font-medium outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-300/40 transition placeholder:text-slate-400"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               Password / கடவுச்சொல்
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-sky-500" />
+              <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-orange-400" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
+                autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-11 h-12 rounded-2xl glass border border-sky-200/80 dark:border-sky-800/60 text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-sky-400 transition"
+                className="w-full pl-10 pr-11 h-12 rounded-xl bg-white/90 border border-orange-200/80 text-slate-900 text-xs font-medium outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-300/40 transition placeholder:text-slate-400"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-3.5 text-slate-400 hover:text-sky-600 transition"
+                className="absolute right-3.5 top-3.5 text-slate-400 hover:text-orange-500 transition"
                 tabIndex={-1}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -174,10 +181,43 @@ export const Login = () => {
             </div>
           </div>
 
+          {/* Remember me checkbox */}
+          <div className="flex items-center justify-between pt-1">
+            <label className="flex items-center space-x-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="sr-only"
+              />
+              <div
+                className={`w-4 h-4 rounded border flex items-center justify-center transition ${
+                  rememberMe
+                    ? 'bg-orange-500 border-orange-500 text-white'
+                    : 'bg-white border-slate-300 text-transparent'
+                }`}
+              >
+                <Check className="w-3 h-3 stroke-[3]" />
+              </div>
+              <span className="text-xs text-slate-600 font-medium">
+                {lang === 'ta' ? 'நினைவில் கொள்க (30 நாட்கள்)' : 'Remember me (30-day session)'}
+              </span>
+            </label>
+
+            <span className="text-[11px] text-sky-600 font-semibold bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">
+              Session Protected
+            </span>
+          </div>
+
+          {/* Peach Primary Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-12 btn-sky-primary text-sm font-black shadow-lg shadow-sky-500/25 flex items-center justify-center space-x-2"
+            className="w-full h-12 rounded-xl font-bold text-sm text-white shadow-lg transition active:scale-[0.98] flex items-center justify-center space-x-2"
+            style={{
+              background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+              boxShadow: '0 8px 20px -4px rgba(249, 115, 22, 0.4)',
+            }}
           >
             {loading ? (
               <span>Signing in...</span>
@@ -190,134 +230,57 @@ export const Login = () => {
           </button>
         </form>
 
-        {/* Authorized Persons (2 Authorized Credentials) */}
-        <div className="pt-4 border-t border-sky-100 dark:border-sky-900/40 space-y-2.5">
+        {/* 1-Tap Quick Credentials for Testing the 3 Roles */}
+        <div className="pt-4 border-t border-orange-100/80 space-y-2.5">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
-              {lang === 'ta' ? 'அங்கீகரிக்கப்பட்ட நபர்கள் (2 நபர்)' : 'Authorized Logins (2 Persons)'}
+            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">
+              {lang === 'ta' ? 'பயனர் பிரிவுகள் (3 Roles)' : 'Switch Login Role (3 Roles)'}
             </p>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold">
-              1-Tap Fill
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+              1-Tap Test
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {/* Person 1: Owner */}
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => handleQuickLogin('owner')}
-              className="p-3 rounded-2xl glass border border-emerald-200/80 dark:border-emerald-800/60 hover:bg-emerald-50/60 dark:hover:bg-emerald-950/40 text-left transition active:scale-[0.98] group"
+              onClick={() => handleQuickRole('owner')}
+              className="p-2 rounded-xl border border-orange-200/70 bg-white/70 hover:bg-orange-50 hover:border-orange-400 transition text-left group"
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className="inline-flex items-center space-x-1 text-xs font-black text-emerald-700 dark:text-emerald-300">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>1. Owner (Vasantha Kumar K)</span>
-                </span>
-                <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded font-bold">
-                  Admin
-                </span>
+              <div className="flex items-center space-x-1 mb-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-orange-500" />
+                <span className="text-[11px] font-bold text-slate-800">Owner</span>
               </div>
-              <p className="text-[11px] font-mono font-medium text-slate-700 dark:text-slate-200 truncate">owner@fintrack.com</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Password: <strong className="font-mono text-emerald-600 dark:text-emerald-400 font-black">admin123</strong>
-              </p>
+              <p className="text-[10px] text-slate-500 truncate">Loans + EMI</p>
+              <span className="text-[9px] text-orange-600 font-mono">owner</span>
             </button>
 
-            {/* Person 2: Collection Agent */}
             <button
               type="button"
-              onClick={() => handleQuickLogin('agent')}
-              className="p-3 rounded-2xl glass border border-sky-200/80 dark:border-sky-800/60 hover:bg-sky-50/60 dark:hover:bg-sky-950/40 text-left transition active:scale-[0.98] group"
+              onClick={() => handleQuickRole('loan_agent')}
+              className="p-2 rounded-xl border border-sky-200/70 bg-white/70 hover:bg-sky-50 hover:border-sky-400 transition text-left group"
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className="inline-flex items-center space-x-1 text-xs font-black text-sky-700 dark:text-sky-300">
-                  <UserCheck className="w-3.5 h-3.5 text-sky-500" />
-                  <span>2. Agent (Magimaidoss M)</span>
-                </span>
-                <span className="text-[9px] font-mono text-sky-600 dark:text-sky-400 bg-sky-100/80 dark:bg-sky-900/40 px-1.5 py-0.5 rounded font-bold">
-                  Dues
-                </span>
+              <div className="flex items-center space-x-1 mb-1">
+                <Briefcase className="w-3.5 h-3.5 text-sky-500" />
+                <span className="text-[11px] font-bold text-slate-800">Loan Agent</span>
               </div>
-              <p className="text-[11px] font-mono font-medium text-slate-700 dark:text-slate-200 truncate">agent@fintrack.com</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Password: <strong className="font-mono text-sky-600 dark:text-sky-400 font-black">agent123</strong>
-              </p>
+              <p className="text-[10px] text-slate-500 truncate">Daily/Wk/Mo</p>
+              <span className="text-[9px] text-sky-600 font-mono">loanagent</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickRole('emi_agent')}
+              className="p-2 rounded-xl border border-emerald-200/70 bg-white/70 hover:bg-emerald-50 hover:border-emerald-400 transition text-left group"
+            >
+              <div className="flex items-center space-x-1 mb-1">
+                <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-[11px] font-bold text-slate-800">EMI Agent</span>
+              </div>
+              <p className="text-[10px] text-slate-500 truncate">EMI Only</p>
+              <span className="text-[9px] text-emerald-700 font-mono">emiagent</span>
             </button>
           </div>
-        </div>
-
-        {/* Server Status & Config Toggle */}
-        <div className="pt-2 border-t border-sky-100/60 dark:border-sky-900/30 space-y-2">
-          <div className="flex items-center justify-between text-[11px] text-slate-400">
-            <div className="flex items-center space-x-1.5">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  serverStatus === 'online'
-                    ? 'bg-emerald-500 ring-2 ring-emerald-500/30'
-                    : serverStatus === 'checking'
-                    ? 'bg-amber-400 animate-pulse'
-                    : 'bg-red-500 ring-2 ring-red-500/30'
-                }`}
-              />
-              <span className={serverStatus === 'online' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500'}>
-                {serverStatus === 'online'
-                  ? `API: Connected (${api.getApiBaseUrl().includes('localhost') ? 'Local Dev' : 'Cloud DB'})`
-                  : serverStatus === 'checking'
-                  ? 'Connecting to server...'
-                  : 'API: Standalone / Offline'}
-              </span>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <button
-                type="button"
-                onClick={checkServer}
-                title="Refresh server status"
-                className="p-1 hover:text-sky-500 transition active:scale-90"
-              >
-                <RefreshCw className="w-3 h-3" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowServerConfig(!showServerConfig)}
-                className="text-sky-600 dark:text-sky-400 hover:underline font-bold text-[11px] flex items-center space-x-1"
-              >
-                <Server className="w-3 h-3" />
-                <span>{showServerConfig ? 'Close' : 'Server Config'}</span>
-              </button>
-            </div>
-          </div>
-
-          {showServerConfig && (
-            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-                Backend API URL (Current: <code className="font-mono text-sky-600 break-all">{api.getApiBaseUrl()}</code>):
-              </p>
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  placeholder={api.getApiBaseUrl()}
-                  value={customApiUrl}
-                  onChange={(e) => setCustomApiUrl(e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono outline-none focus:ring-2 focus:ring-sky-400"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (customApiUrl.trim()) {
-                      localStorage.setItem('fintrack_api_url', customApiUrl.trim());
-                    } else {
-                      localStorage.removeItem('fintrack_api_url');
-                    }
-                    checkServer();
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-sky-600 text-white font-bold text-xs hover:bg-sky-700 active:scale-95 transition"
-                >
-                  Save & Ping
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

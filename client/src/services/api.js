@@ -62,7 +62,7 @@ const setStored = (key, data) => {
 const getHeaders = () => {
   let token = null;
   try {
-    token = localStorage.getItem('fintrack_token');
+    token = localStorage.getItem('fintrack_token') || sessionStorage.getItem('fintrack_token');
   } catch (e) {}
 
   const headers = {
@@ -1980,6 +1980,210 @@ export const api = {
       return res.data;
     }
     return null;
+  },
+
+  // ==========================================
+  // EMI MODULE CLIENT API
+  // ==========================================
+  getEMIDashboardStats: async (agentId) => {
+    const q = agentId && agentId !== 'all' ? `?agentId=${encodeURIComponent(agentId)}` : '';
+    const res = await safeFetchJson(`/api/emi/dashboard${q}`, { headers: getHeaders() });
+    if (res.ok && res.data?.stats) {
+      return { success: true, stats: res.data.stats };
+    }
+    return { success: false, stats: null, error: res.error };
+  },
+
+  getEMILoans: async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.status) query.append('status', params.status);
+    if (params.search) query.append('search', params.search);
+    if (params.area) query.append('area', params.area);
+    if (params.agentId) query.append('agentId', params.agentId);
+    if (params.page) query.append('page', params.page);
+
+    const res = await safeFetchJson(`/api/emi/loans?${query.toString()}`, { headers: getHeaders() });
+    if (res.ok && res.data?.loans) {
+      return { success: true, loans: res.data.loans, count: res.data.count, total: res.data.total };
+    }
+    return { success: false, loans: [], error: res.error };
+  },
+
+  getEMILoanById: async (id) => {
+    const res = await safeFetchJson(`/api/emi/loans/${id}`, { headers: getHeaders() });
+    if (res.ok && res.data?.loan) {
+      return { success: true, loan: res.data.loan, payments: res.data.payments || [] };
+    }
+    return { success: false, loan: null, error: res.error };
+  },
+
+  createEMILoan: async (loanData) => {
+    const res = await safeFetchJson('/api/emi/loans', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(loanData),
+    });
+    if (res.ok && res.data?.loan) {
+      return { success: true, loan: res.data.loan, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to create EMI loan');
+  },
+
+  recordEMIPayment: async (paymentData) => {
+    const res = await safeFetchJson('/api/emi/payments', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(paymentData),
+    });
+    if (res.ok && res.data?.receipt) {
+      return { success: true, receipt: res.data.receipt, loan: res.data.loan, message: res.data.message };
+    }
+    try {
+      await addToSyncQueue({
+        type: 'CREATE_EMI_PAYMENT',
+        endpoint: '/api/emi/payments',
+        method: 'POST',
+        data: paymentData,
+      });
+      return {
+        success: true,
+        offline: true,
+        receipt: {
+          receiptNo: `OFFLINE-EMI-${Date.now().toString().slice(-4)}`,
+          amount: paymentData.amount,
+          mode: paymentData.mode || 'cash',
+          paymentDate: new Date(),
+        },
+      };
+    } catch (e) {
+      throw new Error(res.error || 'Failed to record EMI payment');
+    }
+  },
+
+  reverseEMIPayment: async (paymentId, reason) => {
+    const res = await safeFetchJson(`/api/emi/payments/${paymentId}/reverse`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ reason }),
+    });
+    if (res.ok && res.data?.success) {
+      return { success: true, message: res.data.message, loan: res.data.loan };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to reverse payment');
+  },
+
+  getForeclosureQuote: async (loanId) => {
+    const res = await safeFetchJson(`/api/emi/loans/${loanId}/foreclosure-quote`, { headers: getHeaders() });
+    if (res.ok && res.data?.quote) {
+      return { success: true, quote: res.data.quote };
+    }
+    return { success: false, error: res.error };
+  },
+
+  forecloseEMILoan: async (loanId, settlementData) => {
+    const res = await safeFetchJson(`/api/emi/loans/${loanId}/foreclose`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(settlementData),
+    });
+    if (res.ok && res.data?.loan) {
+      return { success: true, loan: res.data.loan, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to foreclose EMI loan');
+  },
+
+  rescheduleEMIInstallment: async (loanId, rescheduleData) => {
+    const res = await safeFetchJson(`/api/emi/loans/${loanId}/reschedule`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(rescheduleData),
+    });
+    if (res.ok && res.data?.loan) {
+      return { success: true, loan: res.data.loan, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to reschedule installment');
+  },
+
+  getEMICustomers: async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.search) query.append('search', params.search);
+    if (params.area) query.append('area', params.area);
+
+    const res = await safeFetchJson(`/api/emi/customers?${query.toString()}`, { headers: getHeaders() });
+    if (res.ok && res.data?.customers) {
+      return { success: true, customers: res.data.customers };
+    }
+    return { success: false, customers: [], error: res.error };
+  },
+
+  createEMICustomer: async (customerData) => {
+    const res = await safeFetchJson('/api/emi/customers', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(customerData),
+    });
+    if (res.ok && res.data?.customer) {
+      return { success: true, customer: res.data.customer, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to register customer');
+  },
+
+  // ==========================================
+  // AGENT MANAGEMENT (Owner only)
+  // ==========================================
+  getAgentsList: async () => {
+    const res = await safeFetchJson('/api/auth/agents', { headers: getHeaders() });
+    if (res.ok && res.data?.agents) {
+      return { success: true, agents: res.data.agents };
+    }
+    return { success: false, agents: [], error: res.error };
+  },
+
+  createAgent: async (agentData) => {
+    const res = await safeFetchJson('/api/auth/agents', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(agentData),
+    });
+    if (res.ok && res.data?.agent) {
+      return { success: true, agent: res.data.agent, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to create agent');
+  },
+
+  updateAgent: async (id, agentData) => {
+    const res = await safeFetchJson(`/api/auth/agents/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(agentData),
+    });
+    if (res.ok && res.data?.agent) {
+      return { success: true, agent: res.data.agent, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to update agent');
+  },
+
+  toggleAgentStatus: async (id) => {
+    const res = await safeFetchJson(`/api/auth/agents/${id}/status`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+    });
+    if (res.ok && res.data?.agent) {
+      return { success: true, agent: res.data.agent, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to toggle status');
+  },
+
+  resetAgentPassword: async (id, newPassword) => {
+    const res = await safeFetchJson(`/api/auth/agents/${id}/reset-password`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ newPassword }),
+    });
+    if (res.ok && res.data?.success) {
+      return { success: true, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to reset password');
   },
 
   getSyncStatus,

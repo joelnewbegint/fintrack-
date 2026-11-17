@@ -21,6 +21,7 @@ const paymentSchema = z.object({
 });
 
 router.use(protect);
+router.use(restrictTo('owner', 'loan_agent'));
 
 router.get('/', getPayments);
 router.post('/', validate(paymentSchema), recordPayment);

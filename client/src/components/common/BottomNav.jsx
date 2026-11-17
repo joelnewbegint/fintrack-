@@ -9,11 +9,13 @@ import {
   Receipt,
   Settings,
   MoreHorizontal,
+  Layers,
+  Coins,
 } from 'lucide-react';
 
 export const BottomNav = ({ activeTab, setActiveTab, onOpenMoreSheet }) => {
   const { lang } = useLanguage();
-  const { isClient } = useAuth();
+  const { isClient, isOwner, isLoanAgent, isEmiAgent } = useAuth();
   const { isMobile } = useDeviceMode();
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
@@ -38,100 +40,87 @@ export const BottomNav = ({ activeTab, setActiveTab, onOpenMoreSheet }) => {
     };
   }, []);
 
-  // BottomNav is visible in Mobile mode only
   if (!isMobile || isKeyboardOpen) return null;
 
-  const tabs = isClient
-    ? [
-        {
-          id: 'dashboard',
-          label: lang === 'ta' ? 'முகப்பு' : 'Home',
-          icon: LayoutDashboard,
-        },
-        {
-          id: 'loans',
-          label: lang === 'ta' ? 'கடன்கள்' : 'Loans',
-          icon: Banknote,
-        },
-        {
-          id: 'payments',
-          label: lang === 'ta' ? 'செலுத்தியவை' : 'History',
-          icon: Receipt,
-        },
-        {
-          id: 'settings',
-          label: lang === 'ta' ? 'சுயவிவரம்' : 'Profile',
-          icon: Settings,
-        },
-      ]
-    : [
-        {
-          id: 'dashboard',
-          label: lang === 'ta' ? 'முகப்பு' : 'Home',
-          icon: LayoutDashboard,
-        },
-        {
-          id: 'customers',
-          label: lang === 'ta' ? 'வாடிக்கையாளர்' : 'Customers',
-          icon: Users,
-        },
-        {
-          id: 'loans',
-          label: lang === 'ta' ? 'கடன்' : 'Loans',
-          icon: Banknote,
-        },
-        {
-          id: 'payments',
-          label: lang === 'ta' ? 'வசூல்' : 'Collect',
-          icon: Receipt,
-        },
-        {
-          id: 'more',
-          label: lang === 'ta' ? 'கூடுதல்' : 'More',
-          icon: MoreHorizontal,
-          isMore: true,
-        },
-      ];
+  let tabs = [];
+
+  if (isClient) {
+    tabs = [
+      { id: 'dashboard', label: lang === 'ta' ? 'முகப்பு' : 'Home', icon: LayoutDashboard },
+      { id: 'loans', label: lang === 'ta' ? 'கடன்கள்' : 'Loans', icon: Banknote },
+      { id: 'payments', label: lang === 'ta' ? 'செலுத்தியவை' : 'History', icon: Receipt },
+      { id: 'settings', label: lang === 'ta' ? 'சுயவிவரம்' : 'Profile', icon: Settings },
+    ];
+  } else if (isEmiAgent) {
+    tabs = [
+      { id: 'emiDashboard', label: lang === 'ta' ? 'EMI முகப்பு' : 'EMI Home', icon: LayoutDashboard },
+      { id: 'emiList', label: lang === 'ta' ? 'மாத தவணை' : 'Accounts', icon: Layers },
+      { id: 'settings', label: lang === 'ta' ? 'அமைப்புகள்' : 'Settings', icon: Settings },
+      { id: 'more', label: lang === 'ta' ? 'கூடுதல்' : 'More', icon: MoreHorizontal, isMore: true },
+    ];
+  } else if (isLoanAgent) {
+    tabs = [
+      { id: 'dashboard', label: lang === 'ta' ? 'முகப்பு' : 'Home', icon: LayoutDashboard },
+      { id: 'customers', label: lang === 'ta' ? 'வாடிக்கையாளர்' : 'Customers', icon: Users },
+      { id: 'loans', label: lang === 'ta' ? 'கடன்' : 'Loans', icon: Banknote },
+      { id: 'payments', label: lang === 'ta' ? 'வசூல்' : 'Collect', icon: Receipt },
+      { id: 'more', label: lang === 'ta' ? 'கூடுதல்' : 'More', icon: MoreHorizontal, isMore: true },
+    ];
+  } else {
+    // Owner
+    tabs = [
+      { id: 'overview', label: lang === 'ta' ? 'மேலோட்டம்' : 'Overview', icon: LayoutDashboard },
+      { id: 'dashboard', label: lang === 'ta' ? 'கடன்' : 'Loans', icon: Coins },
+      { id: 'emiDashboard', label: lang === 'ta' ? 'EMI' : 'EMI', icon: Layers },
+      { id: 'payments', label: lang === 'ta' ? 'வசூல்' : 'Collect', icon: Receipt },
+      { id: 'more', label: lang === 'ta' ? 'கூடுதல்' : 'More', icon: MoreHorizontal, isMore: true },
+    ];
+  }
 
   return (
     <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto z-40 pointer-events-none">
       <nav className="pointer-events-auto h-16 w-full glass-panel border-t border-white/70 dark:border-sky-800/40 px-2 flex items-center justify-around shadow-2xl pb-safe">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = !tab.isMore && activeTab === tab.id;
+          const isActive = activeTab === tab.id;
+
+          if (tab.isMore) {
+            return (
+              <button
+                key={tab.id}
+                onClick={onOpenMoreSheet}
+                className="flex-1 flex flex-col items-center justify-center py-1 text-slate-500 dark:text-slate-400 active:scale-95 transition min-h-[44px]"
+              >
+                <div className="p-1 rounded-xl">
+                  <Icon className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                </div>
+                <span className="text-[10px] font-bold mt-0.5 tracking-tight">{tab.label}</span>
+              </button>
+            );
+          }
 
           return (
             <button
               key={tab.id}
-              onClick={() => {
-                if (tab.isMore) {
-                  if (onOpenMoreSheet) onOpenMoreSheet();
-                } else {
-                  setActiveTab(tab.id);
-                }
-              }}
-              className={`flex-1 flex flex-col items-center justify-center py-1 min-h-[48px] rounded-2xl transition-all duration-200 active:scale-95 ${
-                isActive
-                  ? 'text-sky-600 dark:text-sky-400 font-black'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-sky-600'
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex flex-col items-center justify-center py-1 transition active:scale-95 min-h-[44px] ${
+                isActive ? 'text-sky-600 dark:text-sky-400 font-black' : 'text-slate-500 dark:text-slate-400 font-medium'
               }`}
             >
               <div
-                className={`flex flex-col items-center justify-center px-2.5 py-1 rounded-xl transition-all ${
-                  isActive
-                    ? 'bg-sky-500/15 dark:bg-sky-500/25 ring-1 ring-sky-400/30'
-                    : ''
+                className={`p-1 rounded-xl transition ${
+                  isActive ? 'bg-sky-100 dark:bg-sky-950/80 scale-110 shadow-xs' : ''
                 }`}
               >
                 <Icon
-                  className={`w-5 h-5 transition-transform ${
-                    isActive ? 'scale-110 stroke-[2.5]' : 'stroke-[2]'
+                  className={`w-5 h-5 ${
+                    isActive ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400 dark:text-slate-500'
                   }`}
                 />
-                <span className="text-[11px] font-bold tracking-tight mt-0.5 leading-none">
-                  {tab.label}
-                </span>
               </div>
+              <span className="text-[10px] font-bold mt-0.5 tracking-tight truncate max-w-[64px]">
+                {tab.label}
+              </span>
             </button>
           );
         })}

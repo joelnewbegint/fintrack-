@@ -28,24 +28,71 @@ import Expenses from './pages/Expenses';
 import DailyClosing from './pages/DailyClosing';
 import Calendar from './pages/Calendar';
 import Settings from './pages/Settings';
+import Agents from './pages/Agents';
+import OverviewDashboard from './pages/OverviewDashboard';
+import EMIDashboard from './pages/emi/EMIDashboard';
+import EMIList from './pages/emi/EMIList';
+import EMIDetail from './pages/emi/EMIDetail';
+import NewEMILoanModal from './pages/emi/NewEMILoanModal';
+import CollectEMIModal from './pages/emi/CollectEMIModal';
 import api from './services/api';
 
 export function App() {
-  const { user, loading, isOwner, isClient } = useAuth();
+  const { user, loading, isOwner, isLoanAgent, isEmiAgent, isClient } = useAuth();
   const { isMobile, isTablet, isLaptop, isRealPhone } = useDeviceMode();
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // Role-based activeTab default
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const stored = localStorage.getItem('fintrack_user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u.role === 'emi_agent') return 'emiDashboard';
+        if (u.role === 'owner' || u.role === 'admin') return 'overview';
+      }
+    } catch (e) {}
+    return 'dashboard';
+  });
+
+  // Owner 3-way mode switch: 'overview' | 'loans' | 'emi'
+  const [ownerMode, setOwnerMode] = useState(() => {
+    try {
+      const stored = localStorage.getItem('fintrack_user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u.role === 'emi_agent') return 'emi';
+        if (u.role === 'owner' || u.role === 'admin') return 'overview';
+      }
+    } catch (e) {}
+    return 'loans';
+  });
+
   const [selectedLoanId, setSelectedLoanId] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [selectedEMILoanId, setSelectedEMILoanId] = useState(null);
   const [loanFilterType, setLoanFilterType] = useState('all');
+  const [emiListFilter, setEmiListFilter] = useState('active');
 
+  // Enforce role isolation & redirect to appropriate default on role mismatch
   useEffect(() => {
-    if (isClient && !['dashboard', 'loans', 'payments', 'settings'].includes(activeTab)) {
-      setActiveTab('dashboard');
-    }
-  }, [isClient, activeTab]);
+    if (!user) return;
 
-  // Quick Action Modals triggered by shortcuts, Navbar, or mobile FAB
+    if (isEmiAgent) {
+      if (!['emiDashboard', 'emiList', 'settings'].includes(activeTab)) {
+        setActiveTab('emiDashboard');
+      }
+    } else if (isLoanAgent) {
+      if (['overview', 'emiDashboard', 'emiList', 'agents', 'investments', 'expenses'].includes(activeTab)) {
+        setActiveTab('dashboard');
+      }
+    } else if (isClient) {
+      if (!['dashboard', 'loans', 'payments', 'settings'].includes(activeTab)) {
+        setActiveTab('dashboard');
+      }
+    }
+  }, [user, activeTab, isEmiAgent, isLoanAgent, isClient]);
+
+  // Quick Action Modals
   const [showGlobalLoanModal, setShowGlobalLoanModal] = useState(false);
   const [showGlobalPayModal, setShowGlobalPayModal] = useState(false);
   const [showGlobalInvestmentModal, setShowGlobalInvestmentModal] = useState(false);
@@ -53,16 +100,20 @@ export function App() {
   const [showMoreSheet, setShowMoreSheet] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
-  const [globalWhatsappItem, setGlobalWhatsappItem] = useState(null);
   const [showWhatsAppHub, setShowWhatsAppHub] = useState(false);
   const [whatsappHubProps, setWhatsappHubProps] = useState({});
   const [globalPayItem, setGlobalPayItem] = useState(null);
   const [showLoanFormModal, setShowLoanFormModal] = useState(false);
 
+  // New EMI Modals
+  const [showNewEMILoanModal, setShowNewEMILoanModal] = useState(false);
+  const [showGlobalEmiPayModal, setShowGlobalEmiPayModal] = useState(false);
+  const [globalEmiPayItem, setGlobalEmiPayItem] = useState(null);
+
   const [customers, setCustomers] = useState([]);
   const [activeLoans, setActiveLoans] = useState([]);
 
-  // Sidebar Minimization State (Persisted in localStorage)
+  // Sidebar Minimization State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     try {
       const saved = localStorage.getItem('fintrack_sidebar_collapsed');
@@ -83,27 +134,31 @@ export function App() {
     });
   };
 
-  // Fetch customers for the quick loan modal
   const fetchModalData = async () => {
     try {
-      const res = await api.getCustomers();
-      if (res.success) setCustomers(res.customers || []);
-      const loansRes = await api.getLoans({ status: 'active' });
-      if (loansRes.success) setActiveLoans(loansRes.loans || []);
-    } catch (e) {
-      // ignore
-    }
+      if (!isEmiAgent) {
+        const res = await api.getCustomers();
+        if (res.success) setCustomers(res.customers || []);
+        const loansRes = await api.getLoans({ status: 'active' });
+        if (loansRes.success) setActiveLoans(loansRes.loans || []);
+      }
+    } catch (e) {}
   };
 
   const fetchNotificationsCount = async () => {
     try {
-      const statsRes = await api.getDashboardStats();
-      const overdue = (statsRes?.overdueLoans || []).length;
-      const todayDue = (statsRes?.todayDueList || []).filter((i) => !i.isPaidToday).length;
-      setNotificationCount(overdue + todayDue);
-    } catch (e) {
-      // ignore
-    }
+      if (isEmiAgent) {
+        const emiRes = await api.getEMIDashboardStats();
+        if (emiRes.success) {
+          setNotificationCount((emiRes.stats?.todayDueCount || 0) + (emiRes.stats?.overdueCount || 0));
+        }
+      } else {
+        const statsRes = await api.getDashboardStats();
+        const overdue = (statsRes?.overdueLoans || []).length;
+        const todayDue = (statsRes?.todayDueList || []).filter((i) => !i.isPaidToday).length;
+        setNotificationCount(overdue + todayDue);
+      }
+    } catch (e) {}
   };
 
   useEffect(() => {
@@ -115,31 +170,25 @@ export function App() {
     }
   }, [user]);
 
-  // Global Keyboard Shortcuts (N = New Loan, P = Payment, / = Search)
+  // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ignore if user is currently typing in an input or textarea
-      if (
-        e.target.tagName === 'INPUT' ||
-        e.target.tagName === 'TEXTAREA' ||
-        e.target.tagName === 'SELECT'
-      ) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
         return;
       }
 
       if ((e.key === 'n' || e.key === 'N') && isOwner) {
         e.preventDefault();
-        setShowGlobalLoanModal(true);
+        if (ownerMode === 'emi') setShowNewEMILoanModal(true);
+        else setShowGlobalLoanModal(true);
       } else if (e.key === 'p' || e.key === 'P') {
         e.preventDefault();
-        setShowGlobalPayModal(true);
+        if (ownerMode === 'emi') setShowGlobalEmiPayModal(true);
+        else setShowGlobalPayModal(true);
       } else if ((e.key === 'i' || e.key === 'I') && isOwner) {
         e.preventDefault();
         setShowGlobalInvestmentModal(true);
       } else if ((e.key === 'm' || e.key === 'M' || e.key === '[') && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        toggleSidebar();
-      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
         e.preventDefault();
         toggleSidebar();
       } else if (e.key === '/') {
@@ -151,19 +200,20 @@ export function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOwner]);
+  }, [isOwner, ownerMode]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-sky-950 text-white">
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
         <div className="flex flex-col items-center space-y-3">
-          <div className="w-12 h-12 border-4 border-sky-400 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-bold text-sky-200 tracking-wider">Loading FinTrack Sky Blue...</p>
+          <div className="w-12 h-12 border-4 border-orange-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-bold text-orange-200 tracking-wider">Loading VK Banker's & Finance...</p>
         </div>
       </div>
     );
   }
 
+  // ProtectedRoute enforcement: unauthenticated users redirected to Login
   if (!user) {
     return <Login />;
   }
@@ -171,18 +221,22 @@ export function App() {
   const handleTabChange = (tab) => {
     setSelectedLoanId(null);
     setSelectedCustomerId(null);
+    setSelectedEMILoanId(null);
     setActiveTab(tab);
+
+    if (tab === 'overview') setOwnerMode('overview');
+    else if (tab === 'emiDashboard' || tab === 'emiList') setOwnerMode('emi');
+    else if (tab === 'dashboard' || tab === 'loans') setOwnerMode('loans');
   };
 
   return (
     <div
       className={`min-h-screen flex flex-col font-sans relative overflow-x-hidden ${
         isMobile && !isRealPhone
-          ? 'max-w-[440px] mx-auto border-x border-sky-200/40 dark:border-sky-900/40 shadow-2xl'
+          ? 'max-w-[440px] mx-auto border-x border-orange-200/40 shadow-2xl'
           : 'w-full'
       }`}
     >
-      {/* Floating Sky-Blue Blurred Background Orbs */}
       <BackgroundOrbs />
 
       {/* Top App Bar */}
@@ -191,7 +245,10 @@ export function App() {
           const input = document.querySelector('input[type="text"]');
           if (input) input.focus();
         }}
-        onAddPayment={() => setShowGlobalPayModal(true)}
+        onAddPayment={() => {
+          if (isEmiAgent || ownerMode === 'emi') setShowGlobalEmiPayModal(true);
+          else setShowGlobalPayModal(true);
+        }}
         onOpenMoreSheet={() => setShowMoreSheet(true)}
         onOpenNotifications={() => setShowNotifications(true)}
         onOpenLoanForm={() => setShowLoanFormModal(true)}
@@ -203,6 +260,63 @@ export function App() {
         isSidebarCollapsed={isSidebarCollapsed}
         onToggleSidebar={toggleSidebar}
       />
+
+      {/* OWNER COMBINED 3-WAY MODE SWITCHER (Peach & Sky Glass Aesthetic) */}
+      {isOwner && (
+        <div className="w-full flex justify-center py-2 px-3 relative z-30">
+          <div
+            className="inline-flex p-1 rounded-2xl border shadow-sm items-center space-x-1"
+            style={{
+              background: 'rgba(255, 255, 255, 0.85)',
+              backdropFilter: 'blur(16px)',
+              borderColor: 'rgba(255, 255, 255, 0.95)',
+              boxShadow: '0 4px 20px -2px rgba(249, 115, 22, 0.12)',
+            }}
+          >
+            <button
+              onClick={() => {
+                setOwnerMode('overview');
+                handleTabChange('overview');
+              }}
+              className={`px-4 py-1.5 rounded-xl text-xs font-black transition flex items-center space-x-1.5 ${
+                ownerMode === 'overview'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-orange-50/50'
+              }`}
+            >
+              <span>👑 Overview / மேலோட்டம்</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setOwnerMode('loans');
+                handleTabChange('dashboard');
+              }}
+              className={`px-4 py-1.5 rounded-xl text-xs font-black transition flex items-center space-x-1.5 ${
+                ownerMode === 'loans'
+                  ? 'bg-sky-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-sky-50/50'
+              }`}
+            >
+              <span>💼 Loans / கடன் பிரிவு</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setOwnerMode('emi');
+                handleTabChange('emiDashboard');
+              }}
+              className={`px-4 py-1.5 rounded-xl text-xs font-black transition flex items-center space-x-1.5 ${
+                ownerMode === 'emi'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-orange-50/50'
+              }`}
+            >
+              <span>📊 EMI / மாத தவணை</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       <div
         className={`flex-1 flex w-full relative z-10 ${
@@ -234,10 +348,20 @@ export function App() {
             isMobile ? 'pb-28' : 'pb-10'
           }`}
         >
+          {/* Detail Views */}
           {selectedLoanId ? (
             <LoanDetail
               loanId={selectedLoanId}
               onBack={() => setSelectedLoanId(null)}
+            />
+          ) : selectedEMILoanId ? (
+            <EMIDetail
+              loanId={selectedEMILoanId}
+              onBack={() => setSelectedEMILoanId(null)}
+              onOpenCollectModal={(item) => {
+                setGlobalEmiPayItem(item);
+                setShowGlobalEmiPayModal(true);
+              }}
             />
           ) : selectedCustomerId ? (
             <CustomerDetail
@@ -250,6 +374,21 @@ export function App() {
             />
           ) : (
             <>
+              {/* Owner Overview */}
+              {activeTab === 'overview' && (
+                <OverviewDashboard
+                  onSwitchToLoans={() => {
+                    setOwnerMode('loans');
+                    setActiveTab('dashboard');
+                  }}
+                  onSwitchToEMI={() => {
+                    setOwnerMode('emi');
+                    setActiveTab('emiDashboard');
+                  }}
+                />
+              )}
+
+              {/* Loans Module Dashboard & Pages */}
               {activeTab === 'dashboard' && (
                 <Dashboard
                   onSelectFinanceType={(type) => {
@@ -278,11 +417,11 @@ export function App() {
 
               {activeTab === 'payments' && <Payments />}
 
-              {activeTab === 'investments' && (
+              {activeTab === 'investments' && isOwner && (
                 <Investments onOpenNewInvestment={() => setShowGlobalInvestmentModal(true)} />
               )}
 
-              {activeTab === 'expenses' && (
+              {activeTab === 'expenses' && isOwner && (
                 <Expenses onNavigateToDashboard={() => setActiveTab('dashboard')} />
               )}
 
@@ -291,23 +430,60 @@ export function App() {
               {activeTab === 'calendar' && <Calendar />}
 
               {activeTab === 'settings' && <Settings />}
+
+              {/* Owner-only Agent Management */}
+              {activeTab === 'agents' && isOwner && <Agents />}
+
+              {/* EMI Module Dashboard & List */}
+              {activeTab === 'emiDashboard' && (
+                <EMIDashboard
+                  onOpenNewEMILoan={() => setShowNewEMILoanModal(true)}
+                  onOpenCollectModal={(item) => {
+                    setGlobalEmiPayItem(item || {});
+                    setShowGlobalEmiPayModal(true);
+                  }}
+                  onViewLoan={(id) => setSelectedEMILoanId(id)}
+                  onNavigateToList={(tab) => {
+                    setEmiListFilter(tab || 'active');
+                    setActiveTab('emiList');
+                  }}
+                />
+              )}
+
+              {activeTab === 'emiList' && (
+                <EMIList
+                  initialTab={emiListFilter}
+                  onViewLoan={(id) => setSelectedEMILoanId(id)}
+                  onOpenNewLoan={() => setShowNewEMILoanModal(true)}
+                  onOpenCollectModal={(item) => {
+                    setGlobalEmiPayItem(item || {});
+                    setShowGlobalEmiPayModal(true);
+                  }}
+                />
+              )}
             </>
           )}
         </main>
       </div>
 
-      {/* Mobile-First Bottom Navigation Bar (5 tabs) */}
+      {/* Mobile-First Bottom Navigation Bar */}
       <BottomNav
         activeTab={activeTab}
         setActiveTab={handleTabChange}
         onOpenMoreSheet={() => setShowMoreSheet(true)}
       />
 
-      {/* Mobile-Mode Round 56px Floating Action Button (Admin/Agent only) */}
+      {/* Mobile-Mode Round Floating Action Button */}
       {!isClient && (
         <FloatingPaymentButton
-          onRecordPayment={() => setShowGlobalPayModal(true)}
-          onAddLoan={() => setShowGlobalLoanModal(true)}
+          onRecordPayment={() => {
+            if (isEmiAgent || ownerMode === 'emi') setShowGlobalEmiPayModal(true);
+            else setShowGlobalPayModal(true);
+          }}
+          onAddLoan={() => {
+            if (isEmiAgent || ownerMode === 'emi') setShowNewEMILoanModal(true);
+            else setShowGlobalLoanModal(true);
+          }}
           onAddCustomer={() => setShowGlobalCustomerModal(true)}
           onAddInvestment={() => setShowGlobalInvestmentModal(true)}
         />
@@ -327,7 +503,7 @@ export function App() {
         unreadNotificationsCount={notificationCount}
       />
 
-      {/* Global Quick Loan Modal (N shortcut or Mobile FAB) */}
+      {/* Global Quick Loan Modal */}
       {showGlobalLoanModal && (
         <LoanModal
           customers={customers}
@@ -340,7 +516,7 @@ export function App() {
         />
       )}
 
-      {/* Global Quick Payment Modal (P shortcut, Navbar button, or Mobile FAB) */}
+      {/* Global Quick Payment Modal */}
       {showGlobalPayModal && (
         <PaymentModal
           loanItem={globalPayItem}
@@ -358,7 +534,7 @@ export function App() {
         />
       )}
 
-      {/* Global Quick Customer Modal (Mobile FAB) */}
+      {/* Global Quick Customer Modal */}
       {showGlobalCustomerModal && (
         <CustomerModal
           onClose={() => setShowGlobalCustomerModal(false)}
@@ -370,7 +546,7 @@ export function App() {
         />
       )}
 
-      {/* Global Quick Investment Modal (I shortcut, FAB, or Investments page) */}
+      {/* Global Quick Investment Modal */}
       {showGlobalInvestmentModal && (
         <InvestmentModal
           onClose={() => setShowGlobalInvestmentModal(false)}
@@ -381,56 +557,61 @@ export function App() {
         />
       )}
 
-      {/* Global Notification Modal / Drawer */}
+      {/* EMI Modals */}
+      <NewEMILoanModal
+        isOpen={showNewEMILoanModal}
+        onClose={() => setShowNewEMILoanModal(false)}
+        onSuccess={() => {
+          setShowNewEMILoanModal(false);
+          setActiveTab('emiList');
+        }}
+      />
+
+      <CollectEMIModal
+        isOpen={showGlobalEmiPayModal}
+        loanItem={globalEmiPayItem}
+        onClose={() => {
+          setShowGlobalEmiPayModal(false);
+          setGlobalEmiPayItem(null);
+        }}
+        onSuccess={() => {
+          fetchNotificationsCount();
+        }}
+      />
+
+      {/* WhatsApp Reminders & Notifications Modals */}
       {showNotifications && (
         <NotificationModal
           isOpen={showNotifications}
-          onClose={() => {
-            setShowNotifications(false);
-            fetchNotificationsCount();
-          }}
-          onRecordPayment={(item) => {
-            setShowNotifications(false);
-            setGlobalPayItem(item);
-            setShowGlobalPayModal(true);
-          }}
-          onOpenWhatsApp={(item) => {
-            setShowNotifications(false);
-            setGlobalWhatsappItem(item);
-          }}
-          onViewLoan={(id) => {
+          onClose={() => setShowNotifications(false)}
+          onSelectLoan={(id) => {
             setShowNotifications(false);
             setSelectedLoanId(id);
           }}
+          onQuickPay={(loan) => {
+            setShowNotifications(false);
+            setGlobalPayItem(loan);
+            setShowGlobalPayModal(true);
+          }}
         />
       )}
 
-      {/* Global WhatsApp Reminder Modal */}
-      {globalWhatsappItem && (
-        <WhatsAppReminderModal
-          item={globalWhatsappItem}
-          onClose={() => setGlobalWhatsappItem(null)}
+      {showWhatsAppHub && (
+        <WhatsAppHubModal
+          isOpen={showWhatsAppHub}
+          onClose={() => setShowWhatsAppHub(false)}
+          initialCustomerPhone={whatsappHubProps?.phone}
+          initialCustomerName={whatsappHubProps?.name}
+          initialLoanItem={whatsappHubProps?.loan}
         />
       )}
 
-      {/* Global WhatsApp Web & Manual Automation Hub */}
-      <WhatsAppHubModal
-        isOpen={showWhatsAppHub}
-        onClose={() => {
-          setShowWhatsAppHub(false);
-          setWhatsappHubProps({});
-        }}
-        {...whatsappHubProps}
-      />
-
-      {/* PWA Install Guide Modal */}
-      <PWAInstallModal />
-
-      {/* Official Loan Application Form (Print & Download) */}
-      <LoanApplicationFormModal
-        isOpen={showLoanFormModal}
-        onClose={() => setShowLoanFormModal(false)}
-      />
+      {showLoanFormModal && (
+        <LoanApplicationFormModal
+          isOpen={showLoanFormModal}
+          onClose={() => setShowLoanFormModal(false)}
+        />
+      )}
     </div>
   );
 }

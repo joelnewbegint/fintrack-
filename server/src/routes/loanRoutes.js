@@ -53,6 +53,7 @@ const updateLoanSchema = z.object({
 });
 
 router.use(protect);
+router.use(restrictTo('owner', 'loan_agent'));
 
 router.get('/', getLoans);
 router.get('/:id', getLoanById);

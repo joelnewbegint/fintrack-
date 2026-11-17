@@ -11,6 +11,9 @@ import Payment from './models/Payment.js';
 import AuditLog from './models/AuditLog.js';
 import Settings from './models/Settings.js';
 import Investment from './models/Investment.js';
+import EMICustomer from './models/EMICustomer.js';
+import EMILoan from './models/EMILoan.js';
+import EMIPayment from './models/EMIPayment.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,13 +52,16 @@ export const seedData = async (exitOnComplete = true) => {
     });
     console.log('🏢 Created business settings:', settings.businessName);
 
-    // 2. Create Users
+    // 2. Create Users for all 3 roles
     const salt = await bcrypt.genSalt(10);
     const ownerHash = await bcrypt.hash('admin123', salt);
+    const loanAgentHash = await bcrypt.hash('loan123', salt);
     const agentHash = await bcrypt.hash('agent123', salt);
+    const emiAgentHash = await bcrypt.hash('emi123', salt);
 
     const owner = await User.create({
       name: 'Vasantha Kumar K (Owner)',
+      username: 'owner',
       email: 'owner@fintrack.com',
       phone: '9842112345',
       passwordHash: ownerHash,
@@ -64,16 +70,39 @@ export const seedData = async (exitOnComplete = true) => {
       status: 'active',
     });
 
-    const agent = await User.create({
-      name: 'Magimaidoss M (Collection Agent)',
-      email: 'agent@fintrack.com',
-      phone: '9789054321',
-      passwordHash: agentHash,
-      role: 'agent',
+    const loanAgent = await User.create({
+      name: 'K. Saravanan (Loan Agent)',
+      username: 'loanagent',
+      email: 'loanagent@fintrack.com',
+      phone: '9842199887',
+      passwordHash: loanAgentHash,
+      role: 'loan_agent',
       assignedAreas: ['Gandhipuram', 'RS Puram', 'Town Hall'],
       status: 'active',
     });
-    console.log('👤 Created Users: Owner (owner@fintrack.com) and Agent (agent@fintrack.com)');
+
+    const legacyAgent = await User.create({
+      name: 'Magimaidoss M (Collection Agent)',
+      username: 'agent',
+      email: 'agent@fintrack.com',
+      phone: '9789054321',
+      passwordHash: agentHash,
+      role: 'loan_agent',
+      assignedAreas: ['Gandhipuram', 'RS Puram', 'Town Hall'],
+      status: 'active',
+    });
+
+    const emiAgent = await User.create({
+      name: 'R. Vignesh (EMI Collection Agent)',
+      username: 'emiagent',
+      email: 'emiagent@fintrack.com',
+      phone: '9789123456',
+      passwordHash: emiAgentHash,
+      role: 'emi_agent',
+      assignedAreas: ['Ukkadam', 'Singanallur', 'Simmakkal'],
+      status: 'active',
+    });
+    console.log('👤 Created Users: Owner (owner), Loan Agent (loanagent), EMI Agent (emiagent)');
 
     // 2b. Seed Initial Capital Investments
     await Investment.deleteMany({});
@@ -447,7 +476,7 @@ export const seedData = async (exitOnComplete = true) => {
           amount: inst.amount,
           date: inst.paidDate,
           mode,
-          collectedBy: p % 2 === 0 ? owner._id : agent._id,
+          collectedBy: p % 2 === 0 ? owner._id : loanAgent._id,
           notes: `Installment #${inst.installmentNo} collection (${mode.toUpperCase()})`,
         });
 
@@ -483,6 +512,132 @@ export const seedData = async (exitOnComplete = true) => {
     console.log(
       `💰 Created ${totalLoansCreated} loans and ${totalPaymentsCreated} payment receipts across Daily, Weekly, and Monthly schemes.`
     );
+
+    // 6. Seed EMI Module Samples (EMICustomer, EMILoan, EMIPayment)
+    await EMICustomer.deleteMany({});
+    await EMILoan.deleteMany({});
+    await EMIPayment.deleteMany({});
+
+    const emiCust1 = await EMICustomer.create({
+      name: 'R. Balamurugan',
+      tamilName: 'ஆர். பாலமுருகன்',
+      phone: '9843322110',
+      address: '14, Gandhipuram 4th Street, Coimbatore',
+      area: 'Gandhipuram',
+      idProofType: 'Aadhaar Card',
+      idProofNumber: '8765-4321-9012',
+      guarantor: { name: 'K. Ramesh', phone: '9842211334', relationship: 'Brother' },
+      assignedAgentId: emiAgent._id,
+      status: 'active',
+    });
+
+    const emiCust2 = await EMICustomer.create({
+      name: 'M. Kavitha',
+      tamilName: 'எம். கவிதா',
+      phone: '9789944332',
+      address: '28, Cross Cut Road, Ukkadam, Coimbatore',
+      area: 'Ukkadam',
+      idProofType: 'Voter ID',
+      idProofNumber: 'TN/04/098765',
+      guarantor: { name: 'S. Muthu', phone: '9443322111', relationship: 'Spouse' },
+      assignedAgentId: emiAgent._id,
+      status: 'active',
+    });
+
+    // Seed EMI Loan 1 (12 Months, Reducing balance, 6 of 12 paid)
+    const emiSchedule1 = [];
+    const todayDate = new Date();
+    for (let i = 1; i <= 12; i++) {
+      const d = new Date(todayDate);
+      d.setMonth(d.getMonth() + (i - 6));
+      const isPaid = i <= 6;
+      emiSchedule1.push({
+        installmentNo: i,
+        dueDate: d,
+        amount: 5200,
+        principalPart: 4200,
+        interestPart: 1000,
+        paidAmount: isPaid ? 5200 : 0,
+        penaltyAmount: 0,
+        status: isPaid ? 'paid' : 'pending',
+        paidDate: isPaid ? d : null,
+        paymentMode: isPaid ? 'cash' : '',
+        receiptNo: isPaid ? `RCP-EMI-26-000${i}` : '',
+      });
+    }
+
+    await EMILoan.create({
+      emiNo: 'EMI-26-4012',
+      customerId: emiCust1._id,
+      customerName: emiCust1.name,
+      customerPhone: emiCust1.phone,
+      customerArea: emiCust1.area,
+      assignedAgentId: emiAgent._id,
+      assignedAgentName: emiAgent.name,
+      principal: 50000,
+      interestRatePercent: 14,
+      interestCalculationType: 'reducing',
+      tenureMonths: 12,
+      documentationCharges: 500,
+      installmentAmount: 5200,
+      totalPayable: 62400,
+      totalInterest: 12400,
+      totalCollected: 31200,
+      remainingBalance: 31200,
+      startDate: new Date('2026-05-15'),
+      endDate: new Date('2027-05-15'),
+      status: 'active',
+      schedule: emiSchedule1,
+      createdBy: owner._id,
+    });
+
+    // Seed EMI Loan 2 (Overdue sample)
+    const emiSchedule2 = [];
+    for (let i = 1; i <= 10; i++) {
+      const d = new Date(todayDate);
+      d.setMonth(d.getMonth() + (i - 4));
+      const isPaid = i <= 2;
+      const isOverdue = i === 3 || i === 4;
+      emiSchedule2.push({
+        installmentNo: i,
+        dueDate: d,
+        amount: 8500,
+        principalPart: 7000,
+        interestPart: 1500,
+        paidAmount: isPaid ? 8500 : 0,
+        penaltyAmount: isOverdue ? 150 : 0,
+        status: isPaid ? 'paid' : (isOverdue ? 'overdue' : 'pending'),
+        paidDate: isPaid ? d : null,
+      });
+    }
+
+    await EMILoan.create({
+      emiNo: 'EMI-26-8840',
+      customerId: emiCust2._id,
+      customerName: emiCust2.name,
+      customerPhone: emiCust2.phone,
+      customerArea: emiCust2.area,
+      assignedAgentId: emiAgent._id,
+      assignedAgentName: emiAgent.name,
+      principal: 75000,
+      interestRatePercent: 16,
+      interestCalculationType: 'flat',
+      tenureMonths: 10,
+      documentationCharges: 750,
+      installmentAmount: 8500,
+      totalPayable: 85000,
+      totalInterest: 10000,
+      totalCollected: 17000,
+      remainingBalance: 68000,
+      startDate: new Date('2026-07-01'),
+      endDate: new Date('2027-05-01'),
+      status: 'overdue',
+      totalPenalties: 300,
+      schedule: emiSchedule2,
+      createdBy: owner._id,
+    });
+
+    console.log('📦 Created sample EMI customers and loans with installment schedules.');
     console.log('🎉 Seed complete! Ready for FinTrack production.');
     if (exitOnComplete) {
       await closeDB();

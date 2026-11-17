@@ -82,7 +82,7 @@ export const MobileMoreSheet = ({
                 )}
               </div>
               <p className="text-[11px] text-sky-600 dark:text-sky-400 font-bold capitalize">
-                {user?.role === 'owner' ? 'Owner / நிர்வாகி' : 'Collection Agent / முகவர்'}
+                {user?.role === 'owner' ? 'Owner / நிர்வாகி' : user?.role === 'emi_agent' ? 'EMI Agent / தவணை முகவர்' : 'Loan Agent / கடன் முகவர்'}
               </p>
               <p className="text-[10px] text-slate-400 font-mono truncate">
                 {user?.phone ? `+91 ${user.phone}` : user?.email}

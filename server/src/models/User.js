@@ -8,6 +8,13 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Name is required'],
       trim: true,
     },
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      lowercase: true,
+      trim: true,
+    },
     email: {
       type: String,
       required: [true, 'Email is required'],
@@ -26,8 +33,16 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['owner', 'admin', 'agent', 'client'],
-      default: 'agent',
+      enum: ['owner', 'admin', 'loan_agent', 'agent', 'emi_agent', 'client'],
+      default: 'loan_agent',
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
+      default: null,
     },
     address: {
       type: String,
@@ -57,6 +72,10 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+userSchema.virtual('isLocked').get(function () {
+  return !!(this.lockUntil && this.lockUntil > Date.now());
+});
 
 userSchema.methods.comparePassword = async function (password) {
   return bcrypt.compare(password, this.passwordHash);
