@@ -54,6 +54,9 @@ import {
   Coins,
   ShieldCheck,
   Wallet,
+  Landmark,
+  Briefcase,
+  Sparkles,
 } from 'lucide-react';
 
 export const Dashboard = ({
@@ -63,6 +66,8 @@ export const Dashboard = ({
   onOpenNewLoan,
   onOpenInvestment,
   onOpenExpenses,
+  onOpenNewCustomer,
+  onOpenQuickEntry,
 }) => {
   const { t, lang } = useLanguage();
   const { user, isOwner, isClient } = useAuth();
@@ -836,8 +841,8 @@ export const Dashboard = ({
                MOBILE DASHBOARD (Top to Bottom: Section F, E, A)
             ======================================================== */
             <div className="space-y-4">
-              {/* 1. Greeting + Date */}
-              <div className="flex items-center justify-between">
+              {/* 1. Greeting + Date + ⚡ Quick Enter */}
+              <div className="flex items-center justify-between gap-2">
                 <div>
                   <h2 className="font-black text-base text-slate-900 dark:text-white tracking-tight">
                     {lang === 'ta' ? 'வணக்கம்' : 'Welcome back'}, {user?.name?.split(' ')[0] || 'Sir'}
@@ -851,13 +856,55 @@ export const Dashboard = ({
                     })}
                   </p>
                 </div>
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                  {user?.role === 'owner' ? 'Owner' : user?.role === 'client' ? 'Client' : 'Agent'}
-                </span>
+                <div className="flex items-center space-x-1.5 shrink-0">
+                  <button
+                    onClick={onOpenQuickEntry}
+                    className="flex items-center space-x-1 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-sky-500 via-sky-600 to-indigo-600 text-white font-black text-xs shadow-md shadow-sky-500/25 active:scale-95 transition"
+                    title={lang === 'ta' ? 'ஒட்டுமொத்த விரைவு உள்ளீடு' : 'One-Click Quick Entry'}
+                  >
+                    <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
+                    <span>{lang === 'ta' ? 'விரைவு பதிவு' : 'Quick Enter'}</span>
+                  </button>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                    {user?.role === 'owner' ? 'Owner' : user?.role === 'client' ? 'Client' : 'Agent'}
+                  </span>
+                </div>
               </div>
 
               {/* 2. Horizontal Swipe Carousel of Key Metric Cards (Snap scrolling) */}
               <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 scrollbar-none -mx-3 px-3">
+                {/* Available Capital / Investment Card (Minus Loans Disbursed, Add to Lend) */}
+                <div
+                  onClick={() => onOpenInvestment && onOpenInvestment()}
+                  className="w-[84%] shrink-0 snap-center glass rounded-3xl p-4 border border-indigo-300/80 dark:border-indigo-800/60 shadow-lg bg-gradient-to-br from-indigo-500/10 via-sky-500/10 to-cyan-500/10 cursor-pointer active:scale-98 transition relative overflow-hidden"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
+                      {lang === 'ta' ? 'முதலீட்டு கையிருப்பு (Available)' : 'Available Capital to Lend'}
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 via-sky-500 to-cyan-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/25">
+                      <Landmark className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <p className="text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums mt-1 whitespace-nowrap">
+                    {formatCurrency(
+                      cards.availableInvestment !== undefined
+                        ? cards.availableInvestment
+                        : Math.max(0, (cards.activeWorkingCapital || cards.totalInvested || 0) - (cards.totalLent || 0))
+                    )}
+                  </p>
+                  <div className="flex items-center justify-between mt-1 text-[10px]">
+                    <span className="text-slate-500 dark:text-slate-400 font-bold">
+                      {lang === 'ta'
+                        ? `முதலீடு: ${formatCurrency(cards.totalInvested || 0)}`
+                        : `Pool: ${formatCurrency(cards.totalInvested || 0)}`}
+                    </span>
+                    <span className="text-rose-500 font-bold">
+                      (-{formatCurrency(cards.totalLent || 0)} lent)
+                    </span>
+                  </div>
+                </div>
+
                 {/* Net Overall Collected (After Expenses) with Tap for Breakdown */}
                 <div
                   onClick={() => setShowBreakdownModal(true)}
@@ -1427,6 +1474,41 @@ export const Dashboard = ({
                DESKTOP & TABLET DASHBOARD (Rich Multi-pane Layout)
             ======================================================== */
             <div className="space-y-6">
+              {/* Master One-Click Overall Quick Entry Card */}
+              <div
+                onClick={onOpenQuickEntry}
+                className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-sky-500 via-indigo-600 to-purple-600 text-white cursor-pointer shadow-xl shadow-indigo-500/25 hover:shadow-2xl hover:scale-[1.008] active:scale-[0.99] transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-white/20 relative overflow-hidden"
+              >
+                <div className="flex items-center space-x-3.5 relative z-10">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 shadow-inner">
+                    <Zap className="w-6 h-6 text-amber-300 fill-amber-300" />
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="font-black text-base sm:text-lg tracking-tight">
+                        {lang === 'ta' ? '⚡ ஒட்டுமொத்த விரைவு உள்ளீடு (One-Click Quick Entry)' : '⚡ One-Click Overall Quick Entry'}
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-900 shadow-xs">
+                        Instant
+                      </span>
+                    </div>
+                    <p className="text-xs text-sky-100 font-medium mt-0.5">
+                      {lang === 'ta'
+                        ? 'ஒரே கிளிக்கில் வசூல், புதிய கடன், வாடிக்கையாளர், மூலதன முதலீடு மற்றும் அலுவலக செலவு பதிவுகளைத் துவங்கவும்'
+                        : 'Launch payments, issue loans, add customers, record capital investments, or log expenses in 1 click'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto relative z-10">
+                  <span className="px-4 py-2 rounded-xl bg-white text-indigo-700 font-black text-xs shadow-md hover:bg-sky-50 transition">
+                    {lang === 'ta' ? 'உள்ளீடு செய்க' : 'Open Quick Entry'}
+                  </span>
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                    <ChevronRight className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+              </div>
+
               {/* Quick Action Bar (Add Payment for Admin & Agent, New Loan & Investment for Owner) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div
@@ -1562,6 +1644,32 @@ export const Dashboard = ({
                   gradient="from-emerald-400 to-teal-600"
                   delay={0}
                   onClick={() => setShowBreakdownModal(true)}
+                />
+                <StatCard
+                  title={lang === 'ta' ? 'முதலீட்டு கையிருப்பு (Available)' : 'Available Capital to Lend'}
+                  amount={
+                    cards.availableInvestment !== undefined
+                      ? cards.availableInvestment
+                      : Math.max(0, (cards.activeWorkingCapital || cards.totalInvested || 0) - (cards.totalLent || 0))
+                  }
+                  subtitle={
+                    lang === 'ta'
+                      ? `முதலீடு: ${formatCurrency(cards.totalInvested || 0)} • கடன்: -${formatCurrency(cards.totalLent || 0)}`
+                      : `Total Pool: ${formatCurrency(cards.totalInvested || 0)} • Disbursed: -${formatCurrency(cards.totalLent || 0)}`
+                  }
+                  icon={Landmark}
+                  gradient="from-indigo-500 via-sky-600 to-cyan-500"
+                  delay={0.02}
+                  onClick={() => onOpenInvestment && onOpenInvestment()}
+                />
+                <StatCard
+                  title={lang === 'ta' ? 'மொத்த மூலதன முதலீடு' : 'Total Capital Invested'}
+                  amount={cards.totalInvested || cards.activeWorkingCapital || 0}
+                  subtitle={lang === 'ta' ? 'சொந்த மற்றும் கூட்டாளி பங்கு' : 'Promoter & partner capital fund'}
+                  icon={Briefcase}
+                  gradient="from-blue-600 via-indigo-600 to-violet-700"
+                  delay={0.03}
+                  onClick={() => onOpenInvestment && onOpenInvestment()}
                 />
                 <StatCard
                   title={t('totalLent')}

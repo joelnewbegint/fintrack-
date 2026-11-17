@@ -3,6 +3,7 @@ import {
   getInvestments,
   createInvestment,
   recordReturn,
+  updateInvestment,
   deleteInvestment,
 } from '../controllers/investmentController.js';
 import { protect, restrictTo } from '../middleware/auth.js';
@@ -14,6 +15,8 @@ router.use(restrictTo('owner'));
 
 router.get('/', getInvestments);
 router.post('/', createInvestment);
+router.put('/:id', updateInvestment);
+router.patch('/:id', updateInvestment);
 router.post('/:id/return', recordReturn);
 router.delete('/:id', deleteInvestment);
 

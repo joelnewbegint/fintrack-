@@ -16,6 +16,7 @@ import WhatsAppReminderModal from './components/common/WhatsAppReminderModal';
 import WhatsAppHubModal from './components/common/WhatsAppHubModal';
 import PWAInstallModal from './components/common/PWAInstallModal';
 import LoanApplicationFormModal from './components/common/LoanApplicationFormModal';
+import QuickEntryModal from './components/common/QuickEntryModal';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Loans from './pages/Loans';
@@ -58,6 +59,7 @@ export function App() {
   const [whatsappHubProps, setWhatsappHubProps] = useState({});
   const [globalPayItem, setGlobalPayItem] = useState(null);
   const [showLoanFormModal, setShowLoanFormModal] = useState(false);
+  const [showQuickEntryModal, setShowQuickEntryModal] = useState(false);
 
   const [customers, setCustomers] = useState([]);
   const [activeLoans, setActiveLoans] = useState([]);
@@ -192,6 +194,7 @@ export function App() {
           if (input) input.focus();
         }}
         onAddPayment={() => setShowGlobalPayModal(true)}
+        onOpenQuickEntry={() => setShowQuickEntryModal(true)}
         onOpenMoreSheet={() => setShowMoreSheet(true)}
         onOpenNotifications={() => setShowNotifications(true)}
         onOpenLoanForm={() => setShowLoanFormModal(true)}
@@ -258,8 +261,10 @@ export function App() {
                   onViewLoan={(id) => setSelectedLoanId(id)}
                   onOpenPayment={() => setShowGlobalPayModal(true)}
                   onOpenNewLoan={() => setShowGlobalLoanModal(true)}
+                  onOpenNewCustomer={() => setShowGlobalCustomerModal(true)}
                   onOpenInvestment={() => setShowGlobalInvestmentModal(true)}
                   onOpenExpenses={() => setActiveTab('expenses')}
+                  onOpenQuickEntry={() => setShowQuickEntryModal(true)}
                 />
               )}
 
@@ -308,6 +313,7 @@ export function App() {
           onAddLoan={() => setShowGlobalLoanModal(true)}
           onAddCustomer={() => setShowGlobalCustomerModal(true)}
           onAddInvestment={() => setShowGlobalInvestmentModal(true)}
+          onOpenQuickEntry={() => setShowQuickEntryModal(true)}
         />
       )}
 
@@ -428,6 +434,18 @@ export function App() {
       <LoanApplicationFormModal
         isOpen={showLoanFormModal}
         onClose={() => setShowLoanFormModal(false)}
+      />
+
+      {/* One-Click Overall Quick Entry Master Modal */}
+      <QuickEntryModal
+        isOpen={showQuickEntryModal}
+        onClose={() => setShowQuickEntryModal(false)}
+        onRecordPayment={() => setShowGlobalPayModal(true)}
+        onAddLoan={() => setShowGlobalLoanModal(true)}
+        onAddCustomer={() => setShowGlobalCustomerModal(true)}
+        onAddInvestment={() => setShowGlobalInvestmentModal(true)}
+        onAddExpense={() => setActiveTab('expenses')}
+        onDailyClosing={() => setActiveTab('dailyClosing')}
       />
     </div>
   );

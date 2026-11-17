@@ -1,20 +1,36 @@
 import React, { useState } from 'react';
 import api from '../../services/api';
 import { formatCurrency, formatDateForInput } from '../../utils/currency';
-import { X, Check, Landmark, DollarSign, ArrowDownLeft, ShieldCheck } from 'lucide-react';
+import { X, Check, Landmark, DollarSign, ArrowDownLeft, ShieldCheck, Edit3 } from 'lucide-react';
 
-export const InvestmentModal = ({ onClose, onSuccess, initialReturnItem = null }) => {
+export const InvestmentModal = ({ onClose, onSuccess, initialReturnItem = null, initialEditItem = null }) => {
   const isReturnMode = Boolean(initialReturnItem);
+  const isEditMode = Boolean(initialEditItem);
 
-  // New Investment Fields
-  const [investorName, setInvestorName] = useState(initialReturnItem?.investorName || '');
-  const [phone, setPhone] = useState(initialReturnItem?.phone || '');
-  const [amount, setAmount] = useState(initialReturnItem ? 50000 : 100000);
-  const [interestPercent, setInterestPercent] = useState(0);
-  const [investmentType, setInvestmentType] = useState('self');
-  const [startDate, setStartDate] = useState(formatDateForInput());
-  const [paymentMode, setPaymentMode] = useState('bank');
-  const [notes, setNotes] = useState('');
+  const activeTarget = initialEditItem || initialReturnItem;
+
+  // Investment Fields
+  const [investorName, setInvestorName] = useState(activeTarget?.investorName || '');
+  const [phone, setPhone] = useState(activeTarget?.phone || '');
+  const [amount, setAmount] = useState(() => {
+    if (initialEditItem) return initialEditItem.amount || 0;
+    if (initialReturnItem) return 50000;
+    return 100000;
+  });
+  const [interestPercent, setInterestPercent] = useState(initialEditItem?.interestPercent || 0);
+  const [investmentType, setInvestmentType] = useState(initialEditItem?.investmentType || 'self');
+  const [startDate, setStartDate] = useState(() => {
+    if (initialEditItem?.startDate) {
+      try {
+        return new Date(initialEditItem.startDate).toISOString().slice(0, 10);
+      } catch (e) {
+        return formatDateForInput();
+      }
+    }
+    return formatDateForInput();
+  });
+  const [paymentMode, setPaymentMode] = useState(initialEditItem?.paymentMode || 'bank');
+  const [notes, setNotes] = useState(initialEditItem?.notes || '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -34,7 +50,18 @@ export const InvestmentModal = ({ onClose, onSuccess, initialReturnItem = null }
 
     try {
       setSubmitting(true);
-      if (isReturnMode) {
+      if (isEditMode) {
+        await api.updateInvestment(initialEditItem._id, {
+          investorName,
+          phone,
+          amount: numAmount,
+          interestPercent: Number(interestPercent) || 0,
+          investmentType,
+          startDate,
+          paymentMode,
+          notes,
+        });
+      } else if (isReturnMode) {
         if (numAmount > activeBalance) {
           setError(`Return amount cannot exceed active balance of ${formatCurrency(activeBalance)}`);
           setSubmitting(false);
@@ -78,15 +105,23 @@ export const InvestmentModal = ({ onClose, onSuccess, initialReturnItem = null }
         <div className="flex justify-between items-center pb-3 border-b border-sky-100 dark:border-sky-900/60">
           <div>
             <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center space-x-2">
-              <Landmark className="w-5 h-5 text-sky-500 flex-shrink-0" />
+              {isEditMode ? (
+                <Edit3 className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+              ) : (
+                <Landmark className="w-5 h-5 text-sky-500 flex-shrink-0" />
+              )}
               <span className="truncate">
-                {isReturnMode
+                {isEditMode
+                  ? 'Edit Capital Investment / முதலீடு திருத்து'
+                  : isReturnMode
                   ? 'Withdraw Capital'
                   : 'Add Capital Investment'}
               </span>
             </h3>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              {isReturnMode
+              {isEditMode
+                ? `Editing capital investment details for ${initialEditItem.investorName}`
+                : isReturnMode
                 ? `Recording return against ${initialReturnItem.investorName}`
                 : 'Track owner capital, partner equity, or borrowed fund'}
             </p>
@@ -269,7 +304,9 @@ export const InvestmentModal = ({ onClose, onSuccess, initialReturnItem = null }
                 <>
                   <Check className="w-5 h-5 stroke-[3]" />
                   <span>
-                    {isReturnMode
+                    {isEditMode
+                      ? 'Save Changes / மாற்றங்களை சேமி'
+                      : isReturnMode
                       ? 'Confirm Withdrawal'
                       : 'Save Capital Investment'}
                   </span>

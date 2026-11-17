@@ -2,6 +2,7 @@ import Investment from '../models/Investment.js';
 import Loan from '../models/Loan.js';
 import Payment from '../models/Payment.js';
 import AuditLog from '../models/AuditLog.js';
+import User from '../models/User.js';
 
 export const getInvestments = async (req, res, next) => {
   try {
@@ -214,6 +215,87 @@ export const deleteInvestment = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Investment record deleted',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateInvestment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      investorName,
+      phone,
+      amount,
+      interestPercent,
+      investmentType,
+      startDate,
+      paymentMode,
+      notes,
+      status,
+    } = req.body;
+
+    const investment = await Investment.findById(id);
+    if (!investment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Investment record not found',
+      });
+    }
+
+    const before = {
+      investorName: investment.investorName,
+      amount: investment.amount,
+      interestPercent: investment.interestPercent,
+      investmentType: investment.investmentType,
+    };
+
+    if (investorName !== undefined) investment.investorName = String(investorName).trim();
+    if (phone !== undefined) investment.phone = String(phone).trim();
+    if (amount !== undefined) {
+      const numAmount = Number(amount);
+      if (numAmount <= 0) {
+        return res.status(400).json({ success: false, message: 'Amount must be greater than 0' });
+      }
+      investment.amount = numAmount;
+    }
+    if (interestPercent !== undefined) investment.interestPercent = Number(interestPercent) || 0;
+    if (investmentType !== undefined) investment.investmentType = investmentType;
+    if (startDate !== undefined) investment.startDate = new Date(startDate);
+    if (paymentMode !== undefined) investment.paymentMode = paymentMode;
+    if (notes !== undefined) investment.notes = notes;
+    if (status !== undefined) investment.status = status;
+
+    // Recalculate status based on totalReturned vs amount
+    if ((investment.totalReturned || 0) >= investment.amount) {
+      investment.status = 'closed';
+    } else if ((investment.totalReturned || 0) > 0) {
+      investment.status = 'partially_returned';
+    } else {
+      investment.status = 'active';
+    }
+
+    await investment.save();
+
+    await AuditLog.create({
+      userId: req.user._id,
+      userName: req.user.name,
+      action: 'UPDATE_INVESTMENT',
+      entity: 'Investment',
+      entityId: investment._id.toString(),
+      before,
+      after: {
+        investorName: investment.investorName,
+        amount: investment.amount,
+        interestPercent: investment.interestPercent,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Investment record updated successfully',
+      investment,
     });
   } catch (error) {
     next(error);

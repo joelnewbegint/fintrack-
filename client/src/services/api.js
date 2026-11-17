@@ -369,9 +369,27 @@ export const api = {
       target.pending += pending;
     });
 
+    const localInvestments = getStored(STORAGE_KEYS.INVESTMENTS, initialInvestments);
+    let totalInvested = 0;
+    let totalReturned = 0;
+    localInvestments.forEach((inv) => {
+      totalInvested += Number(inv.amount || 0);
+      totalReturned += Number(inv.totalReturned || 0);
+    });
+    const activeWorkingCapital = Math.max(0, totalInvested - totalReturned);
+    const availableInvestment = Math.max(0, activeWorkingCapital - totalActiveCapital);
+    const netAvailableCapital = Math.max(
+      0,
+      activeWorkingCapital + totalGrossCollected - (totalActiveCapital + totalExpenses)
+    );
+
     return {
       success: true,
       cards: {
+        totalInvested,
+        activeWorkingCapital,
+        availableInvestment,
+        netAvailableCapital,
         totalLent: totalActiveCapital,
         totalCollected: totalGrossCollected,
         totalExpenses,
@@ -1415,6 +1433,28 @@ export const api = {
       return { success: true, investment: investments[index] };
     }
     return { success: true };
+  },
+
+  updateInvestment: async (id, data) => {
+    const result = await safeFetchJson(`/api/investments/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (result.ok) return result.data;
+
+    const investments = getStored(STORAGE_KEYS.INVESTMENTS, initialInvestments);
+    const index = investments.findIndex((i) => i._id === id);
+    if (index !== -1) {
+      investments[index] = {
+        ...investments[index],
+        ...data,
+        updatedAt: new Date().toISOString(),
+      };
+      setStored(STORAGE_KEYS.INVESTMENTS, investments);
+      return { success: true, investment: investments[index] };
+    }
+    return { success: false, message: 'Investment not found locally' };
   },
 
   deleteInvestment: async (id) => {

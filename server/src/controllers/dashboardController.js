@@ -3,6 +3,7 @@ import Loan from '../models/Loan.js';
 import Payment from '../models/Payment.js';
 import Customer from '../models/Customer.js';
 import Expense from '../models/Expense.js';
+import Investment from '../models/Investment.js';
 
 export const getDashboardStats = async (req, res, next) => {
   try {
@@ -521,9 +522,35 @@ export const getDashboardStats = async (req, res, next) => {
       };
     });
 
+    // 10. Investment Capital Calculation
+    // Total investment recorded in the system
+    const allInvestments = await Investment.find().lean();
+    let totalInvested = 0;
+    let totalReturned = 0;
+    for (const inv of allInvestments) {
+      totalInvested += Number(inv.amount || 0);
+      totalReturned += Number(inv.totalReturned || 0);
+    }
+    const activeWorkingCapital = Math.max(0, totalInvested - totalReturned);
+
+    // Total Lent = sum of all loan principals issued
+    // When a new loan is added:
+    // - totalLent increases by the loan principal amount ("add to lend")
+    // - availableInvestment decreases by the loan principal amount ("that amount should be minus")
+    const totalPrincipalLent = Number(totalStats.totalPrincipal || 0);
+    const availableInvestment = Math.max(0, activeWorkingCapital - totalPrincipalLent);
+    const netAvailableCapital = Math.max(
+      0,
+      activeWorkingCapital + Number(totalStats.totalCollected || 0) - (totalPrincipalLent + Number(totalExpenses || 0))
+    );
+
     res.status(200).json({
       success: true,
       cards: {
+        totalInvested,
+        activeWorkingCapital,
+        availableInvestment,
+        netAvailableCapital,
         totalLent: totalStats.totalPrincipal,
         totalCollected: totalStats.totalCollected,
         totalExpenses,

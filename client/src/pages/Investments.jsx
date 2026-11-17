@@ -19,6 +19,7 @@ import {
   Clock,
   Briefcase,
   History,
+  Edit3,
 } from 'lucide-react';
 
 export const Investments = ({ onOpenNewInvestment }) => {
@@ -30,6 +31,7 @@ export const Investments = ({ onOpenNewInvestment }) => {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [returnItem, setReturnItem] = useState(null);
+  const [editItem, setEditItem] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -262,6 +264,15 @@ export const Investments = ({ onOpenNewInvestment }) => {
                       )}
 
                       <button
+                        onClick={() => setEditItem(inv)}
+                        className="min-h-[48px] px-3.5 glass hover:bg-sky-50 text-slate-600 hover:text-sky-600 rounded-xl flex items-center justify-center space-x-1 border border-sky-200/60 dark:border-sky-800/60"
+                        title="Edit Investment"
+                      >
+                        <Edit3 className="w-4 h-4 text-sky-500" />
+                        <span className="text-xs font-bold">{lang === 'ta' ? 'திருத்து' : 'Edit'}</span>
+                      </button>
+
+                      <button
                         onClick={() => handleDelete(inv._id, inv.investorName)}
                         className="min-h-[48px] min-w-[48px] px-3.5 glass hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl flex items-center justify-center"
                         title="Delete"
@@ -368,6 +379,14 @@ export const Investments = ({ onOpenNewInvestment }) => {
                         <span>Withdraw</span>
                       </button>
                     )}
+
+                    <button
+                      onClick={() => setEditItem(inv)}
+                      className="p-1.5 rounded-xl glass hover:bg-sky-50 text-slate-500 hover:text-sky-600 transition"
+                      title="Edit Investment"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-sky-500" />
+                    </button>
 
                     <button
                       onClick={() => handleDelete(inv._id, inv.investorName)}
@@ -489,6 +508,14 @@ export const Investments = ({ onOpenNewInvestment }) => {
                             )}
 
                             <button
+                              onClick={() => setEditItem(inv)}
+                              className="p-1.5 rounded-xl glass hover:bg-sky-50 text-slate-500 hover:text-sky-600 transition"
+                              title="Edit Investment"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-sky-500" />
+                            </button>
+
+                            <button
                               onClick={() => handleDelete(inv._id, inv.investorName)}
                               className="p-1.5 rounded-xl glass hover:bg-red-50 text-slate-400 hover:text-red-500 transition"
                               title="Delete"
@@ -507,13 +534,15 @@ export const Investments = ({ onOpenNewInvestment }) => {
         </div>
       )}
 
-      {/* Add / Return Capital Modal */}
-      {(showAddModal || returnItem) && (
+      {/* Add / Edit / Return Capital Modal */}
+      {(showAddModal || returnItem || editItem) && (
         <InvestmentModal
           initialReturnItem={returnItem}
+          initialEditItem={editItem}
           onClose={() => {
             setShowAddModal(false);
             setReturnItem(null);
+            setEditItem(null);
           }}
           onSuccess={() => {
             fetchInvestments();
