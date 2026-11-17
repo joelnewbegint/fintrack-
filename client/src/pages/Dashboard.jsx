@@ -90,6 +90,15 @@ export const Dashboard = ({
   const [mobileVisibleCount, setMobileVisibleCount] = useState(5);
   const [showTrendChart, setShowTrendChart] = useState(false);
   const [showSplitChart, setShowSplitChart] = useState(false);
+  const [agentList, setAgentList] = useState([]);
+
+  useEffect(() => {
+    if (isOwner) {
+      api.getAgents().then((res) => {
+        if (Array.isArray(res)) setAgentList(res);
+      }).catch(() => {});
+    }
+  }, [isOwner]);
 
   const loadData = async (isBackground = false) => {
     try {
@@ -153,15 +162,6 @@ export const Dashboard = ({
   const overdueTotal = overdueLoans.reduce((acc, item) => acc + (Number(item.remainingBalance || item.dueAmount) || 0), 0);
   const totalDueAndOverdue = todayDueTotal + overdueTotal;
 
-  const [agentList, setAgentList] = useState([]);
-
-  useEffect(() => {
-    if (isOwner) {
-      api.getAgents().then((res) => {
-        if (Array.isArray(res)) setAgentList(res);
-      }).catch(() => {});
-    }
-  }, [isOwner]);
   const collectionTrend = stats?.collectionTrend || [];
   const financeTypeSplit = (stats?.financeTypeSplit || []).map((item) => {
     let c = '#0EA5E9'; // sky
