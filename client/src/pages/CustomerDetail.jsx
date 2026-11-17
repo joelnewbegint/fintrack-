@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useDeviceMode } from '../context/DeviceModeContext';
-import { formatCurrency, formatDate } from '../utils/currency';
+import { formatCurrency, formatDate, formatPhoneNumber } from '../utils/currency';
 import { parseCustomerName } from '../utils/customerName';
 import {
   generateLoanSchedule,
@@ -623,8 +623,8 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                       <th className="py-2.5 px-3">Date</th>
                       <th className="py-2.5 px-3">Loan Account</th>
                       <th className="py-2.5 px-3">Mode</th>
-                      <th className="py-2.5 px-3">Amount Paid</th>
-                      <th className="py-2.5 px-3">Remaining Balance</th>
+                      <th className="py-2.5 px-3 text-right">Amount Paid</th>
+                      <th className="py-2.5 px-3 text-right">Remaining Balance</th>
                       <th className="py-2.5 px-3">Collected By</th>
                       <th className="py-2.5 px-3 text-right">Receipt Voucher</th>
                     </tr>
@@ -637,10 +637,10 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                         <td className="py-2.5 px-3">{formatDate(item.date)}</td>
                         <td className="py-2.5 px-3 font-semibold">{item.loanNo}</td>
                         <td className="py-2.5 px-3 uppercase font-bold text-[10px]">{item.mode}</td>
-                        <td className="py-2.5 px-3 font-bold text-emerald-600 tabular-nums">
+                        <td className="py-2.5 px-3 text-right font-bold text-emerald-600 tabular-nums">
                           {formatCurrency(item.amount)}
                         </td>
-                        <td className="py-2.5 px-3 font-bold text-amber-600 tabular-nums">
+                        <td className="py-2.5 px-3 text-right font-bold text-amber-600 tabular-nums">
                           {formatCurrency(item.runningBalance)}
                         </td>
                         <td className="py-2.5 px-3 text-slate-500 font-sans text-[11px]">{item.collector}</td>
@@ -745,10 +745,10 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                   <tr>
                     <th className="py-2.5 px-3">Inst #</th>
                     <th className="py-2.5 px-3">Due Date</th>
-                    <th className="py-2.5 px-3">Expected Amount</th>
+                    <th className="py-2.5 px-3 text-right">Expected Amount</th>
                     <th className="py-2.5 px-3">Paid Date</th>
                     <th className="py-2.5 px-3">Receipt No</th>
-                    <th className="py-2.5 px-3">Amount Paid</th>
+                    <th className="py-2.5 px-3 text-right">Amount Paid</th>
                     <th className="py-2.5 px-3 text-center">Status</th>
                     <th className="py-2.5 px-3 text-right">Declare / Action</th>
                   </tr>
@@ -771,12 +771,12 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                     >
                       <td className="py-2 px-3 font-bold text-slate-500">#{inst.installmentNo}</td>
                       <td className="py-2 px-3">{formatDate(inst.dueDate)}</td>
-                      <td className="py-2 px-3 font-semibold">{formatCurrency(inst.amount)}</td>
+                      <td className="py-2 px-3 text-right font-semibold tabular-nums">{formatCurrency(inst.amount)}</td>
                       <td className="py-2 px-3 text-slate-600 dark:text-slate-400">
                         {inst.paidDate ? formatDate(inst.paidDate) : '-'}
                       </td>
                       <td className="py-2 px-3 text-sky-600 font-bold">{inst.receiptNo || '-'}</td>
-                      <td className="py-2 px-3 font-bold text-emerald-600">
+                      <td className="py-2 px-3 text-right font-bold text-emerald-600 tabular-nums">
                         {inst.paidAmount > 0 ? formatCurrency(inst.paidAmount) : '-'}
                       </td>
                       <td className="py-2 px-3 text-center">

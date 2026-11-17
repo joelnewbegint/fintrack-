@@ -415,8 +415,8 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   <tr>
                     <th className="py-2.5 px-3">#</th>
                     <th className="py-2.5 px-3">Due Date</th>
-                    <th className="py-2.5 px-3">Amount</th>
-                    <th className="py-2.5 px-3">Paid</th>
+                    <th className="py-2.5 px-3 text-right">Amount</th>
+                    <th className="py-2.5 px-3 text-right">Paid</th>
                     <th className="py-2.5 px-3">Status</th>
                     <th className="py-2.5 px-3">Paid Date</th>
                     <th className="py-2.5 px-3 text-right">Action</th>
@@ -430,8 +430,8 @@ export const LoanDetail = ({ loanId, onBack }) => {
                     >
                       <td className="py-2.5 px-3 font-bold">{inst.installmentNo}</td>
                       <td className="py-2.5 px-3">{formatDate(inst.dueDate)}</td>
-                      <td className="py-2.5 px-3 font-semibold">{formatCurrency(inst.amount)}</td>
-                      <td className="py-2.5 px-3 text-emerald-600 font-bold">
+                      <td className="py-2.5 px-3 text-right font-semibold tabular-nums">{formatCurrency(inst.amount)}</td>
+                      <td className="py-2.5 px-3 text-right text-emerald-600 font-bold tabular-nums">
                         {formatCurrency(inst.paidAmount || 0)}
                       </td>
                       <td className="py-2.5 px-3">

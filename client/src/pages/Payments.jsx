@@ -3,7 +3,7 @@ import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useDeviceMode } from '../context/DeviceModeContext';
-import { formatCurrency, formatDate } from '../utils/currency';
+import { formatCurrency, formatDate, formatPhoneNumber } from '../utils/currency';
 import { parseCustomerName } from '../utils/customerName';
 import ReceiptModal from '../components/common/ReceiptModal';
 import PaymentModal from '../components/common/PaymentModal';
@@ -294,7 +294,7 @@ export const Payments = () => {
                     <th className="py-3 px-4">Borrower</th>
                     <th className="py-3 px-4">Loan Account</th>
                     <th className="py-3 px-4">Mode</th>
-                    <th className="py-3 px-4">Amount</th>
+                    <th className="py-3 px-4 text-right">Amount</th>
                     <th className="py-3 px-4">Collected By</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
@@ -316,7 +316,7 @@ export const Payments = () => {
                           {p.customerId?.name}
                         </div>
                         <div className="text-[10px] text-slate-500 font-mono">
-                          {p.customerId?.phone} {p.customerId?.area ? `• ${p.customerId?.area}` : ''}
+                          {formatPhoneNumber(p.customerId?.phone)} {p.customerId?.area ? `• ${p.customerId?.area}` : ''}
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -336,7 +336,7 @@ export const Payments = () => {
                           {p.mode}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-black tabular-nums text-slate-900 dark:text-white text-sm">
+                      <td className="py-3 px-4 text-right font-bold tabular-nums text-slate-900 dark:text-white text-sm">
                         {formatCurrency(p.amount)}
                       </td>
                       <td className="py-3 px-4 text-slate-500">

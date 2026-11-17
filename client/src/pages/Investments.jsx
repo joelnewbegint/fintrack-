@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useDeviceMode } from '../context/DeviceModeContext';
-import { formatCurrency, formatDate } from '../utils/currency';
+import { formatCurrency, formatDate, formatPhoneNumber } from '../utils/currency';
 import InvestmentModal from '../components/common/InvestmentModal';
 import StatCard from '../components/common/StatCard';
 import {
@@ -418,10 +418,10 @@ export const Investments = ({ onOpenNewInvestment }) => {
                     <th className="py-3.5 px-4">Type</th>
                     <th className="py-3.5 px-4">Channel</th>
                     <th className="py-3.5 px-4">Start Date</th>
-                    <th className="py-3.5 px-4">Initial Capital</th>
-                    <th className="py-3.5 px-4">Returned</th>
-                    <th className="py-3.5 px-4">Active Balance</th>
-                    <th className="py-3.5 px-4">Interest Rate</th>
+                    <th className="py-3.5 px-4 text-right">Initial Capital</th>
+                    <th className="py-3.5 px-4 text-right">Returned</th>
+                    <th className="py-3.5 px-4 text-right">Active Balance</th>
+                    <th className="py-3.5 px-4 text-right">Interest Rate</th>
                     <th className="py-3.5 px-4">Status</th>
                     <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
@@ -439,7 +439,7 @@ export const Investments = ({ onOpenNewInvestment }) => {
                             {inv.investorName}
                           </div>
                           {inv.phone && (
-                            <div className="text-[10px] text-slate-400 font-mono">{inv.phone}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">{formatPhoneNumber(inv.phone)}</div>
                           )}
                         </td>
 
@@ -465,19 +465,19 @@ export const Investments = ({ onOpenNewInvestment }) => {
                           {formatDate(inv.startDate)}
                         </td>
 
-                        <td className="py-3.5 px-4 font-black tabular-nums text-slate-900 dark:text-white">
+                        <td className="py-3.5 px-4 text-right font-bold tabular-nums text-slate-900 dark:text-white">
                           {formatCurrency(inv.amount)}
                         </td>
 
-                        <td className="py-3.5 px-4 font-bold tabular-nums text-amber-600">
+                        <td className="py-3.5 px-4 text-right font-bold tabular-nums text-amber-600">
                           {formatCurrency(inv.totalReturned || 0)}
                         </td>
 
-                        <td className="py-3.5 px-4 font-black tabular-nums text-emerald-600 text-sm">
+                        <td className="py-3.5 px-4 text-right font-bold tabular-nums text-emerald-600 text-sm">
                           {formatCurrency(active)}
                         </td>
 
-                        <td className="py-3.5 px-4 font-bold tabular-nums text-sky-600">
+                        <td className="py-3.5 px-4 text-right font-bold tabular-nums text-sky-600">
                           {inv.interestPercent}% p.a.
                         </td>
 

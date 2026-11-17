@@ -1,12 +1,13 @@
 /**
- * Formats a number to Indian Currency Standard (e.g., ₹ 1,25,000)
+ * Formats a number to Indian Currency Standard (e.g., ₹1,25,000 with Indian digit grouping)
  */
-export const formatCurrency = (amount) => {
+export const formatCurrency = (amount, decimals = 0) => {
   const num = Number(amount) || 0;
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(num);
 };
 
@@ -28,11 +29,12 @@ export const formatShortCurrency = (amount) => {
 };
 
 /**
- * Format date to Indian standard (DD/MM/YYYY)
+ * Format date to standard: DD MMM YYYY (e.g. "17 Nov 2026")
  */
 export const formatDate = (dateStr) => {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '-';
   return d.toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',
@@ -41,11 +43,36 @@ export const formatDate = (dateStr) => {
 };
 
 /**
- * Format date for inputs (YYYY-MM-DD)
+ * Format date for input elements: YYYY-MM-DD
  */
 export const formatDateForInput = (date = new Date()) => {
   const d = new Date(date);
+  if (isNaN(d.getTime())) return new Date().toISOString().split('T')[0];
   return d.toISOString().split('T')[0];
+};
+
+/**
+ * Standardize phone number display: +91 XXXXX XXXXX (10-digit Indian standard)
+ */
+export const formatPhoneNumber = (phone) => {
+  if (!phone) return '-';
+  const clean = String(phone).replace(/[^0-9]/g, '');
+  if (clean.length === 10) {
+    return `+91 ${clean.slice(0, 5)} ${clean.slice(5)}`;
+  }
+  if (clean.length === 12 && clean.startsWith('91')) {
+    const raw = clean.slice(2);
+    return `+91 ${raw.slice(0, 5)} ${raw.slice(5)}`;
+  }
+  return phone;
+};
+
+/**
+ * Standardize percentage display: e.g. "15%" or "12.5%"
+ */
+export const formatPercentage = (val, decimals = 0) => {
+  const num = Number(val) || 0;
+  return `${num.toFixed(decimals)}%`;
 };
 
 /**

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+build/
+.git/
+.gemini/
+*.log
+package-lock.json

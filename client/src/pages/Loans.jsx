@@ -775,11 +775,11 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                     <p className="text-xs font-bold text-slate-900 dark:text-white">Scheme</p>
                     <p className="text-[10px] text-slate-400 font-medium">திட்டம்</p>
                   </th>
-                  <th className="py-3 px-4">
+                  <th className="py-3 px-4 text-right">
                     <p className="text-xs font-bold text-slate-900 dark:text-white">Principal</p>
                     <p className="text-[10px] text-slate-400 font-medium">முதற்கடன்</p>
                   </th>
-                  <th className="py-3 px-4">
+                  <th className="py-3 px-4 text-right">
                     <p className="text-xs font-bold text-slate-900 dark:text-white">Installment</p>
                     <p className="text-[10px] text-slate-400 font-medium">தவணை</p>
                   </th>
@@ -942,7 +942,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                         </td>
 
                         {/* 4. Principal Cell (Bold Amount + Disbursed/Charge Sub-line) */}
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 text-right">
                           <div className="font-bold text-sm text-slate-900 dark:text-white tabular-nums">
                             {formatCurrency(loan.principal)}
                           </div>
@@ -960,7 +960,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                         </td>
 
                         {/* 5. Installment Cell (Bold amount with frequency) */}
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 text-right">
                           <div className="font-bold text-sm text-slate-900 dark:text-white tabular-nums">
                             {formatCurrency(loan.installmentAmount)}
                             <span className="font-normal text-xs text-slate-400 ml-1">
