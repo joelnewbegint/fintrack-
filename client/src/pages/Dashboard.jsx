@@ -13,6 +13,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from 'recharts';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
@@ -58,6 +59,7 @@ import {
   Landmark,
   Briefcase,
   Sparkles,
+  BarChart2,
 } from 'lucide-react';
 
 export const Dashboard = ({
@@ -91,6 +93,10 @@ export const Dashboard = ({
   const [showTrendChart, setShowTrendChart] = useState(false);
   const [showSplitChart, setShowSplitChart] = useState(false);
   const [agentList, setAgentList] = useState([]);
+
+  // Trend Chart State (7D, 14D, 30D & Area vs Bar)
+  const [trendDays, setTrendDays] = useState(30);
+  const [trendChartType, setTrendChartType] = useState('area');
 
   useEffect(() => {
     if (isOwner) {
@@ -206,6 +212,275 @@ export const Dashboard = ({
       completedFilterScheme === 'all' || itemScheme === completedFilterScheme;
     return matchesSearch && matchesScheme;
   });
+
+  // Calculate trend metrics for the selected time range
+  const activeTrendData = collectionTrend.slice(-trendDays);
+  const trendSliceTotal = activeTrendData.reduce((acc, d) => acc + (Number(d.amount) || 0), 0);
+  const trendSliceAvg = Math.round(trendSliceTotal / (activeTrendData.length || 1));
+  const trendSlicePeak = Math.max(...activeTrendData.map((d) => Number(d.amount) || 0), 0);
+  const trendYDomainMax = trendSlicePeak > 0 ? Math.ceil(trendSlicePeak * 1.25) : 5000;
+
+  // Custom rich glass tooltip for collection trend
+  const CustomTrendTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const d = payload[0].payload;
+      return (
+        <div
+          className="rounded-2xl p-3 text-xs shadow-xl border border-white/90 dark:border-slate-700 min-w-[170px]"
+          style={{
+            background: 'rgba(255, 255, 255, 0.96)',
+            backdropFilter: 'blur(14px)',
+          }}
+        >
+          <div className="font-extrabold text-slate-800 dark:text-slate-900 mb-1 flex items-center justify-between gap-2">
+            <span>📅 {d.date || d.displayDate}</span>
+            {d.count > 0 && (
+              <span className="text-[10px] text-sky-700 bg-sky-100/80 px-2 py-0.5 rounded-full font-bold">
+                {d.count} {d.count === 1 ? 'entry' : 'entries'}
+              </span>
+            )}
+          </div>
+          <div className="text-base font-black text-sky-600 tracking-tight">
+            ₹{Number(d.amount || 0).toLocaleString('en-IN')}
+          </div>
+          {(d.cash > 0 || d.upi > 0) && (
+            <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-200 flex items-center justify-between text-[10px] font-semibold text-slate-600">
+              <span>Cash: ₹{Number(d.cash || 0).toLocaleString('en-IN')}</span>
+              <span>UPI: ₹{Number(d.upi || 0).toLocaleString('en-IN')}</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Reusable Collection Trend Card with 7D/14D/30D selector & Area/Bar switcher
+  const renderCollectionTrendCard = (compact = false) => (
+    <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg min-w-0">
+      {/* Header with Title and Interactive Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+        <div>
+          <div className="flex items-center space-x-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse" />
+            <h3 className="font-black text-sm text-slate-900 dark:text-white">
+              {t('collectionTrend30Days') || 'Collection Trend'}
+            </h3>
+          </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            Daily repayment cashflow history
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-2 self-start sm:self-auto">
+          {/* 7D / 14D / 30D Time Range Selector */}
+          <div className="inline-flex p-0.5 bg-slate-100/90 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-inner">
+            {[7, 14, 30].map((days) => (
+              <button
+                key={days}
+                onClick={() => setTrendDays(days)}
+                className={`px-2.5 py-1 text-[11px] font-extrabold rounded-lg transition-all ${
+                  trendDays === days
+                    ? 'bg-sky-500 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {days}D
+              </button>
+            ))}
+          </div>
+
+          {/* Area vs Bar View Switcher */}
+          <div className="inline-flex p-0.5 bg-slate-100/90 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-inner">
+            <button
+              onClick={() => setTrendChartType('area')}
+              title="Smooth Wave Area"
+              className={`p-1.5 rounded-lg transition-all ${
+                trendChartType === 'area'
+                  ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setTrendChartType('bar')}
+              title="Daily Cashflow Columns"
+              className={`p-1.5 rounded-lg transition-all ${
+                trendChartType === 'bar'
+                  ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              <BarChart2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 3 Metric Summary Strip */}
+      <div className="grid grid-cols-3 gap-2 py-2 px-3 mb-3 bg-sky-50/70 dark:bg-sky-950/30 rounded-2xl border border-sky-100 dark:border-sky-900/40">
+        <div>
+          <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 block tracking-wider">
+            {trendDays}D Total
+          </span>
+          <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+            ₹{trendSliceTotal.toLocaleString('en-IN')}
+          </span>
+        </div>
+        <div>
+          <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 block tracking-wider">
+            Daily Avg
+          </span>
+          <span className="text-sm sm:text-base font-black text-sky-600 dark:text-sky-400">
+            ₹{trendSliceAvg.toLocaleString('en-IN')}
+          </span>
+        </div>
+        <div>
+          <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 block tracking-wider">
+            Peak Day
+          </span>
+          <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 truncate block">
+            {trendSlicePeak > 0 ? `₹${trendSlicePeak.toLocaleString('en-IN')}` : '₹0'}
+          </span>
+        </div>
+      </div>
+
+      {/* Chart View */}
+      <div className={`${compact ? 'h-48' : 'h-64'} w-full`}>
+        {trendSliceTotal === 0 ? (
+          <div className="h-full w-full flex flex-col items-center justify-center p-4 text-center rounded-2xl bg-white/40 dark:bg-slate-900/30 border border-dashed border-sky-200 dark:border-sky-800">
+            <div className="w-10 h-10 rounded-2xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center text-sky-600 mb-2">
+              <Coins className="w-5 h-5" />
+            </div>
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              No Collections Recorded in the Last {trendDays} Days
+            </p>
+            <p className="text-[11px] text-slate-400 max-w-xs mt-0.5">
+              Installments collected will plot your daily cashflow trend curve here.
+            </p>
+            <button
+              onClick={onOpenPayment}
+              className="mt-3 px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold shadow-sm transition active:scale-95 flex items-center space-x-1"
+            >
+              <span>+ Record Collection</span>
+            </button>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            {trendChartType === 'bar' ? (
+              <BarChart data={activeTrendData} margin={{ top: 16, right: 10, left: -14, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="barTrendGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0EA5E9" stopOpacity={0.95} />
+                    <stop offset="100%" stopColor="#0284C7" stopOpacity={0.8} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.12} />
+                <XAxis
+                  dataKey="displayDate"
+                  tick={{ fontSize: 10, fill: '#64748B' }}
+                  axisLine={{ stroke: '#E2E8F0' }}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0, trendYDomainMax]}
+                  tickFormatter={(v) => formatShortCurrency(v)}
+                  tick={{ fontSize: 10, fill: '#64748B' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={<CustomTrendTooltip />} />
+                {trendSliceAvg > 0 && (
+                  <ReferenceLine
+                    y={trendSliceAvg}
+                    stroke="#94A3B8"
+                    strokeDasharray="3 3"
+                    label={{
+                      value: `Avg ${formatShortCurrency(trendSliceAvg)}`,
+                      position: 'insideTopRight',
+                      fontSize: 9,
+                      fill: '#64748B',
+                      fontWeight: 700,
+                    }}
+                  />
+                )}
+                <Bar
+                  dataKey="amount"
+                  fill="url(#barTrendGrad)"
+                  radius={[6, 6, 0, 0]}
+                  maxBarSize={32}
+                />
+              </BarChart>
+            ) : (
+              <AreaChart data={activeTrendData} margin={{ top: 16, right: 10, left: -14, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="areaTrendGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.42} />
+                    <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.12} />
+                <XAxis
+                  dataKey="displayDate"
+                  tick={{ fontSize: 10, fill: '#64748B' }}
+                  axisLine={{ stroke: '#E2E8F0' }}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0, trendYDomainMax]}
+                  tickFormatter={(v) => formatShortCurrency(v)}
+                  tick={{ fontSize: 10, fill: '#64748B' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={<CustomTrendTooltip />} />
+                {trendSliceAvg > 0 && (
+                  <ReferenceLine
+                    y={trendSliceAvg}
+                    stroke="#94A3B8"
+                    strokeDasharray="3 3"
+                    label={{
+                      value: `Avg ${formatShortCurrency(trendSliceAvg)}`,
+                      position: 'insideTopRight',
+                      fontSize: 9,
+                      fill: '#64748B',
+                      fontWeight: 700,
+                    }}
+                  />
+                )}
+                <Area
+                  type="monotone"
+                  dataKey="amount"
+                  stroke="#0284C7"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#areaTrendGrad)"
+                  dot={(dotProps) => {
+                    const { cx, cy, payload } = dotProps;
+                    if (!payload || payload.amount <= 0) return null;
+                    return (
+                      <circle
+                        key={`dot-${cx}-${cy}`}
+                        cx={cx}
+                        cy={cy}
+                        r={4}
+                        fill="#0284C7"
+                        stroke="#FFFFFF"
+                        strokeWidth={2}
+                        className="drop-shadow-sm"
+                      />
+                    );
+                  }}
+                  activeDot={{ r: 6, fill: '#0284C7', stroke: '#FFFFFF', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            )}
+          </ResponsiveContainer>
+        )}
+      </div>
+    </div>
+  );
 
   // Render the Today's Collection List Component (used in right panel on Laptop, or stacked on Tablet)
   const renderTodayCollectionList = () => (
@@ -1456,22 +1731,8 @@ export const Dashboard = ({
                     <ChevronDown className={`w-4 h-4 transition-transform ${showTrendChart ? 'rotate-180' : ''}`} />
                   </button>
                   {showTrendChart && (
-                    <div className="h-44 w-full mt-3">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={collectionTrend}>
-                          <defs>
-                            <linearGradient id="colorTrendMob" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.8} />
-                              <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0.05} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                          <XAxis dataKey="displayDate" tick={{ fontSize: 9 }} />
-                          <YAxis tickFormatter={formatShortCurrency} tick={{ fontSize: 9 }} />
-                          <Tooltip formatter={(val) => [formatCurrency(val), 'Collected']} />
-                          <Area type="monotone" dataKey="amount" stroke="#0EA5E9" strokeWidth={2.5} fill="url(#colorTrendMob)" />
-                        </AreaChart>
-                      </ResponsiveContainer>
+                    <div className="mt-3">
+                      {renderCollectionTrendCard(true)}
                     </div>
                   )}
                 </div>
@@ -1687,46 +1948,8 @@ export const Dashboard = ({
               {isLaptop ? (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                   <div className="lg:col-span-7 space-y-6 min-w-0">
-                    {/* Collection Trend (30 Days) */}
-                    <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg min-w-0">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h3 className="font-black text-sm text-slate-900 dark:text-white">
-                            {t('collectionTrend30Days')}
-                          </h3>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                            Daily repayment cashflow history
-                          </p>
-                        </div>
-                        <span className="text-xs font-bold text-sky-600 bg-sky-50 dark:bg-sky-950/60 px-2.5 py-1 rounded-xl border border-sky-200">
-                          30 Days
-                        </span>
-                      </div>
-                      <div className="h-64 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={collectionTrend}>
-                            <defs>
-                              <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.8} />
-                                <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                            <XAxis dataKey="displayDate" tick={{ fontSize: 10 }} />
-                            <YAxis tickFormatter={formatShortCurrency} tick={{ fontSize: 10 }} />
-                            <Tooltip formatter={(val) => [formatCurrency(val), 'Collected']} />
-                            <Area
-                              type="monotone"
-                              dataKey="amount"
-                              stroke="#0EA5E9"
-                              strokeWidth={3}
-                              fillOpacity={1}
-                              fill="url(#colorTotal)"
-                            />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
+                    {/* Collection Trend */}
+                    {renderCollectionTrendCard(false)}
 
                     {/* Charts Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1795,23 +2018,8 @@ export const Dashboard = ({
                 <div className="space-y-6">
                   {renderTodayCollectionList()}
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg">
-                      <h3 className="font-black text-sm text-slate-900 dark:text-white mb-2">
-                        {t('collectionTrend30Days')}
-                      </h3>
-                      <div className="h-52 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={collectionTrend}>
-                            <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                            <XAxis dataKey="displayDate" tick={{ fontSize: 9 }} />
-                            <YAxis tickFormatter={formatShortCurrency} tick={{ fontSize: 9 }} />
-                            <Tooltip formatter={(val) => [formatCurrency(val), 'Collected']} />
-                            <Area type="monotone" dataKey="amount" stroke="#0EA5E9" strokeWidth={2.5} fill="#0EA5E9" fillOpacity={0.2} />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderCollectionTrendCard(true)}
 
                     <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg">
                       <h3 className="font-black text-sm text-slate-900 dark:text-white mb-2">

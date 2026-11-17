@@ -338,9 +338,12 @@ export const getDashboardStats = async (req, res, next) => {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
     thirtyDaysAgo.setHours(0, 0, 0, 0);
 
+    const validLoanIds = (await Loan.find(clientFilter, '_id')).map((l) => l._id);
+
     const trendAggregate = await Payment.aggregate([
       {
         $match: {
+          loanId: { $in: validLoanIds },
           date: { $gte: thirtyDaysAgo },
         },
       },
@@ -369,20 +372,33 @@ export const getDashboardStats = async (req, res, next) => {
     });
 
     const collectionTrend = [];
+    let trendTotal30Days = 0;
+    let peakCollection = { amount: 0, date: '', displayDate: '' };
+
     for (let i = 29; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
       const entry = trendMap[dateStr];
+      const amount = entry ? entry.total : 0;
+      const displayDate = `${d.getDate()}/${d.getMonth() + 1}`;
+
+      trendTotal30Days += amount;
+      if (amount > peakCollection.amount) {
+        peakCollection = { amount, date: dateStr, displayDate };
+      }
+
       collectionTrend.push({
         date: dateStr,
-        displayDate: `${d.getDate()}/${d.getMonth() + 1}`,
-        amount: entry ? entry.total : 0,
+        displayDate,
+        amount,
         cash: entry ? entry.cashTotal : 0,
         upi: entry ? entry.upiTotal : 0,
         count: entry ? entry.count : 0,
       });
     }
+
+    const avgDailyCollection = Math.round(trendTotal30Days / 30);
 
     // 7. Finance-Type Split (For Donut Chart)
     const financeTypeSplit = [
@@ -577,6 +593,12 @@ export const getDashboardStats = async (req, res, next) => {
       completedLoansList,
       overdueLoans,
       collectionTrend,
+      trendSummary: {
+        total30Days: trendTotal30Days,
+        avgDaily: avgDailyCollection,
+        peakAmount: peakCollection.amount,
+        peakDate: peakCollection.displayDate,
+      },
       financeTypeSplit,
       monthlyChartData,
       dailyCollectionBreakdown,

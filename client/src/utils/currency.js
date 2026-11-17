@@ -17,15 +17,18 @@ export const formatCurrency = (amount, decimals = 0) => {
 export const formatShortCurrency = (amount) => {
   const num = Number(amount) || 0;
   if (num >= 10000000) {
-    return `₹ ${(num / 10000000).toFixed(2)} Cr`;
+    const cr = num / 10000000;
+    return `₹${cr % 1 === 0 ? cr : cr.toFixed(1)}Cr`;
   }
   if (num >= 100000) {
-    return `₹ ${(num / 100000).toFixed(2)} L`;
+    const l = num / 100000;
+    return `₹${l % 1 === 0 ? l : l.toFixed(1)}L`;
   }
   if (num >= 1000) {
-    return `₹ ${(num / 1000).toFixed(1)} K`;
+    const k = num / 1000;
+    return `₹${k % 1 === 0 ? k : k.toFixed(1)}K`;
   }
-  return `₹ ${num}`;
+  return `₹${num.toLocaleString('en-IN')}`;
 };
 
 /**
