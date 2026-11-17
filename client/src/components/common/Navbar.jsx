@@ -38,7 +38,7 @@ export const Navbar = ({
   isSidebarCollapsed = false,
   onToggleSidebar,
 }) => {
-  const { user, logout, isOwner } = useAuth();
+  const { user, logout, isOwner, isClient } = useAuth();
   const { lang, toggleLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const { isLaptop, isTablet, isMobile } = useDeviceMode();
@@ -253,16 +253,32 @@ export const Navbar = ({
           {/* ⋯ More ▾ Dropdown */}
           <div className="relative" ref={moreMenuRef}>
             <button
-              onClick={() => setShowMoreMenu(!showMoreMenu)}
-              className="h-10 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center space-x-1.5 transition active:scale-95"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMoreMenu((prev) => !prev);
+                setShowUserMenu(false);
+              }}
+              className={`h-10 px-3 rounded-xl border text-xs font-bold flex items-center space-x-1.5 transition active:scale-95 ${
+                showMoreMenu
+                  ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
+                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-slate-200/80 dark:border-slate-700/80 text-slate-700 dark:text-slate-200'
+              }`}
               aria-label="More options"
+              title="More Options & Settings"
             >
               <span>⋯ More</span>
-              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+              <ChevronDown
+                className={`w-3.5 h-3.5 opacity-60 transition-transform duration-200 ${
+                  showMoreMenu ? 'rotate-180' : ''
+                }`}
+              />
             </button>
 
             {showMoreMenu && (
-              <div className="absolute right-0 top-full mt-1.5 w-60 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-800 p-2 z-50 text-xs space-y-1">
+              <div
+                className="absolute right-0 top-full mt-1.5 w-64 rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 p-2 z-50 text-xs space-y-1 animate-in fade-in zoom-in-95 duration-100"
+                onClick={(e) => e.stopPropagation()}
+              >
                 {/* Device Switcher */}
                 <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
@@ -278,9 +294,9 @@ export const Navbar = ({
                       setShowMoreMenu(false);
                       onOpenWhatsAppHub();
                     }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600 transition"
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600 transition text-left"
                   >
-                    <Smartphone className="w-4 h-4 text-emerald-500" />
+                    <Smartphone className="w-4 h-4 text-emerald-500 shrink-0" />
                     <span>WhatsApp Web Hub</span>
                   </button>
                 )}
@@ -292,10 +308,24 @@ export const Navbar = ({
                       setShowMoreMenu(false);
                       onOpenLoanForm();
                     }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition"
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition text-left"
                   >
-                    <FileText className="w-4 h-4 text-sky-500" />
+                    <FileText className="w-4 h-4 text-sky-500 shrink-0" />
                     <span>Loan Application Form</span>
+                  </button>
+                )}
+
+                {/* More Sheet / Settings */}
+                {onOpenMoreSheet && (
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      onOpenMoreSheet();
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left"
+                  >
+                    <MoreHorizontal className="w-4 h-4 text-slate-500 shrink-0" />
+                    <span>Full Utilities & Backups / கூடுதல்</span>
                   </button>
                 )}
 
@@ -306,9 +336,9 @@ export const Navbar = ({
                       setShowMoreMenu(false);
                       promptInstall();
                     }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition"
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition text-left"
                   >
-                    <Download className="w-4 h-4 text-sky-500" />
+                    <Download className="w-4 h-4 text-sky-500 shrink-0" />
                     <span>Install App (PWA)</span>
                   </button>
                 )}
@@ -316,10 +346,10 @@ export const Navbar = ({
                 {/* Language Toggle */}
                 <button
                   onClick={toggleLanguage}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left"
                 >
                   <div className="flex items-center space-x-2.5">
-                    <Globe className="w-4 h-4 text-slate-500" />
+                    <Globe className="w-4 h-4 text-slate-500 shrink-0" />
                     <span>Language / மொழி</span>
                   </div>
                   <span className="font-bold text-[11px] text-sky-600 dark:text-sky-400 uppercase">
@@ -330,13 +360,13 @@ export const Navbar = ({
                 {/* Dark Theme Toggle */}
                 <button
                   onClick={toggleTheme}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left"
                 >
                   <div className="flex items-center space-x-2.5">
                     {theme === 'dark' ? (
-                      <Sun className="w-4 h-4 text-amber-500" />
+                      <Sun className="w-4 h-4 text-amber-500 shrink-0" />
                     ) : (
-                      <Moon className="w-4 h-4 text-slate-500" />
+                      <Moon className="w-4 h-4 text-slate-500 shrink-0" />
                     )}
                     <span>Theme</span>
                   </div>
@@ -348,14 +378,18 @@ export const Navbar = ({
             )}
           </div>
 
-          {/* User Profile Avatar J with Logout */}
+          {/* User Profile Avatar with Logout */}
           <div className="relative" ref={userMenuRef}>
             <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowUserMenu((prev) => !prev);
+                setShowMoreMenu(false);
+              }}
               className="w-10 h-10 rounded-full bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm flex items-center justify-center shadow-sm transition active:scale-95 ring-2 ring-white dark:ring-slate-900"
               title={user?.name || 'User Profile'}
             >
-              {user?.name ? user.name[0].toUpperCase() : 'J'}
+              {user?.name ? user.name[0].toUpperCase() : 'V'}
             </button>
 
             {showUserMenu && (
