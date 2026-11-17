@@ -3,6 +3,8 @@ import api from '../../services/api';
 import { formatCurrency, formatDateForInput } from '../../utils/currency';
 import { useDeviceMode } from '../../context/DeviceModeContext';
 import { buildLoanAgreementPDF, downloadRepaymentSchedulePDF } from '../../utils/loanAgreementPdf';
+import SmartNameInput from './SmartNameInput';
+import { saveRecentName } from '../../utils/nameCorrection';
 import {
   X,
   UserPlus,
@@ -35,6 +37,17 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
 
   // Tab State: 'profile' (Step 1) or 'loan' (Step 2)
   const [activeTab, setActiveTab] = useState('profile');
+  const [existingCustomers, setExistingCustomers] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getCustomers().then((res) => {
+      if (isMounted && res && res.customers) {
+        setExistingCustomers(res.customers);
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   const switchTab = (tab) => {
     setActiveTab(tab);
@@ -501,6 +514,10 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
         savedCust = res.customer;
       }
 
+      // Persist customer name and guarantor name to recent search/entry history
+      if (name) saveRecentName(name);
+      if (guarantorName) saveRecentName(guarantorName);
+
       setCreatedCustomer(savedCust);
 
       // If user wants to issue a loan with this customer:
@@ -959,13 +976,19 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Full Name / பெயர் *
                     </label>
-                    <input
-                      type="text"
+                    <SmartNameInput
+                      value={name}
+                      onChange={setName}
                       required
                       placeholder="e.g. S. Murugesan"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full min-h-[46px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-base sm:text-xs outline-none focus:ring-2 focus:ring-sky-400"
+                      existingCustomers={existingCustomers}
+                      onSelectCustomer={(cust) => {
+                        if (cust.phone && !phone) setPhone(cust.phone);
+                        if (cust.area && !area) setArea(cust.area);
+                        if (cust.address && !address) setAddress(cust.address);
+                        if (cust.idNumber && !idNumber) setIdNumber(cust.idNumber);
+                      }}
+                      inputClassName="w-full min-h-[46px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-base sm:text-xs outline-none focus:ring-2 focus:ring-sky-400"
                     />
                   </div>
                   <div>
@@ -1105,12 +1128,13 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
                     <span>Guarantor / ஜாமீன்தாரர் விவரங்கள்</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <input
-                      type="text"
-                      placeholder="Guarantor Name / பெயர்"
+                    <SmartNameInput
                       value={guarantorName}
-                      onChange={(e) => setGuarantorName(e.target.value)}
-                      className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-base sm:text-xs outline-none"
+                      onChange={setGuarantorName}
+                      placeholder="Guarantor Name / பெயர்"
+                      showSpellBadge={false}
+                      existingCustomers={existingCustomers}
+                      inputClassName="w-full min-h-[44px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-base sm:text-xs outline-none"
                     />
                     <input
                       type="tel"

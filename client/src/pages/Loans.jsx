@@ -13,6 +13,8 @@ import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 import LoanApplicationFormModal from '../components/common/LoanApplicationFormModal';
 import EditLoanModal from '../components/common/EditLoanModal';
 import { downloadLoanAgreementPDF, downloadRepaymentSchedulePDF } from '../utils/loanAgreementPdf';
+import SmartNameInput from '../components/common/SmartNameInput';
+import { saveRecentName } from '../utils/nameCorrection';
 import {
   Plus,
   Search,
@@ -182,13 +184,24 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
       <div className="glass rounded-2xl p-3 sm:p-4 border border-white/70 dark:border-sky-800/40 shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search */}
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search loan #, customer, phone... (/ to focus)"
+          <SmartNameInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-11 pl-10 pr-4 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs outline-none focus:ring-2 focus:ring-sky-400 transition"
+            onChange={setSearch}
+            isSearch={true}
+            placeholder="Search loan #, customer, phone... (/ to focus)"
+            existingCustomers={loans
+              .map((l) => ({
+                _id: l._id,
+                name: l.customerName || l.customerId?.name,
+                phone: l.customerPhone || l.customerId?.phone,
+                area: l.customerArea || l.customerId?.area,
+              }))
+              .filter((c) => c.name)}
+            onSelectCustomer={(cust) => {
+              setSearch(cust.name);
+              saveRecentName(cust.name);
+            }}
+            inputClassName="w-full h-11 pl-10 pr-9 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs outline-none focus:ring-2 focus:ring-sky-400 transition"
           />
         </div>
 

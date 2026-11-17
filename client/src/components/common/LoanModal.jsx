@@ -5,6 +5,8 @@ import { parseCustomerName } from '../../utils/customerName';
 import { useDeviceMode } from '../../context/DeviceModeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { buildLoanAgreementPDF, downloadRepaymentSchedulePDF } from '../../utils/loanAgreementPdf';
+import SmartNameInput from './SmartNameInput';
+import { saveRecentName } from '../../utils/nameCorrection';
 import {
   X,
   PlusCircle,
@@ -641,13 +643,18 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                   <>
                     {/* Search Input */}
                     <div className="relative">
-                      <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Search borrower by name, phone, area..."
+                      <SmartNameInput
                         value={customerSearch}
-                        onChange={(e) => setCustomerSearch(e.target.value)}
-                        className="w-full pl-9 pr-4 h-11 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs outline-none focus:ring-2 focus:ring-sky-400 transition"
+                        onChange={setCustomerSearch}
+                        isSearch={true}
+                        placeholder="Search borrower by name, phone, area..."
+                        existingCustomers={customerList}
+                        onSelectCustomer={(cust) => {
+                          setCustomerId(cust._id);
+                          setCustomerSearch(cust.name);
+                          saveRecentName(cust.name);
+                        }}
+                        inputClassName="w-full pl-9 pr-9 h-11 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs outline-none focus:ring-2 focus:ring-sky-400 transition"
                       />
                     </div>
 
@@ -667,6 +674,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                               key={c._id}
                               onClick={() => {
                                 setCustomerId(c._id);
+                                saveRecentName(c.name);
                                 if (custPhoto) setBorrowerPhoto(custPhoto);
                               }}
                               className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between ${

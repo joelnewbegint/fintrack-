@@ -5,6 +5,8 @@ import { formatCurrency, formatDateForInput, formatDate } from '../../utils/curr
 import { parseCustomerName } from '../../utils/customerName';
 import { useDeviceMode } from '../../context/DeviceModeContext';
 import { openWhatsApp, generateReceiptMessage } from '../../utils/whatsapp';
+import SmartNameInput from './SmartNameInput';
+import { saveRecentName } from '../../utils/nameCorrection';
 import {
   X,
   Check,
@@ -105,6 +107,9 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
 
   const handleSelectLoan = (loan) => {
     const cust = loan.customerId || {};
+    if (cust.name) {
+      saveRecentName(cust.name);
+    }
     const formatted = {
       loanId: loan._id,
       _id: loan._id,
@@ -215,6 +220,9 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
 
     try {
       setSubmitting(true);
+      if (selectedLoan.customerName) {
+        saveRecentName(selectedLoan.customerName);
+      }
       const res = await api.recordPayment({
         loanId: selectedLoan.loanId || selectedLoan._id,
         amount: payNum,
@@ -468,17 +476,24 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
               STATE B: LOAN ACCOUNT SELECTION SEARCH LIST
           ========================================================================= */
           <div className="mt-4 space-y-3 flex-1 overflow-y-auto pr-1">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-sky-500" />
-              <input
-                type="text"
-                autoFocus
-                placeholder="Search borrower name, phone, loan #, area..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 h-12 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-base sm:text-xs font-medium outline-none focus:ring-2 focus:ring-sky-400"
-              />
-            </div>
+            <SmartNameInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              isSearch={true}
+              placeholder="Search borrower name, phone, loan #, area..."
+              existingCustomers={activeLoansList
+                .map((l) => ({
+                  _id: l._id,
+                  name: l.customerId?.name || l.customerName,
+                  phone: l.customerId?.phone,
+                  area: l.customerId?.area,
+                }))
+                .filter((c) => c.name)}
+              onSelectCustomer={(cust) => {
+                setSearchQuery(cust.name);
+              }}
+              inputClassName="w-full pl-10 pr-9 h-12 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-base sm:text-xs font-medium outline-none focus:ring-2 focus:ring-sky-400"
+            />
 
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {loadingLoans ? (

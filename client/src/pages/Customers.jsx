@@ -7,6 +7,8 @@ import { formatCurrency } from '../utils/currency';
 import { parseCustomerName } from '../utils/customerName';
 import CustomerModal from '../components/common/CustomerModal';
 import { LoanModal } from '../components/common/LoanModal';
+import SmartNameInput from '../components/common/SmartNameInput';
+import { saveRecentName } from '../utils/nameCorrection';
 import {
   UserPlus,
   Search,
@@ -114,13 +116,17 @@ export const Customers = ({ onViewCustomer }) => {
       {/* Search and Area Filter Bar */}
       <div className="glass rounded-2xl p-3 sm:p-4 border border-white/70 dark:border-sky-800/40 shadow-md flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" />
-          <input
-            type="text"
-            placeholder={t('searchPlaceholder')}
+          <SmartNameInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-11 pl-10 pr-4 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs outline-none focus:ring-2 focus:ring-sky-400 transition"
+            onChange={setSearch}
+            isSearch={true}
+            placeholder={t('searchPlaceholder')}
+            existingCustomers={customers}
+            onSelectCustomer={(cust) => {
+              setSearch(cust.name);
+              saveRecentName(cust.name);
+            }}
+            inputClassName="w-full h-11 pl-10 pr-9 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs outline-none focus:ring-2 focus:ring-sky-400 transition"
           />
         </div>
 
