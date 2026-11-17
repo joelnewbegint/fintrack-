@@ -10,7 +10,7 @@
  * 5. Automatic cache purge on version updates.
  */
 
-const CACHE_NAME = 'vk-bankers-pwa-v5.3.0';
+const CACHE_NAME = 'vk-bankers-pwa-v5.4.0';
 
 const STATIC_SHELL_ASSETS = [
   '/manifest.webmanifest',

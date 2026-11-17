@@ -228,16 +228,28 @@ export const Navbar = ({
           </button>
         </div>
 
-        {/* Right: DisplayModeSwitcher + WhatsApp + Loan Form + Install + Language + Theme + User Profile Pill */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
-          <div className="hidden lg:block">
-            <DisplayModeSwitcher compact={false} showLabel={true} />
-          </div>
+        {/* Right: Synced Pill + Bell + EN/Tamil + Theme + ⋯ More ▾ + Profile Avatar */}
+        <div className="flex items-center space-x-2 shrink-0">
+          {/* ● Synced Pill */}
+          <button
+            onClick={handleSyncClick}
+            className="h-9 px-3 rounded-full glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-sky-50/60 dark:hover:bg-sky-950/40 flex items-center space-x-1.5 transition active:scale-95 shadow-xs"
+            title="Cloud Sync Status"
+          >
+            {isManualSyncing || syncState.status === 'syncing' ? (
+              <RefreshCw className="w-3 h-3 text-sky-500 animate-spin" />
+            ) : syncState.status === 'synced' ? (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+            ) : (
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+            )}
+            <span className="text-[11px] font-bold">{syncState.status === 'synced' ? 'Synced' : 'Offline'}</span>
+          </button>
 
-          {/* Bell with 99+ badge */}
+          {/* Notification Bell with 99+ Badge */}
           <button
             onClick={onOpenNotifications}
-            className="relative h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center transition active:scale-95"
+            className="relative h-9 w-9 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 hover:bg-sky-50/60 dark:hover:bg-sky-950/40 text-slate-600 dark:text-slate-300 flex items-center justify-center transition active:scale-95 shadow-xs"
             aria-label="Notifications"
           >
             <Bell className="w-4 h-4 text-slate-600 dark:text-slate-300" />
@@ -248,56 +260,20 @@ export const Navbar = ({
             )}
           </button>
 
-          {/* WhatsApp Web Button */}
-          {onOpenWhatsAppHub && !isClient && (
-            <button
-              onClick={onOpenWhatsAppHub}
-              className="hidden xl:flex items-center space-x-1.5 h-9 px-3 rounded-xl border border-emerald-300 dark:border-emerald-700/60 bg-white/70 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-xs font-bold text-emerald-700 dark:text-emerald-400 transition active:scale-95 shadow-xs"
-              title="Open WhatsApp Hub"
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
-              <span>WhatsApp</span>
-            </button>
-          )}
-
-          {/* Loan Form Button */}
-          {onOpenLoanForm && (
-            <button
-              onClick={onOpenLoanForm}
-              className="hidden xl:flex items-center space-x-1.5 h-9 px-3 rounded-xl border border-sky-300 dark:border-sky-700/60 bg-white/70 dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-sky-950/40 text-xs font-bold text-sky-700 dark:text-sky-300 transition active:scale-95 shadow-xs"
-              title="Print Application Form"
-            >
-              <FileText className="w-3.5 h-3.5 text-sky-500" />
-              <span>Loan Form</span>
-            </button>
-          )}
-
-          {/* Install PWA Button */}
-          {!isInstalled && promptInstall && (
-            <button
-              onClick={promptInstall}
-              className="hidden 2xl:flex items-center space-x-1.5 h-9 px-3 rounded-xl border border-amber-300 dark:border-amber-700/60 bg-white/70 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-xs font-bold text-amber-700 dark:text-amber-400 transition active:scale-95 shadow-xs"
-              title="Install VK Banker App"
-            >
-              <Download className="w-3.5 h-3.5 text-amber-500" />
-              <span>Install</span>
-            </button>
-          )}
-
-          {/* Language Toggle */}
+          {/* Quick EN/த Language Toggle */}
           <button
             onClick={toggleLanguage}
-            className="h-9 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center space-x-1 transition active:scale-95"
+            className="h-9 px-2.5 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 hover:bg-sky-50/60 dark:hover:bg-sky-950/40 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center space-x-1 transition active:scale-95 shadow-xs"
             title="Toggle Language / மொழி மாற்றம்"
           >
             <Globe className="w-3.5 h-3.5 text-sky-500" />
             <span className="text-[11px] font-black">{lang === 'ta' ? 'தமிழ்' : 'EN'}</span>
           </button>
 
-          {/* Theme Switcher */}
+          {/* Quick Theme Switcher */}
           <button
             onClick={toggleTheme}
-            className="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center transition active:scale-95"
+            className="h-9 w-9 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 hover:bg-sky-50/60 dark:hover:bg-sky-950/40 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center transition active:scale-95 shadow-xs"
             title="Cycle Theme (Lavender Glass / Classic Glass / Light / Dark)"
           >
             {theme === 'lavender-glass' ? (
@@ -310,6 +286,132 @@ export const Navbar = ({
               <Sun className="w-4 h-4 text-amber-500" />
             )}
           </button>
+
+          {/* ⋯ More ▾ Dropdown (Contains DisplayModeSwitcher, WhatsApp, Loan Form, PWA Install, Agent Filter) */}
+          <div className="relative" ref={moreMenuRef}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMoreMenu((prev) => !prev);
+                setShowUserMenu(false);
+              }}
+              className={`h-9 px-3 rounded-xl border text-xs font-bold flex items-center space-x-1.5 transition active:scale-95 shadow-xs ${
+                showMoreMenu
+                  ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-400 dark:border-sky-600 text-sky-700 dark:text-sky-300 ring-2 ring-sky-400/20'
+                  : 'glass border-sky-200/60 dark:border-sky-800/60 text-slate-700 dark:text-slate-200 hover:bg-sky-50/60 dark:hover:bg-sky-950/40'
+              }`}
+              title="More Options & Utilities"
+              aria-label="More options"
+            >
+              <span className="font-bold">⋯ More</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 opacity-60 transition-transform duration-200 ${
+                  showMoreMenu ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {showMoreMenu && (
+              <div
+                className="absolute right-0 top-full mt-2 w-72 rounded-2xl glass-panel bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl border border-sky-200/80 dark:border-sky-800/80 p-2.5 z-50 text-xs space-y-1.5 animate-in fade-in zoom-in-95 duration-150"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* 1. Layout Mode Switcher */}
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Layout Mode / திரை வடிவம்
+                  </p>
+                  <DisplayModeSwitcher compact={false} showLabel={true} />
+                </div>
+
+                {/* 2. WhatsApp Web Hub */}
+                {onOpenWhatsAppHub && !isClient && (
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      onOpenWhatsAppHub();
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-300 transition text-left group"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 flex items-center justify-center shrink-0">
+                        <MessageSquare className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-xs">WhatsApp Hub</p>
+                        <p className="text-[10px] text-slate-400">Share notices & receipts</p>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">
+                      Active
+                    </span>
+                  </button>
+                )}
+
+                {/* 3. Loan Application Form */}
+                {onOpenLoanForm && (
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      onOpenLoanForm();
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-700 dark:hover:text-sky-300 transition text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-950/70 text-sky-600 flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-xs">Loan Application Form</p>
+                      <p className="text-[10px] text-slate-400">Print blank borrower form</p>
+                    </div>
+                  </button>
+                )}
+
+                {/* 4. Install App (PWA) */}
+                {!isInstalled && promptInstall && (
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      promptInstall();
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-amber-700 dark:hover:text-amber-300 transition text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-950/70 text-amber-600 flex items-center justify-center shrink-0">
+                      <Download className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-xs">Install Web App</p>
+                      <p className="text-[10px] text-slate-400">Add to Desktop / Mobile home</p>
+                    </div>
+                  </button>
+                )}
+
+                {/* 5. Agent Filter for Owner */}
+                {isOwner && agentList.length > 0 && (
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Filter Agent / கள முகவர்
+                    </p>
+                    <select
+                      value={selectedAgent}
+                      onChange={(e) => {
+                        setSelectedAgent(e.target.value);
+                        window.dispatchEvent(new CustomEvent('fintrack:filter-agent', { detail: e.target.value }));
+                      }}
+                      className="w-full h-8 px-2 rounded-lg bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 outline-none cursor-pointer"
+                    >
+                      <option value="all">All Agents / அனைத்து முகவர்கள்</option>
+                      {agentList.map((a) => (
+                        <option key={a._id || a.id} value={a._id || a.id}>
+                          {a.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* User Profile Pill matching screenshot */}
           <div className="relative" ref={userMenuRef}>
