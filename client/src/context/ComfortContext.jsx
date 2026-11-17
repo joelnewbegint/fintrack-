@@ -62,6 +62,9 @@ export const ComfortProvider = ({ children }) => {
     if (themeMode === 'lavender-glass') {
       root.setAttribute('data-theme', 'lavender-glass');
       root.classList.remove('dark');
+    } else if (themeMode === 'glass') {
+      root.setAttribute('data-theme', 'glass');
+      root.classList.remove('dark');
     } else {
       root.removeAttribute('data-theme');
       if (themeMode === 'auto') {

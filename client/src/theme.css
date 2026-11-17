@@ -1,14 +1,16 @@
 /* ==========================================================================
-   LAVENDER GLASS THEME (VK Banker's & Finance)
+   LAVENDER GLASS THEME - FINTRACK / VK BANKER'S & FINANCE
+   Design Tokens & Glassmorphism Presentation Layer
    Scoped to: [data-theme="lavender-glass"]
-   Non-breaking additive theme with frosted glassmorphism & soft pastel tokens
+   Non-breaking additive theme with 30s ambient drifting blobs,
+   frosted surfaces, Inter + Noto Sans Tamil typography, and WCAG AA contrast.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
    1. CSS VARIABLES (DESIGN TOKENS)
    -------------------------------------------------------------------------- */
 [data-theme="lavender-glass"] {
-  /* Brand & Theme Colors */
+  /* Page & Ambient Color Blobs */
   --lg-bg: #F7F3FB;
   --lg-blob-lavender: #E3DBF4;
   --lg-blob-sky: #CFE6F2;
@@ -16,26 +18,29 @@
 
   /* Glass Surface Tokens */
   --lg-glass-bg: rgba(255, 255, 255, 0.60);
-  --lg-glass-fallback: rgba(255, 255, 255, 0.90);
+  --lg-glass-fallback: rgba(255, 255, 255, 0.92);
   --lg-glass-border: rgba(255, 255, 255, 0.95);
+  --lg-border-subtle: rgba(60, 53, 80, 0.08);
   --lg-glass-radius: 16px;
+  --lg-input-radius: 12px;
+  --lg-pill-radius: 999px;
   --lg-glass-shadow: 0 8px 32px rgba(139, 123, 208, 0.12);
   --lg-glass-blur: blur(18px) saturate(140%);
 
-  /* Primary Interactive */
+  /* Primary Interactive Action (#8B7BD0 / hover #7867C2 / pressed #6B5BB5) */
   --lg-primary: #8B7BD0;
   --lg-primary-hover: #7867C2;
-  --lg-primary-active: #6757B3;
+  --lg-primary-pressed: #6B5BB5;
   --lg-primary-text: #FFFFFF;
-  --lg-primary-shadow: 0 6px 20px rgba(139, 123, 208, 0.30);
+  --lg-primary-shadow: 0 6px 20px rgba(139, 123, 208, 0.28);
 
-  /* Soft Accent & Highlights */
+  /* Soft Accent & Sky Highlight */
   --lg-accent-soft: #E3DBF4;
   --lg-accent-text: #4B3C8A;
   --lg-sky-highlight: #CFE6F2;
   --lg-sky-text: #1F4E6B;
 
-  /* Typography Colors (WCAG AA compliant against #F7F3FB & glass surfaces) */
+  /* Typography Colors (WCAG AA compliant against #F7F3FB and glass surfaces) */
   --lg-text-primary: #3C3550;
   --lg-text-secondary: #7B7390;
   --lg-text-muted: #9D96AF;
@@ -49,28 +54,53 @@
   --lg-status-overdue-text: #A8442C;
   --lg-status-pending-bg: #EEE7D8;
   --lg-status-pending-text: #6B7C8C;
+  --lg-status-partial-bg: #CFE6F2;
+  --lg-status-partial-text: #1F4E6B;
+
+  /* Typography Scale */
+  --lg-font-family: 'Inter', 'Noto Sans Tamil', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --lg-text-xs: 12px;
+  --lg-text-sm: 14px;
+  --lg-text-base: 16px;
+  --lg-text-lg: 20px;
+  --lg-text-xl: 28px;
+
+  /* 4px Spacing Scale */
+  --lg-space-1: 4px;
+  --lg-space-2: 8px;
+  --lg-space-3: 12px;
+  --lg-space-4: 16px;
+  --lg-space-5: 20px;
+  --lg-space-6: 24px;
+  --lg-space-7: 28px;
+  --lg-space-8: 32px;
 
   /* Transitions & Radii */
   --lg-transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
   --lg-radius-sm: 10px;
-  --lg-radius-md: 14px;
+  --lg-radius-md: 12px;
   --lg-radius-lg: 16px;
-  --lg-radius-xl: 20px;
+  --lg-radius-xl: 24px;
+  --lg-radius-full: 999px;
+
+  /* Focus ring */
+  --lg-focus-ring: 2px solid #8B7BD0;
 }
 
 /* --------------------------------------------------------------------------
-   2. GLOBAL BODY & BACKGROUND BLOBS
+   2. GLOBAL BODY & AMBIENT DRIFTING BLOBS (30s Loop, GPU Accelerated)
    -------------------------------------------------------------------------- */
 [data-theme="lavender-glass"] body {
   background-color: var(--lg-bg) !important;
   color: var(--lg-text-primary) !important;
-  font-family: 'Inter', 'Noto Sans Tamil', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-family: var(--lg-font-family) !important;
   font-weight: 400;
   position: relative;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
-/* Ambient Blurred Glass Orbs (Fixed Backdrop) */
+/* Ambient Drifting Blurred Blobs (Fixed Backdrop, 30s smooth alternate drift) */
 [data-theme="lavender-glass"] body::before,
 [data-theme="lavender-glass"] body::after {
   content: '';
@@ -80,33 +110,62 @@
   z-index: 0;
   filter: blur(60px);
   -webkit-filter: blur(60px);
-  opacity: 0.85;
+  opacity: 0.82;
+  will-change: transform;
 }
 
+/* Blob 1: Lavender (Top Right) */
 [data-theme="lavender-glass"] body::before {
   top: -120px;
   right: -80px;
-  width: 520px;
-  height: 520px;
-  background: radial-gradient(circle, var(--lg-blob-lavender) 0%, rgba(227, 219, 244, 0.2) 70%, transparent 100%);
+  width: 540px;
+  height: 540px;
+  background: radial-gradient(circle, var(--lg-blob-lavender) 0%, rgba(227, 219, 244, 0.25) 70%, transparent 100%);
+  animation: lg-drift-lavender 30s ease-in-out infinite alternate;
 }
 
+/* Blob 2: Cream Sky-Blue + Cream Glow (Bottom Left) */
 [data-theme="lavender-glass"] body::after {
   bottom: -140px;
   left: -100px;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, var(--lg-blob-sky) 0%, rgba(207, 230, 242, 0.25) 50%, var(--lg-blob-cream) 80%, transparent 100%);
+  width: 620px;
+  height: 620px;
+  background: radial-gradient(circle, var(--lg-blob-sky) 0%, rgba(207, 230, 242, 0.3) 50%, var(--lg-blob-cream) 80%, transparent 100%);
+  animation: lg-drift-sky 30s ease-in-out infinite alternate-reverse;
 }
 
-/* Ensure app wrapper is positioned above ambient orbs */
+@keyframes lg-drift-lavender {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-35px, 25px, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(20px, -20px, 0) scale(0.98);
+  }
+}
+
+@keyframes lg-drift-sky {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(40px, -30px, 0) scale(1.07);
+  }
+  100% {
+    transform: translate3d(-20px, 15px, 0) scale(0.96);
+  }
+}
+
+/* Ensure app root content sits cleanly above ambient backdrop */
 [data-theme="lavender-glass"] #root {
   position: relative;
   z-index: 1;
 }
 
 /* --------------------------------------------------------------------------
-   3. TYPOGRAPHY RULES (Weights 400 & 500 only, Tabular Numbers)
+   3. TYPOGRAPHY RULES (Scale 12/14/16/20/28, Weights 400 & 500, Tabular Nums)
    -------------------------------------------------------------------------- */
 [data-theme="lavender-glass"] h1,
 [data-theme="lavender-glass"] h2,
@@ -131,14 +190,22 @@
   font-weight: 400;
 }
 
+/* Tabular numbers for all monetary figures and schedules */
 [data-theme="lavender-glass"] .tabular-nums,
 [data-theme="lavender-glass"] .font-mono {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
 
+/* Allow Tamil text 15 percent more line-height to prevent glyph clipping */
+[data-theme="lavender-glass"] [lang="ta"],
+[data-theme="lavender-glass"] .tamil-text,
+[data-theme="lavender-glass"] [data-lang="ta"] {
+  line-height: 1.62 !important;
+}
+
 /* --------------------------------------------------------------------------
-   4. GLASS CARDS & PANELS OVERRIDES
+   4. GLASS CARDS & PANELS
    -------------------------------------------------------------------------- */
 [data-theme="lavender-glass"] .glass,
 [data-theme="lavender-glass"] .glass-card,
@@ -153,25 +220,39 @@
   transition: var(--lg-transition);
 }
 
-/* Card Hover Lift (2px lift, 150ms transition) */
+/* 2px Hover Lift on Cards (150ms transition) */
 [data-theme="lavender-glass"] .glass-hover:hover,
 [data-theme="lavender-glass"] .glass-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 36px rgba(139, 123, 208, 0.18) !important;
+  box-shadow: 0 12px 36px rgba(139, 123, 208, 0.16) !important;
 }
 
-/* Fallback when backdrop-filter is unsupported */
+/* Fallback when backdrop-filter is unsupported or Reduce Effects is active */
 @supports not (backdrop-filter: blur(18px)) {
   [data-theme="lavender-glass"] .glass,
   [data-theme="lavender-glass"] .glass-card,
-  [data-theme="lavender-glass"] .glass-panel {
+  [data-theme="lavender-glass"] .glass-panel,
+  [data-theme="lavender-glass"] header,
+  [data-theme="lavender-glass"] aside {
     background: var(--lg-glass-fallback) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 }
 
+html[data-reduce-effects="true"] [data-theme="lavender-glass"] .glass,
+html[data-reduced-motion="true"] [data-theme="lavender-glass"] .glass,
+[data-theme="lavender-glass"][data-reduce-effects="true"] .glass,
+[data-theme="lavender-glass"][data-reduced-motion="true"] .glass {
+  background: var(--lg-glass-fallback) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 /* --------------------------------------------------------------------------
-   5. BUTTONS & CONTROLS
+   5. BUTTONS & MICRO-INTERACTIONS
    -------------------------------------------------------------------------- */
+/* Primary Button (#8B7BD0 / hover #7867C2 / pressed #6B5BB5) */
 [data-theme="lavender-glass"] .btn-sky-primary,
 [data-theme="lavender-glass"] .btn-primary {
   background: var(--lg-primary) !important;
@@ -187,21 +268,24 @@
 [data-theme="lavender-glass"] .btn-primary:hover {
   background: var(--lg-primary-hover) !important;
   transform: translateY(-2px) !important;
-  box-shadow: 0 8px 24px rgba(139, 123, 208, 0.38) !important;
+  box-shadow: 0 8px 24px rgba(139, 123, 208, 0.36) !important;
 }
 
+/* Micro-interaction: scale 0.97 on press */
+[data-theme="lavender-glass"] button:active,
 [data-theme="lavender-glass"] .btn-sky-primary:active,
 [data-theme="lavender-glass"] .btn-primary:active {
-  background: var(--lg-primary-active) !important;
-  transform: scale(0.98) !important;
+  background: var(--lg-primary-pressed) !important;
+  transform: scale(0.97) !important;
 }
 
+/* Soft Accent Secondary Button (#E3DBF4 with text #4B3C8A) */
 [data-theme="lavender-glass"] .btn-sky-secondary,
 [data-theme="lavender-glass"] .btn-secondary {
   background: var(--lg-accent-soft) !important;
   color: var(--lg-accent-text) !important;
   font-weight: 500 !important;
-  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
   border-radius: var(--lg-radius-md) !important;
   box-shadow: 0 4px 16px rgba(139, 123, 208, 0.08) !important;
   transition: var(--lg-transition) !important;
@@ -209,11 +293,16 @@
 
 [data-theme="lavender-glass"] .btn-sky-secondary:hover,
 [data-theme="lavender-glass"] .btn-secondary:hover {
-  background: #D8CCE8 !important;
+  background: #D9CDEB !important;
   transform: translateY(-2px) !important;
 }
 
-/* Form Inputs in Glass */
+[data-theme="lavender-glass"] .btn-sky-secondary:active,
+[data-theme="lavender-glass"] .btn-secondary:active {
+  transform: scale(0.97) !important;
+}
+
+/* Form Inputs (radius 12px) */
 [data-theme="lavender-glass"] input:not([type="checkbox"]):not([type="radio"]),
 [data-theme="lavender-glass"] select,
 [data-theme="lavender-glass"] textarea,
@@ -221,7 +310,7 @@
   background: rgba(255, 255, 255, 0.70) !important;
   border: 1px solid rgba(227, 219, 244, 0.9) !important;
   color: var(--lg-text-primary) !important;
-  border-radius: var(--lg-radius-md) !important;
+  border-radius: var(--lg-input-radius) !important;
   transition: var(--lg-transition);
 }
 
@@ -230,13 +319,21 @@
 [data-theme="lavender-glass"] textarea:focus,
 [data-theme="lavender-glass"] .input-glass:focus {
   border-color: var(--lg-primary) !important;
-  box-shadow: 0 0 0 3px rgba(139, 123, 208, 0.25) !important;
-  background: rgba(255, 255, 255, 0.90) !important;
+  box-shadow: 0 0 0 3px rgba(139, 123, 208, 0.22) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
   outline: none !important;
 }
 
+/* Visible focus rings for accessibility (WCAG AA) */
+[data-theme="lavender-glass"] button:focus-visible,
+[data-theme="lavender-glass"] a:focus-visible,
+[data-theme="lavender-glass"] [tabindex]:focus-visible {
+  outline: var(--lg-focus-ring) !important;
+  outline-offset: 2px !important;
+}
+
 /* --------------------------------------------------------------------------
-   6. SIDEBAR & TOP BAR (LAVENDER GLASS LAYOUT)
+   6. SIDEBAR & TOP BAR
    -------------------------------------------------------------------------- */
 /* Frosted Glass Sidebar */
 [data-theme="lavender-glass"] aside {
@@ -247,7 +344,7 @@
   box-shadow: 4px 0 24px rgba(139, 123, 208, 0.08) !important;
 }
 
-/* Active Sidebar Navigation Pill (Soft Lavender) */
+/* Active Sidebar Navigation Pill (Soft Lavender #E3DBF4 / #4B3C8A) */
 [data-theme="lavender-glass"] aside .active-nav-pill,
 [data-theme="lavender-glass"] aside nav a.bg-sky-500,
 [data-theme="lavender-glass"] aside nav a.bg-blue-600,
@@ -274,47 +371,63 @@
 }
 
 /* --------------------------------------------------------------------------
-   7. STATUS PILLS (PAID, DUE TODAY, OVERDUE, PENDING)
+   7. STATUS PILLS (RADIUS 999PX)
    -------------------------------------------------------------------------- */
+/* Paid #DDF0E6/#2F7D5B */
 [data-theme="lavender-glass"] .badge-paid,
 [data-theme="lavender-glass"] .status-paid {
   background-color: var(--lg-status-paid-bg) !important;
   color: var(--lg-status-paid-text) !important;
   border: 1px solid rgba(47, 125, 91, 0.2) !important;
-  border-radius: 9999px !important;
+  border-radius: var(--lg-pill-radius) !important;
   padding: 4px 10px !important;
   font-size: 11px !important;
   font-weight: 500 !important;
 }
 
+/* Due today #E3DBF4/#4B3C8A */
 [data-theme="lavender-glass"] .badge-duetoday,
 [data-theme="lavender-glass"] .status-duetoday {
   background-color: var(--lg-status-duetoday-bg) !important;
   color: var(--lg-status-duetoday-text) !important;
   border: 1px solid rgba(75, 60, 138, 0.2) !important;
-  border-radius: 9999px !important;
+  border-radius: var(--lg-pill-radius) !important;
   padding: 4px 10px !important;
   font-size: 11px !important;
   font-weight: 500 !important;
 }
 
+/* Overdue #FBE3DC/#A8442C */
 [data-theme="lavender-glass"] .badge-overdue,
 [data-theme="lavender-glass"] .status-overdue {
   background-color: var(--lg-status-overdue-bg) !important;
   color: var(--lg-status-overdue-text) !important;
   border: 1px solid rgba(168, 68, 44, 0.2) !important;
-  border-radius: 9999px !important;
+  border-radius: var(--lg-pill-radius) !important;
   padding: 4px 10px !important;
   font-size: 11px !important;
   font-weight: 500 !important;
 }
 
+/* Pending #EEE7D8/#6B7C8C */
 [data-theme="lavender-glass"] .badge-pending,
 [data-theme="lavender-glass"] .status-pending {
   background-color: var(--lg-status-pending-bg) !important;
   color: var(--lg-status-pending-text) !important;
   border: 1px solid rgba(107, 124, 140, 0.2) !important;
-  border-radius: 9999px !important;
+  border-radius: var(--lg-pill-radius) !important;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+/* Partial #CFE6F2/#1F4E6B */
+[data-theme="lavender-glass"] .badge-partial,
+[data-theme="lavender-glass"] .status-partial {
+  background-color: var(--lg-status-partial-bg) !important;
+  color: var(--lg-status-partial-text) !important;
+  border: 1px solid rgba(31, 78, 107, 0.2) !important;
+  border-radius: var(--lg-pill-radius) !important;
   padding: 4px 10px !important;
   font-size: 11px !important;
   font-weight: 500 !important;
@@ -324,7 +437,7 @@
    8. SKY BLUE KPI CARD (EMI DUE TODAY / OVERDUE)
    -------------------------------------------------------------------------- */
 [data-theme="lavender-glass"] .card-sky-kpi {
-  background: linear-gradient(135deg, rgba(207, 230, 242, 0.85) 0%, rgba(227, 219, 244, 0.70) 100%) !important;
+  background: linear-gradient(135deg, rgba(207, 230, 242, 0.88) 0%, rgba(227, 219, 244, 0.72) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.95) !important;
   box-shadow: 0 8px 30px rgba(31, 78, 107, 0.12) !important;
   color: var(--lg-sky-text) !important;
@@ -337,7 +450,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   9. GLASS TABLE ROWS & MOBILE STACKED CARDS
+   9. GLASS TABLES & ROWS
    -------------------------------------------------------------------------- */
 [data-theme="lavender-glass"] table tbody tr {
   background: rgba(255, 255, 255, 0.45);
@@ -391,4 +504,3 @@
     transition-duration: 0.001ms !important;
   }
 }
-

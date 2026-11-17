@@ -17,6 +17,7 @@ import {
   Globe,
   Sliders,
   Eye,
+  Layers,
 } from 'lucide-react';
 
 export const ComfortSettings = () => {
@@ -111,9 +112,10 @@ export const ComfortSettings = () => {
                 <Sun className="w-4 h-4 text-sky-500" />
                 <span>Theme Mode / வண்ண தீம்</span>
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {[
                   { id: 'lavender-glass', label: 'Lavender Glass', icon: Sparkles, tamil: 'லாவெண்டர்' },
+                  { id: 'glass', label: 'Classic Glass', icon: Layers, tamil: 'கிளாஸ்' },
                   { id: 'light', label: 'Light', icon: Sun, tamil: 'பகல்' },
                   { id: 'dark', label: 'Dark', icon: Moon, tamil: 'இரவு' },
                   { id: 'auto', label: 'Auto', icon: RotateCcw, tamil: 'தானியங்கி' },

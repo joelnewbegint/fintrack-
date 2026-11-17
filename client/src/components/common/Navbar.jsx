@@ -24,6 +24,10 @@ import {
   ChevronDown,
   MoreHorizontal,
   Sparkles,
+  Layers,
+  Wallet,
+  Check,
+  MessageSquare,
 } from 'lucide-react';
 
 export const Navbar = ({
@@ -176,291 +180,159 @@ export const Navbar = ({
   // -------------------------------------------------------------------------
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
-      <div className="w-full px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-        {/* Left: Sidebar Toggle + VK Logo Circle + Name */}
-        <div className="flex items-center space-x-3 shrink-0">
+      <div className="w-full px-3 sm:px-5 h-16 flex items-center justify-between gap-2.5">
+        {/* Left: Sidebar Toggle + Wallet Icon Box + VK BANKER'S & FINANCE */}
+        <div className="flex items-center space-x-2 sm:space-x-2.5 shrink-0">
           {onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
-              className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95"
+              className="p-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95"
               title="Toggle Sidebar (M)"
             >
               <Menu className="w-5 h-5" />
             </button>
           )}
 
-          <div className="flex items-center space-x-2.5">
-            <div className="w-9 h-9 rounded-full bg-sky-500 flex items-center justify-center text-white font-black text-sm shadow-sm shrink-0">
-              VK
-            </div>
-            <div className="min-w-0">
-              <span className="font-black text-base sm:text-lg text-slate-900 dark:text-white tracking-tight block leading-tight">
-                VK Banker's
+          <div className="w-9 h-9 rounded-xl bg-sky-500 text-white flex items-center justify-center shadow-md shadow-sky-500/25 shrink-0">
+            <Wallet className="w-5 h-5" />
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex items-center space-x-2">
+              <span className="font-black text-sm sm:text-base text-sky-600 dark:text-sky-400 tracking-tight block leading-tight">
+                VK BANKER'S & FINANCE
               </span>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium block truncate">
-                {lang === 'ta' ? 'வணக்கம்' : 'Hello'}, {user?.name?.split(' ')[0] || 'Sir'}
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full border border-sky-300 bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-300 hidden md:inline">
+                VK BANKER'S
               </span>
             </div>
+            <span className="text-[10px] text-slate-400 font-medium block truncate leading-none mt-0.5">
+              Banker's & Finance Ledger
+            </span>
           </div>
         </div>
 
-        {/* Center: Search input "Search customer, loan #, phone... ( / to focus )" */}
-        <div className="flex-1 max-w-lg mx-3 sm:mx-4">
+        {/* Center: Search pill "தேடல் / Search... /" */}
+        <div className="flex-1 max-w-xs sm:max-w-sm mx-1 sm:mx-2">
           <button
             onClick={onOpenSearch}
-            className="w-full h-10 flex items-center justify-between px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-400 hover:border-sky-400 hover:text-slate-600 dark:hover:text-slate-200 transition shadow-xs"
+            className="w-full h-9 flex items-center justify-between px-3 rounded-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-400 hover:border-sky-400 hover:text-slate-600 dark:hover:text-slate-200 transition shadow-xs"
           >
-            <div className="flex items-center space-x-2.5 min-w-0">
-              <Search className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="truncate">Search customer, loan #, phone... ( / to focus )</span>
+            <div className="flex items-center space-x-2 min-w-0">
+              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className="truncate text-[11px]">{lang === 'ta' ? 'தேடல் / Search...' : 'Search...'}</span>
             </div>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200/60 dark:bg-slate-700 text-slate-500 font-bold shrink-0">
+              /
+            </span>
           </button>
         </div>
 
-        {/* Right: Agent Filter (Owner only) + EN/த toggle + Theme Switcher + Synced Pill + Bell + ⋯ More ▾ + Profile Avatar */}
-        <div className="flex items-center space-x-2 shrink-0">
-          {/* Agent Filter (Owner only) */}
-          {isOwner && agentList.length > 0 && (
-            <select
-              value={selectedAgent}
-              onChange={(e) => {
-                setSelectedAgent(e.target.value);
-                window.dispatchEvent(new CustomEvent('fintrack:filter-agent', { detail: e.target.value }));
-              }}
-              className="h-9 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200 border-none outline-none cursor-pointer hidden xl:block"
-              title="Filter by Collection Agent / கள முகவர்"
+        {/* Right: DisplayModeSwitcher + WhatsApp + Loan Form + Install + Language + Theme + User Profile Pill */}
+        <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+          <div className="hidden lg:block">
+            <DisplayModeSwitcher compact={false} showLabel={true} />
+          </div>
+
+          {/* Bell with 99+ badge */}
+          <button
+            onClick={onOpenNotifications}
+            className="relative h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center transition active:scale-95"
+            aria-label="Notifications"
+          >
+            <Bell className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+            {unreadNotificationsCount > 0 && (
+              <span className="absolute 1 top-0.5 right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-rose-500 text-white text-[8.5px] font-black flex items-center justify-center">
+                {cappedNotificationBadge}
+              </span>
+            )}
+          </button>
+
+          {/* WhatsApp Web Button */}
+          {onOpenWhatsAppHub && !isClient && (
+            <button
+              onClick={onOpenWhatsAppHub}
+              className="hidden xl:flex items-center space-x-1.5 h-9 px-3 rounded-xl border border-emerald-300 dark:border-emerald-700/60 bg-white/70 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-xs font-bold text-emerald-700 dark:text-emerald-400 transition active:scale-95 shadow-xs"
+              title="Open WhatsApp Hub"
             >
-              <option value="all">{lang === 'ta' ? 'அனைத்து முகவர்கள்' : 'All Agents'}</option>
-              {agentList.map((a) => (
-                <option key={a._id || a.id} value={a._id || a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
+              <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
+              <span>WhatsApp</span>
+            </button>
           )}
-          {/* Quick EN/த Language Toggle */}
+
+          {/* Loan Form Button */}
+          {onOpenLoanForm && (
+            <button
+              onClick={onOpenLoanForm}
+              className="hidden xl:flex items-center space-x-1.5 h-9 px-3 rounded-xl border border-sky-300 dark:border-sky-700/60 bg-white/70 dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-sky-950/40 text-xs font-bold text-sky-700 dark:text-sky-300 transition active:scale-95 shadow-xs"
+              title="Print Application Form"
+            >
+              <FileText className="w-3.5 h-3.5 text-sky-500" />
+              <span>Loan Form</span>
+            </button>
+          )}
+
+          {/* Install PWA Button */}
+          {!isInstalled && promptInstall && (
+            <button
+              onClick={promptInstall}
+              className="hidden 2xl:flex items-center space-x-1.5 h-9 px-3 rounded-xl border border-amber-300 dark:border-amber-700/60 bg-white/70 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-xs font-bold text-amber-700 dark:text-amber-400 transition active:scale-95 shadow-xs"
+              title="Install VK Banker App"
+            >
+              <Download className="w-3.5 h-3.5 text-amber-500" />
+              <span>Install</span>
+            </button>
+          )}
+
+          {/* Language Toggle */}
           <button
             onClick={toggleLanguage}
             className="h-9 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center space-x-1 transition active:scale-95"
             title="Toggle Language / மொழி மாற்றம்"
           >
             <Globe className="w-3.5 h-3.5 text-sky-500" />
-            <span className="text-[11px] font-black uppercase">{lang === 'ta' ? 'தமிழ்' : 'EN'}</span>
+            <span className="text-[11px] font-black">{lang === 'ta' ? 'தமிழ்' : 'EN'}</span>
           </button>
 
-          {/* Quick Theme Switcher Pill */}
+          {/* Theme Switcher */}
           <button
             onClick={toggleTheme}
-            className="h-9 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center space-x-1.5 transition active:scale-95"
-            title="Cycle Theme (Lavender Glass / Light / Dark)"
+            className="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center transition active:scale-95"
+            title="Cycle Theme (Lavender Glass / Classic Glass / Light / Dark)"
           >
             {theme === 'lavender-glass' ? (
-              <Sparkles className="w-3.5 h-3.5 text-[#8B7BD0]" />
+              <Sparkles className="w-4 h-4 text-[#8B7BD0]" />
+            ) : theme === 'glass' ? (
+              <Layers className="w-4 h-4 text-sky-500" />
             ) : theme === 'dark' ? (
-              <Moon className="w-3.5 h-3.5 text-sky-400" />
+              <Moon className="w-4 h-4 text-sky-400" />
             ) : (
-              <Sun className="w-3.5 h-3.5 text-amber-500" />
-            )}
-            <span className="text-[11px] capitalize hidden md:inline">
-              {theme === 'lavender-glass' ? 'Lavender' : theme}
-            </span>
-          </button>
-
-          {/* ● Synced Pill */}
-          <button
-            onClick={handleSyncClick}
-            className="h-9 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center space-x-1.5 transition active:scale-95"
-            title="Cloud Sync Status"
-          >
-            {isManualSyncing || syncState.status === 'syncing' ? (
-              <RefreshCw className="w-3 h-3 text-sky-500 animate-spin" />
-            ) : syncState.status === 'synced' ? (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-            ) : (
-              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
-            )}
-            <span>{syncState.status === 'synced' ? 'Synced' : 'Offline'}</span>
-          </button>
-
-          {/* Notification Bell with 99+ Badge */}
-          <button
-            onClick={onOpenNotifications}
-            className="relative h-10 w-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center transition active:scale-95"
-            aria-label="Notifications"
-          >
-            <Bell className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-            {unreadNotificationsCount > 0 && (
-              <span className="absolute 1 top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white dark:ring-slate-900">
-                {cappedNotificationBadge}
-              </span>
+              <Sun className="w-4 h-4 text-amber-500" />
             )}
           </button>
 
-          {/* ⋯ More ▾ Dropdown */}
-          <div className="relative" ref={moreMenuRef}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMoreMenu((prev) => !prev);
-                setShowUserMenu(false);
-              }}
-              className={`h-10 px-3 rounded-xl border text-xs font-bold flex items-center space-x-1.5 transition active:scale-95 ${
-                showMoreMenu
-                  ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
-                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-slate-200/80 dark:border-slate-700/80 text-slate-700 dark:text-slate-200'
-              }`}
-              aria-label="More options"
-              title="More Options & Settings"
-            >
-              <span>⋯ More</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 opacity-60 transition-transform duration-200 ${
-                  showMoreMenu ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-
-            {showMoreMenu && (
-              <div
-                className="absolute right-0 top-full mt-1.5 w-64 rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 p-2 z-50 text-xs space-y-1 animate-in fade-in zoom-in-95 duration-100"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Device Switcher */}
-                <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                    Layout Mode
-                  </p>
-                  <DisplayModeSwitcher />
-                </div>
-
-                {/* WhatsApp Web Hub */}
-                {onOpenWhatsAppHub && !isClient && (
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      onOpenWhatsAppHub();
-                    }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600 transition text-left"
-                  >
-                    <Smartphone className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>WhatsApp Web Hub</span>
-                  </button>
-                )}
-
-                {/* Blank Loan Form */}
-                {onOpenLoanForm && (
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      onOpenLoanForm();
-                    }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition text-left"
-                  >
-                    <FileText className="w-4 h-4 text-sky-500 shrink-0" />
-                    <span>Loan Application Form</span>
-                  </button>
-                )}
-
-                {/* More Sheet / Settings */}
-                {onOpenMoreSheet && (
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      onOpenMoreSheet();
-                    }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left"
-                  >
-                    <MoreHorizontal className="w-4 h-4 text-slate-500 shrink-0" />
-                    <span>Full Utilities & Backups / கூடுதல்</span>
-                  </button>
-                )}
-
-                {/* PWA Install */}
-                {!isInstalled && promptInstall && (
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      promptInstall();
-                    }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition text-left"
-                  >
-                    <Download className="w-4 h-4 text-sky-500 shrink-0" />
-                    <span>Install App (PWA)</span>
-                  </button>
-                )}
-
-                {/* Language Toggle */}
-                <button
-                  onClick={toggleLanguage}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left"
-                >
-                  <div className="flex items-center space-x-2.5">
-                    <Globe className="w-4 h-4 text-slate-500 shrink-0" />
-                    <span>Language / மொழி</span>
-                  </div>
-                  <span className="font-bold text-[11px] text-sky-600 dark:text-sky-400 uppercase">
-                    {lang === 'ta' ? 'தமிழ்' : 'EN'}
-                  </span>
-                </button>
-
-                {/* Theme Selector (Lavender Glass / Light / Dark) */}
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5 px-1">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    Theme / வண்ண தீம்
-                  </span>
-                  <div className="grid grid-cols-3 gap-1">
-                    <button
-                      onClick={() => setTheme('lavender-glass')}
-                      className={`py-1.5 px-2 rounded-lg text-[10.5px] font-bold flex items-center justify-center space-x-1 transition ${
-                        theme === 'lavender-glass'
-                          ? 'bg-[#E3DBF4] text-[#4B3C8A] shadow-xs ring-1 ring-[#8B7BD0]'
-                          : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
-                      }`}
-                    >
-                      <Sparkles className="w-3 h-3 text-[#8B7BD0]" />
-                      <span>Lavender</span>
-                    </button>
-                    <button
-                      onClick={() => setTheme('light')}
-                      className={`py-1.5 px-2 rounded-lg text-[10.5px] font-bold flex items-center justify-center space-x-1 transition ${
-                        theme === 'light'
-                          ? 'bg-sky-100 text-sky-800 shadow-xs ring-1 ring-sky-300'
-                          : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
-                      }`}
-                    >
-                      <Sun className="w-3 h-3 text-amber-500" />
-                      <span>Light</span>
-                    </button>
-                    <button
-                      onClick={() => setTheme('dark')}
-                      className={`py-1.5 px-2 rounded-lg text-[10.5px] font-bold flex items-center justify-center space-x-1 transition ${
-                        theme === 'dark'
-                          ? 'bg-slate-800 text-white shadow-xs ring-1 ring-slate-600'
-                          : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
-                      }`}
-                    >
-                      <Moon className="w-3 h-3 text-sky-400" />
-                      <span>Dark</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* User Profile Avatar with Logout */}
+          {/* User Profile Pill matching screenshot */}
           <div className="relative" ref={userMenuRef}>
-            <button
+            <div
               onClick={(e) => {
                 e.stopPropagation();
                 setShowUserMenu((prev) => !prev);
-                setShowMoreMenu(false);
               }}
-              className="w-10 h-10 rounded-full bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm flex items-center justify-center shadow-sm transition active:scale-95 ring-2 ring-white dark:ring-slate-900"
-              title={user?.name || 'User Profile'}
+              className="flex items-center space-x-2 pl-1.5 pr-3 py-1 rounded-full border border-sky-200 dark:border-sky-800 bg-white/70 dark:bg-slate-800 shadow-xs cursor-pointer active:scale-95 transition"
+              title="User Profile & Settings"
             >
-              {user?.name ? user.name[0].toUpperCase() : 'V'}
-            </button>
+              <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+              </div>
+              <div className="text-left hidden sm:block leading-tight">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block">
+                  {user?.name || 'Vasantha'}
+                </span>
+                <span className="text-[9.5px] text-emerald-600 dark:text-emerald-400 font-semibold block capitalize">
+                  {user?.role === 'owner' ? 'Owner' : user?.role === 'client' ? 'Client' : 'Agent'}
+                </span>
+              </div>
+            </div>
 
             {showUserMenu && (
               <div className="absolute right-0 top-full mt-1.5 w-56 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-800 p-3 z-50 text-xs space-y-2">
@@ -471,9 +343,22 @@ export const Navbar = ({
                   <p className="text-[11px] text-slate-400 truncate">{user?.phone || user?.role}</p>
                 </div>
 
+                {onOpenMoreSheet && (
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onOpenMoreSheet();
+                    }}
+                    className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition text-left"
+                  >
+                    <MoreHorizontal className="w-4 h-4 text-slate-500" />
+                    <span>Settings & Utilities</span>
+                  </button>
+                )}
+
                 <button
                   onClick={logout}
-                  className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold transition"
+                  className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold transition text-left"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Logout / வெளியேறு</span>

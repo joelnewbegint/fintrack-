@@ -1620,52 +1620,13 @@ export const Dashboard = ({
                 )}
               </div>
 
-              {/* 1. Key Metric Cards (8 cards in 4x2 matrix in Laptop Mode) */}
+              {/* 1. Key Metric Cards (Exactly 8 cards in 4x2 matrix matching design mockup) */}
               <div
-                className={`grid ${
-                  isTablet
-                    ? 'grid-cols-2 gap-4'
-                    : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
-                } items-stretch`}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5 items-stretch"
               >
-                {/* NEW: Sky Blue KPI Card: EMI Due Today / Overdue */}
-                <div
-                  onClick={() => {
-                    const el = document.getElementById('today-due-section');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="card-sky-kpi p-5 rounded-2xl sm:rounded-3xl border flex flex-col justify-between cursor-pointer active:scale-98 transition shadow-md"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#1F4E6B] dark:text-[#CFE6F2]">
-                        {lang === 'ta' ? 'இன்றைய தவணை & நிலுவை' : 'EMI Due Today / Overdue'}
-                      </span>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                        {todayDueList.length} {lang === 'ta' ? 'இன்று தவணை' : 'due today'} • {overdueLoans.length} {lang === 'ta' ? 'தாமதம்' : 'overdue'}
-                      </p>
-                    </div>
-                    <div className="w-10 h-10 rounded-2xl bg-[#CFE6F2] text-[#1F4E6B] flex items-center justify-center shadow-sm shrink-0">
-                      <Clock className="w-5 h-5" />
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-2xl font-bold tabular-nums text-[#1F4E6B] dark:text-[#CFE6F2]">
-                      {formatCurrency(totalDueAndOverdue)}
-                    </p>
-                    <div className="flex items-center justify-between text-[11px] mt-1 pt-2 border-t border-white/60 dark:border-white/10">
-                      <span className="text-slate-600 dark:text-slate-300">
-                        {lang === 'ta' ? 'இன்று' : 'Due Today'}: {formatCurrency(todayDueTotal)}
-                      </span>
-                      <span className="text-[#A8442C] font-semibold">
-                        {lang === 'ta' ? 'நிலுவை' : 'Overdue'}: {formatCurrency(overdueTotal)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
+                {/* 1. NET COLLECTIONS IN HAND */}
                 <StatCard
-                  title={t('netCollected')}
+                  title={lang === 'ta' ? 'கையிருப்பு வசூல்' : 'NET COLLECTIONS IN HAND'}
                   amount={
                     cards.netCollected !== undefined
                       ? cards.netCollected
@@ -1674,109 +1635,84 @@ export const Dashboard = ({
                   subtitle={
                     cards.totalExpenses > 0
                       ? `Click for breakdown • -${formatCurrency(cards.totalExpenses)} exp`
-                      : 'Click for daily & scheme breakdown'
+                      : 'Click for daily & scheme br...'
                   }
                   icon={Wallet}
-                  gradient="from-emerald-400 to-teal-600"
+                  gradient="from-emerald-400 to-teal-500"
                   delay={0}
                   onClick={() => setShowBreakdownModal(true)}
                 />
+
+                {/* 2. TOTAL LENT */}
                 <StatCard
-                  title={lang === 'ta' ? 'முதலீட்டு கையிருப்பு (Available)' : 'Available Capital to Lend'}
-                  amount={
-                    cards.availableInvestment !== undefined
-                      ? cards.availableInvestment
-                      : Math.max(0, (cards.activeWorkingCapital || cards.totalInvested || 0) - (cards.totalLent || 0))
-                  }
-                  subtitle={
-                    lang === 'ta'
-                      ? `முதலீடு: ${formatCurrency(cards.totalInvested || 0)} • கடன்: -${formatCurrency(cards.totalLent || 0)}`
-                      : `Total Pool: ${formatCurrency(cards.totalInvested || 0)} • Disbursed: -${formatCurrency(cards.totalLent || 0)}`
-                  }
-                  icon={Landmark}
-                  gradient="from-indigo-500 via-sky-600 to-cyan-500"
-                  delay={0.02}
-                  onClick={() => onOpenInvestment && onOpenInvestment()}
-                />
-                <StatCard
-                  title={lang === 'ta' ? 'மொத்த மூலதன முதலீடு' : 'Total Capital Invested'}
-                  amount={cards.totalInvested || cards.activeWorkingCapital || 0}
-                  subtitle={lang === 'ta' ? 'சொந்த மற்றும் கூட்டாளி பங்கு' : 'Promoter & partner capital fund'}
-                  icon={Briefcase}
-                  gradient="from-blue-600 via-indigo-600 to-violet-700"
-                  delay={0.03}
-                  onClick={() => onOpenInvestment && onOpenInvestment()}
-                />
-                <StatCard
-                  title={t('totalLent')}
+                  title={lang === 'ta' ? 'வழங்கிய மொத்த கடன்' : 'TOTAL LENT'}
                   amount={cards.totalLent}
                   subtitle={`${cards.totalLoans || 0} loans issued`}
                   icon={Banknote}
                   gradient="from-sky-400 to-sky-600"
-                  delay={0.05}
+                  delay={0.03}
                 />
+
+                {/* 3. TOTAL COLLECTED */}
                 <StatCard
-                  title={t('totalCollected')}
+                  title={lang === 'ta' ? 'மொத்த வசூல்' : 'TOTAL COLLECTED'}
                   amount={cards.totalCollected}
-                  subtitle="Gross repaid across accounts"
+                  subtitle="Gross repaid across accou..."
                   icon={CheckCircle2}
                   gradient="from-emerald-400 to-teal-500"
-                  delay={0.1}
+                  delay={0.06}
                 />
+
+                {/* 4. TOTAL EXPENSES */}
                 <StatCard
-                  title={t('totalExpenses')}
+                  title={lang === 'ta' ? 'மொத்த செலவுகள்' : 'TOTAL EXPENSES'}
                   amount={cards.totalExpenses || 0}
                   subtitle="Business & office expenses"
                   icon={TrendingUp}
-                  gradient="from-rose-400 to-pink-600"
-                  delay={0.15}
+                  gradient="from-rose-400 to-pink-500"
+                  delay={0.09}
                   onClick={() => onOpenExpenses && onOpenExpenses()}
                 />
+
+                {/* 5. TOTAL OUTSTANDING */}
                 <StatCard
-                  title={t('totalOutstanding')}
+                  title={lang === 'ta' ? 'மொத்த நிலுவை' : 'TOTAL OUTSTANDING'}
                   amount={cards.totalOutstanding}
                   subtitle={`${cards.activeLoans || 0} active loans pending`}
                   icon={Clock}
                   gradient="from-amber-400 to-amber-500"
-                  delay={0.2}
+                  delay={0.12}
                 />
+
+                {/* 6. ACTIVE INTEREST */}
                 <StatCard
-                  title={t('activeInterest')}
+                  title={lang === 'ta' ? 'செயலில் உள்ள வட்டி' : 'ACTIVE INTEREST'}
                   amount={cards.activeInterest}
-                  subtitle={lang === 'ta' ? 'முடிவுற்றதும் குறையும்' : 'Auto-reduces as loans settle'}
+                  subtitle={lang === 'ta' ? 'முடிவுற்றதும் குறையும்' : 'Auto-reduces as loans sett...'}
                   icon={Coins}
-                  gradient="from-indigo-400 to-indigo-600"
-                  delay={0.25}
+                  gradient="from-indigo-400 to-purple-600"
+                  delay={0.15}
                 />
+
+                {/* 7. TOTAL SETTLED AMOUNT */}
                 <StatCard
-                  title={t('settledAmount')}
+                  title={lang === 'ta' ? 'முடிவடைந்த தொகை' : 'TOTAL SETTLED AMOUNT'}
                   amount={cards.settledAmount}
                   subtitle={`${cards.completedLoans || 0} completed loans`}
                   icon={ShieldCheck}
                   gradient="from-teal-400 to-cyan-600"
-                  delay={0.3}
+                  delay={0.18}
                   onClick={() => setDashboardView('settled')}
                 />
+
+                {/* 8. PROFIT FROM SETTLED */}
                 <StatCard
-                  title={t('profitFromSettled')}
+                  title={lang === 'ta' ? 'முடிவடைந்த நிகர லாபம்' : 'PROFIT FROM SETTLED'}
                   amount={cards.profitFromSettled ?? cards.profitEarned}
                   subtitle={lang === 'ta' ? 'முடிந்த கணக்குகளின் நிகர லாபம்' : 'Realized profit from settled'}
                   icon={Award}
-                  gradient="from-emerald-500 to-green-600"
-                  delay={0.35}
-                  onClick={() => setDashboardView('settled')}
-                />
-                <StatCard
-                  title={t('totalInterestAndProfit')}
-                  amount={sumInterestAndProfit}
-                  subtitle={
-                    lang === 'ta'
-                      ? `நடப்பு: ${formatCurrency(activeInterestVal)} + ஈட்டியது: ${formatCurrency(settledProfitVal)}`
-                      : `Active: ${formatCurrency(activeInterestVal)} + Settled: ${formatCurrency(settledProfitVal)}`
-                  }
-                  icon={TrendingUp}
-                  gradient="from-purple-500 via-indigo-600 to-violet-700"
-                  delay={0.4}
+                  gradient="from-emerald-400 to-green-600"
+                  delay={0.21}
                   onClick={() => setDashboardView('settled')}
                 />
               </div>

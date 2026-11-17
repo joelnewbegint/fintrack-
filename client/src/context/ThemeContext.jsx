@@ -13,6 +13,9 @@ export const ThemeProvider = ({ children }) => {
     if (theme === 'lavender-glass') {
       root.setAttribute('data-theme', 'lavender-glass');
       root.classList.remove('dark');
+    } else if (theme === 'glass') {
+      root.setAttribute('data-theme', 'glass');
+      root.classList.remove('dark');
     } else {
       root.removeAttribute('data-theme');
       if (theme === 'dark') {
@@ -28,6 +31,7 @@ export const ThemeProvider = ({ children }) => {
     setTheme((prev) => {
       if (prev === 'lavender-glass') return 'light';
       if (prev === 'light') return 'dark';
+      if (prev === 'dark') return 'glass';
       return 'lavender-glass';
     });
   };
