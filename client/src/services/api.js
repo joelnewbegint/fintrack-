@@ -483,12 +483,12 @@ export const api = {
 
     // Compute active loans count, total loans count, and total outstanding for each customer
     const loanMap = {};
-    const loanMapByName = {};
+    const unlinkedLoanMap = {};
 
     loans.forEach((loan) => {
       const cid = String(loan.customerId?._id || loan.customerId || '');
-      const notesClean = (loan.notes || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const nameClean = (loan.customerName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const pClean = (loan.customerPhone || '').replace(/[^0-9]/g, '');
+      const nClean = (loan.customerName || '').toLowerCase().split('(')[0].trim().replace(/[^a-z0-9]/g, '');
 
       const applyToBucket = (bucket) => {
         bucket.totalLoansCount += 1;
@@ -509,32 +509,24 @@ export const api = {
           loanMap[cid] = { activeLoanCount: 0, totalOutstanding: 0, totalLoansCount: 0, types: [] };
         }
         applyToBucket(loanMap[cid]);
-      }
-
-      // Also index by raw name keywords (e.g. thilaga, manchi, etc.)
-      for (const token of [notesClean, nameClean]) {
-        if (token) {
-          if (!loanMapByName[token]) {
-            loanMapByName[token] = { activeLoanCount: 0, totalOutstanding: 0, totalLoansCount: 0, types: [] };
-          }
-          applyToBucket(loanMapByName[token]);
+      } else if (pClean && nClean) {
+        // Fallback ONLY for loans without a customerId
+        const key = `${pClean}_${nClean}`;
+        if (!unlinkedLoanMap[key]) {
+          unlinkedLoanMap[key] = { activeLoanCount: 0, totalOutstanding: 0, totalLoansCount: 0, types: [] };
         }
+        applyToBucket(unlinkedLoanMap[key]);
       }
     });
 
     customers = customers.map((c) => {
-      const cNameClean = (c.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const cSimple = (c.name || '').toLowerCase().split('(')[0].trim().replace(/[^a-z0-9]/g, '');
+      const pClean = (c.phone || '').replace(/[^0-9]/g, '');
+      const nClean = (c.name || '').toLowerCase().split('(')[0].trim().replace(/[^a-z0-9]/g, '');
 
-      // Check ID first, then fuzzy name match
-      let stats = loanMap[String(c._id)];
-      if (!stats || stats.totalLoansCount === 0) {
-        for (const [key, val] of Object.entries(loanMapByName)) {
-          if (cSimple && (key.includes(cSimple) || cSimple.includes(key))) {
-            stats = val;
-            break;
-          }
-        }
+      // Check ID first
+      let stats = loanMap[String(c._id)] || (c.clientId ? loanMap[String(c.clientId)] : null);
+      if ((!stats || stats.totalLoansCount === 0) && pClean && nClean) {
+        stats = unlinkedLoanMap[`${pClean}_${nClean}`];
       }
 
       stats = stats || {
@@ -587,8 +579,9 @@ export const api = {
       if (loans.length === 0 && cSimple) {
         loans = getStored(STORAGE_KEYS.LOANS, initialLoans).filter(
           (l) =>
-            (l.notes && l.notes.toLowerCase().includes(cSimple)) ||
-            (l.customerName && l.customerName.toLowerCase().includes(cSimple))
+            !l.customerId &&
+            ((l.notes && l.notes.toLowerCase().includes(cSimple)) ||
+              (l.customerName && l.customerName.toLowerCase().includes(cSimple)))
         );
       }
       if (payments.length === 0 && cSimple) {

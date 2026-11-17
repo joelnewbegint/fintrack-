@@ -45,20 +45,17 @@ export const getCustomers = async (req, res, next) => {
 
     // Populate active loans count, total loans count, and total outstanding for each customer
     const customerIds = customers.flatMap((c) => [c._id, c.clientId, c._id.toString()].filter(Boolean));
-    const customerPhones = customers.map((c) => c.phone).filter(Boolean);
-    const customerNames = customers.map((c) => c.name).filter(Boolean);
 
+    // Only query loans for these customer IDs, plus unlinked loans (where customerId is null/empty)
     const allCustomerLoans = await Loan.find({
       $or: [
         { customerId: { $in: customerIds } },
-        { customerPhone: { $in: customerPhones } },
-        { customerName: { $in: customerNames } },
+        { customerId: { $in: [null, undefined, ''] } },
       ],
     }).select('customerId customerPhone customerName notes remainingBalance principal totalPayable financeType status');
 
     const customerLoanMap = {};
-    const customerPhoneMap = {};
-    const customerNameMap = {};
+    const unlinkedLoanMap = {};
 
     allCustomerLoans.forEach((loan) => {
       const cid = loan.customerId ? loan.customerId.toString() : '';
@@ -76,19 +73,14 @@ export const getCustomers = async (req, res, next) => {
       if (cid) {
         if (!customerLoanMap[cid]) customerLoanMap[cid] = [];
         customerLoanMap[cid].push(bucket);
-      }
-      if (loan.customerPhone) {
-        const pClean = loan.customerPhone.replace(/[^0-9]/g, '');
-        if (pClean) {
-          if (!customerPhoneMap[pClean]) customerPhoneMap[pClean] = [];
-          customerPhoneMap[pClean].push(bucket);
-        }
-      }
-      if (loan.customerName) {
-        const nClean = loan.customerName.toLowerCase().split('(')[0].trim().replace(/[^a-z0-9]/g, '');
-        if (nClean) {
-          if (!customerNameMap[nClean]) customerNameMap[nClean] = [];
-          customerNameMap[nClean].push(bucket);
+      } else {
+        // Fallback ONLY for loans that do not have any customerId linked
+        const pClean = (loan.customerPhone || '').replace(/[^0-9]/g, '');
+        const nClean = (loan.customerName || '').toLowerCase().split('(')[0].trim().replace(/[^a-z0-9]/g, '');
+        if (pClean && nClean) {
+          const key = `${pClean}_${nClean}`;
+          if (!unlinkedLoanMap[key]) unlinkedLoanMap[key] = [];
+          unlinkedLoanMap[key].push(bucket);
         }
       }
     });
@@ -111,10 +103,14 @@ export const getCustomers = async (req, res, next) => {
         }
       };
 
+      // 1. Direct ID match (Exact loan owner)
       addBuckets(customerLoanMap[cidStr]);
       if (c.clientId) addBuckets(customerLoanMap[String(c.clientId)]);
-      if (pClean) addBuckets(customerPhoneMap[pClean]);
-      if (nClean) addBuckets(customerNameMap[nClean]);
+
+      // 2. Fallback match ONLY for unlinked loans matching both phone and name
+      if (pClean && nClean) {
+        addBuckets(unlinkedLoanMap[`${pClean}_${nClean}`]);
+      }
 
       let activeLoanCount = 0;
       let totalOutstanding = 0;
@@ -181,14 +177,27 @@ export const getCustomerById = async (req, res, next) => {
     }
 
     // Fetch customer's loans
-    const loanConditions = [{ customerId: customer._id }];
-    if (customer.clientId) loanConditions.push({ customerId: customer.clientId });
-    if (customer.phone) loanConditions.push({ customerPhone: customer.phone });
+    const loanConditions = [
+      { customerId: customer._id },
+      ...(customer.clientId ? [{ customerId: customer.clientId }] : []),
+    ];
+    // Fallback: match by phone and name ONLY if customerId is unlinked (null/empty) on the loan
+    if (customer.phone && customer.name) {
+      loanConditions.push({
+        customerId: { $in: [null, undefined, ''] },
+        customerPhone: customer.phone,
+        customerName: new RegExp(`^${customer.name}$`, 'i'),
+      });
+    }
     const loans = await Loan.find({ $or: loanConditions }).sort({ createdAt: -1 });
 
     // Fetch customer's payments
     const payments = await Payment.find({
-      $or: [{ customerId: customer._id }, { customerId: customer.clientId }],
+      $or: [
+        { customerId: customer._id },
+        ...(customer.clientId ? [{ customerId: customer.clientId }] : []),
+        { loanId: { $in: loans.map((l) => l._id) } },
+      ],
     })
       .populate('collectedBy', 'name role')
       .populate('loanId', 'loanNo financeType')

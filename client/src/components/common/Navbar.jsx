@@ -21,7 +21,6 @@ import {
   Smartphone,
   CheckCircle2,
   RefreshCw,
-  Plus,
   ChevronDown,
   MoreHorizontal,
 } from 'lucide-react';
@@ -125,15 +124,8 @@ export const Navbar = ({
             </span>
           </div>
 
-          {/* Right: Quick Enter + Sync Pill + Bell + Avatar */}
+          {/* Right: Sync Pill + Bell + Avatar */}
           <div className="flex items-center space-x-1.5 shrink-0">
-            <button
-              onClick={onAddPayment}
-              className="px-2.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-sm flex items-center space-x-1 active:scale-95"
-            >
-              <Plus className="w-3.5 h-3.5 stroke-[3]" />
-              <span>Quick Enter</span>
-            </button>
 
             <button
               onClick={handleSyncClick}
@@ -209,16 +201,8 @@ export const Navbar = ({
           </button>
         </div>
 
-        {/* Right: + Quick Enter + Synced Pill + Bell with 99+ + ⋯ More ▾ + Profile Avatar J */}
+        {/* Right: Synced Pill + Bell with 99+ + ⋯ More ▾ + Profile Avatar J */}
         <div className="flex items-center space-x-2.5 shrink-0">
-          {/* + Quick Enter Button */}
-          <button
-            onClick={onAddPayment}
-            className="h-10 px-4 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold shadow-md shadow-sky-500/20 flex items-center space-x-1.5 active:scale-95 transition"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Quick Enter</span>
-          </button>
 
           {/* ● Synced Pill */}
           <button
