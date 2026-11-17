@@ -13,21 +13,17 @@ import {
   LogOut,
   ShieldCheck,
   UserCheck,
-  Wallet,
   Menu,
   Search,
   Bell,
   Download,
   FileText,
   Smartphone,
-  PanelLeftClose,
-  PanelLeftOpen,
   CheckCircle2,
   RefreshCw,
-  CloudOff,
-  Zap,
-  MoreHorizontal,
+  Plus,
   ChevronDown,
+  MoreHorizontal,
 } from 'lucide-react';
 
 export const Navbar = ({
@@ -104,11 +100,11 @@ export const Navbar = ({
     unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount;
 
   // -------------------------------------------------------------------------
-  // MOBILE TOP BAR (Streamlined & Clean)
+  // MOBILE TOP BAR
   // -------------------------------------------------------------------------
   if (isMobile) {
     return (
-      <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/60 dark:border-sky-800/40 transition-colors pt-safe">
+      <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors pt-safe">
         <div className="px-3 h-14 flex items-center justify-between gap-2 max-w-full">
           {/* Left: Menu toggle + Logo + Title */}
           <div className="flex items-center space-x-2 shrink-0 min-w-0">
@@ -121,67 +117,50 @@ export const Navbar = ({
                 <Menu className="w-5 h-5 text-sky-600 dark:text-sky-400" />
               </button>
             )}
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-400 via-sky-500 to-sky-600 flex items-center justify-center text-white shadow-md shadow-sky-500/25 shrink-0">
-              <Wallet className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white font-black text-xs shadow-md shrink-0">
+              VK
             </div>
-            <span className="font-black text-sm sm:text-base tracking-tight bg-gradient-to-r from-sky-600 to-sky-500 dark:from-sky-300 dark:to-sky-400 bg-clip-text text-transparent truncate">
-              VK BANKER'S
+            <span className="font-black text-sm text-slate-900 dark:text-white truncate">
+              VK Banker's & Finance
             </span>
           </div>
 
           {/* Right: Quick Enter + Sync Pill + Bell + Avatar */}
           <div className="flex items-center space-x-1.5 shrink-0">
-            {/* Quick Enter button */}
             <button
               onClick={onAddPayment}
-              className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold text-[11px] shadow-sm active:scale-95 flex items-center space-x-1"
-              title="Quick Collection Entry"
+              className="px-2.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-sm flex items-center space-x-1 active:scale-95"
             >
-              <Zap className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+              <Plus className="w-3.5 h-3.5 stroke-[3]" />
               <span>Quick Enter</span>
             </button>
 
-            {/* Sync Status: Small Dot + Status */}
             <button
               onClick={handleSyncClick}
-              className="flex items-center space-x-1 px-2 py-1 rounded-xl glass border border-slate-200/60 dark:border-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300 active:scale-95"
-              title="Cloud Sync Status"
+              className="flex items-center space-x-1 px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300"
             >
-              {isManualSyncing || syncState.status === 'syncing' ? (
-                <RefreshCw className="w-2.5 h-2.5 text-sky-500 animate-spin" />
-              ) : syncState.status === 'synced' ? (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-              ) : (
-                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
-              )}
-              <span className="hidden xs:inline">
-                {syncState.status === 'synced' ? 'Synced' : 'Offline'}
-              </span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span className="hidden xs:inline">Synced</span>
             </button>
 
-            {/* Notification Bell (Capped at 99+) */}
             <button
               onClick={onOpenNotifications}
-              className="relative p-2 rounded-xl glass text-slate-700 dark:text-slate-300 active:scale-95"
+              className="relative p-2 rounded-xl text-slate-600 dark:text-slate-300 active:scale-95"
               aria-label="Notifications"
             >
-              <Bell className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+              <Bell className="w-4 h-4 text-slate-600 dark:text-slate-300" />
               {unreadNotificationsCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white dark:ring-slate-900">
+                <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">
                   {cappedNotificationBadge}
                 </span>
               )}
             </button>
 
-            {/* Avatar / More Sheet */}
             <button
               onClick={onOpenMoreSheet}
-              className="p-0.5 active:scale-95"
-              aria-label="Profile and menu"
+              className="w-8 h-8 rounded-full bg-sky-500 text-white font-bold text-xs flex items-center justify-center shadow-sm"
             >
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-sky-600 text-white font-bold text-xs flex items-center justify-center shadow-md shadow-sky-500/25">
-                {user?.name ? user.name[0].toUpperCase() : 'U'}
-              </div>
+              {user?.name ? user.name[0].toUpperCase() : 'J'}
             </button>
           </div>
         </div>
@@ -190,235 +169,210 @@ export const Navbar = ({
   }
 
   // -------------------------------------------------------------------------
-  // DESKTOP & TABLET TOP BAR (Simplified & Cleaned)
+  // DESKTOP & TABLET TOP BAR (Matches Exact Mockup)
   // -------------------------------------------------------------------------
   return (
-    <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/60 dark:border-sky-800/40 transition-colors">
-      <div
-        className={`mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 ${
-          isTablet ? 'max-w-6xl' : 'w-full max-w-[1720px] 2xl:max-w-[1920px]'
-        }`}
-      >
-        {/* Left: Sidebar Toggle + Logo & Brand */}
+    <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
+      <div className="w-full px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+        {/* Left: Sidebar Toggle + VK Logo Circle + Name */}
         <div className="flex items-center space-x-3 shrink-0">
           {onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
-              className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/60 border border-transparent hover:border-sky-200/80 dark:hover:border-sky-800/80 transition active:scale-95 shadow-xs"
-              title={isSidebarCollapsed ? 'Expand Navigation (M)' : 'Minimize Navigation (M)'}
-              aria-label="Toggle Navigation"
+              className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95"
+              title="Toggle Sidebar (M)"
             >
-              {isSidebarCollapsed ? (
-                <PanelLeftOpen className="w-5 h-5 text-sky-600 dark:text-sky-400" />
-              ) : (
-                <PanelLeftClose className="w-5 h-5" />
-              )}
+              <Menu className="w-5 h-5" />
             </button>
           )}
 
           <div className="flex items-center space-x-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-sky-400 via-sky-500 to-sky-600 flex items-center justify-center text-white shadow-md shadow-sky-500/30 border border-white/60">
-              <Wallet className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-full bg-sky-500 flex items-center justify-center text-white font-black text-sm shadow-sm shrink-0">
+              VK
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-black text-lg tracking-tight bg-gradient-to-r from-sky-600 to-sky-500 dark:from-sky-300 dark:to-sky-400 bg-clip-text text-transparent">
-                  VK BANKER'S & FINANCE
-                </span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">
-                  {lang === 'ta' ? 'வி.கே. பேங்கர்ஸ்' : 'FINANCE'}
-                </span>
-              </div>
-            </div>
+            <span className="font-black text-base sm:text-lg text-slate-900 dark:text-white tracking-tight">
+              VK Banker's & Finance
+            </span>
           </div>
         </div>
 
-        {/* Center: ONE Global Search */}
-        <div className="flex-1 max-w-md mx-2 sm:mx-6">
+        {/* Center: Search input "Search customer, loan #, phone... ( / to focus )" */}
+        <div className="flex-1 max-w-lg mx-4">
           <button
             onClick={onOpenSearch}
-            className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl glass border border-slate-200/80 dark:border-slate-800/80 text-xs text-slate-400 hover:border-sky-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all shadow-xs"
-            title="Search loans and customers (Press /)"
+            className="w-full h-10 flex items-center justify-between px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-400 hover:border-sky-400 hover:text-slate-600 dark:hover:text-slate-200 transition shadow-xs"
           >
-            <div className="flex items-center space-x-2">
-              <Search className="w-3.5 h-3.5 text-sky-500" />
-              <span>Search loans, customers, phone... / தேடல்...</span>
+            <div className="flex items-center space-x-2.5 min-w-0">
+              <Search className="w-4 h-4 text-slate-400 shrink-0" />
+              <span className="truncate">Search customer, loan #, phone... ( / to focus )</span>
             </div>
-            <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-[10px] font-bold border border-slate-200 dark:border-slate-700">
-              /
-            </kbd>
           </button>
         </div>
 
-        {/* Right: Quick Enter + Sync Status + Bell + "⋯ More" Dropdown + Profile */}
-        <div className="flex items-center space-x-2 shrink-0">
-          {/* Quick Enter Button */}
+        {/* Right: + Quick Enter + Synced Pill + Bell with 99+ + ⋯ More ▾ + Profile Avatar J */}
+        <div className="flex items-center space-x-2.5 shrink-0">
+          {/* + Quick Enter Button */}
           <button
             onClick={onAddPayment}
-            className="flex items-center space-x-1.5 px-3 py-1.5 min-h-[38px] rounded-xl bg-gradient-to-r from-sky-500 via-sky-600 to-blue-600 text-white text-xs font-bold shadow-md shadow-sky-500/20 hover:shadow-lg active:scale-95 transition"
-            title="Quick Payment / Collection Entry"
+            className="h-10 px-4 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold shadow-md shadow-sky-500/20 flex items-center space-x-1.5 active:scale-95 transition"
           >
-            <Zap className="w-3.5 h-3.5 fill-amber-300 text-amber-300 shrink-0" />
+            <Plus className="w-4 h-4 stroke-[3]" />
             <span>Quick Enter</span>
           </button>
 
-          {/* Sync Status: Small Green Dot + "Synced" */}
+          {/* ● Synced Pill */}
           <button
             onClick={handleSyncClick}
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 min-h-[38px] rounded-xl text-xs font-bold glass border border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-200 transition active:scale-95"
-            title="Cloud Sync Status (Click to sync)"
+            className="h-9 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center space-x-1.5 transition active:scale-95"
+            title="Cloud Sync Status"
           >
             {isManualSyncing || syncState.status === 'syncing' ? (
-              <RefreshCw className="w-3.5 h-3.5 text-sky-500 animate-spin" />
+              <RefreshCw className="w-3 h-3 text-sky-500 animate-spin" />
             ) : syncState.status === 'synced' ? (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 shadow-xs" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             ) : (
               <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
             )}
-            <span className="text-[11px] font-semibold">
-              {isManualSyncing || syncState.status === 'syncing'
-                ? 'Syncing...'
-                : syncState.status === 'synced'
-                ? 'Synced'
-                : `Offline (${syncState.pendingCount || 0})`}
-            </span>
+            <span>{syncState.status === 'synced' ? 'Synced' : 'Offline'}</span>
           </button>
 
-          {/* Notification Bell (Single Badge, Capped at 99+) */}
+          {/* Notification Bell with 99+ Badge */}
           <button
             onClick={onOpenNotifications}
-            className="relative p-2 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-xl glass border border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-200 hover:border-sky-400 transition active:scale-95"
-            title="Notifications & Alerts"
+            className="relative h-10 w-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center transition active:scale-95"
             aria-label="Notifications"
           >
-            <Bell className="w-4 h-4 text-sky-500" />
+            <Bell className="w-5 h-5 text-slate-600 dark:text-slate-300" />
             {unreadNotificationsCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-sm">
+              <span className="absolute 1 top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white dark:ring-slate-900">
                 {cappedNotificationBadge}
               </span>
             )}
           </button>
 
-          {/* "⋯ More" Dropdown (Consolidates Device, WhatsApp, Loan Form, Install, Lang, Theme) */}
-          <div ref={moreMenuRef} className="relative">
+          {/* ⋯ More ▾ Dropdown */}
+          <div className="relative" ref={moreMenuRef}>
             <button
               onClick={() => setShowMoreMenu(!showMoreMenu)}
-              className="flex items-center space-x-1 px-2.5 py-1.5 min-h-[38px] rounded-xl glass border border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-200 hover:border-sky-400 transition active:scale-95 text-xs font-bold"
-              title="More Utilities & Settings"
+              className="h-10 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center space-x-1.5 transition active:scale-95"
               aria-label="More options"
             >
-              <MoreHorizontal className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-              <span className="text-[11px] hidden xl:inline">More</span>
+              <span>⋯ More</span>
+              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
             </button>
 
             {showMoreMenu && (
-              <div className="absolute right-0 top-full mt-2 w-64 p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1 divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
-                {/* Section A: Device Layout Switcher */}
-                <div className="p-1.5 pb-2">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1">
-                    Display Layout
+              <div className="absolute right-0 top-full mt-1.5 w-60 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-800 p-2 z-50 text-xs space-y-1">
+                {/* Device Switcher */}
+                <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Layout Mode
+                  </p>
+                  <DisplayModeSwitcher />
+                </div>
+
+                {/* WhatsApp Web Hub */}
+                {onOpenWhatsAppHub && !isClient && (
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      onOpenWhatsAppHub();
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600 transition"
+                  >
+                    <Smartphone className="w-4 h-4 text-emerald-500" />
+                    <span>WhatsApp Web Hub</span>
+                  </button>
+                )}
+
+                {/* Blank Loan Form */}
+                {onOpenLoanForm && (
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      onOpenLoanForm();
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition"
+                  >
+                    <FileText className="w-4 h-4 text-sky-500" />
+                    <span>Loan Application Form</span>
+                  </button>
+                )}
+
+                {/* PWA Install */}
+                {!isInstalled && promptInstall && (
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      promptInstall();
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition"
+                  >
+                    <Download className="w-4 h-4 text-sky-500" />
+                    <span>Install App (PWA)</span>
+                  </button>
+                )}
+
+                {/* Language Toggle */}
+                <button
+                  onClick={toggleLanguage}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Globe className="w-4 h-4 text-slate-500" />
+                    <span>Language / மொழி</span>
                   </div>
-                  <DisplayModeSwitcher compact={false} />
-                </div>
+                  <span className="font-bold text-[11px] text-sky-600 dark:text-sky-400 uppercase">
+                    {lang === 'ta' ? 'தமிழ்' : 'EN'}
+                  </span>
+                </button>
 
-                {/* Section B: External Actions */}
-                <div className="p-1.5 space-y-1">
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      if (onOpenWhatsAppHub) onOpenWhatsAppHub();
-                    }}
-                    className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 transition text-left font-medium"
-                  >
-                    <Smartphone className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>WhatsApp Web & Quick Send</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      if (onOpenLoanForm) onOpenLoanForm();
-                    }}
-                    className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition text-left font-medium"
-                  >
-                    <FileText className="w-4 h-4 text-sky-500 shrink-0" />
-                    <span>Print Loan Application Form</span>
-                  </button>
-
-                  {!isInstalled && (
-                    <button
-                      onClick={() => {
-                        setShowMoreMenu(false);
-                        promptInstall();
-                      }}
-                      className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-amber-700 transition text-left font-medium"
-                    >
-                      <Download className="w-4 h-4 text-amber-500 shrink-0" />
-                      <span>Install App on Device</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Section C: Language & Theme Toggles */}
-                <div className="p-1.5 pt-2 flex items-center justify-between">
-                  <button
-                    onClick={toggleLanguage}
-                    className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition font-bold"
-                  >
-                    <Globe className="w-3.5 h-3.5 text-sky-500" />
-                    <span>{lang === 'ta' ? 'English' : 'தமிழ்'}</span>
-                  </button>
-
-                  <button
-                    onClick={toggleTheme}
-                    className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition font-bold"
-                  >
+                {/* Dark Theme Toggle */}
+                <button
+                  onClick={toggleTheme}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  <div className="flex items-center space-x-2.5">
                     {theme === 'dark' ? (
-                      <>
-                        <Sun className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Light</span>
-                      </>
+                      <Sun className="w-4 h-4 text-amber-500" />
                     ) : (
-                      <>
-                        <Moon className="w-3.5 h-3.5 text-sky-600" />
-                        <span>Dark</span>
-                      </>
+                      <Moon className="w-4 h-4 text-slate-500" />
                     )}
-                  </button>
-                </div>
+                    <span>Theme</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium capitalize">
+                    {theme}
+                  </span>
+                </button>
               </div>
             )}
           </div>
 
-          {/* Profile / Menu Dropdown */}
-          <div ref={userMenuRef} className="relative">
+          {/* User Profile Avatar J with Logout */}
+          <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center space-x-2 p-1 rounded-xl glass border border-slate-200/80 dark:border-slate-800/80 hover:border-sky-400 transition"
-              aria-label="User Profile"
+              className="w-10 h-10 rounded-full bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm flex items-center justify-center shadow-sm transition active:scale-95 ring-2 ring-white dark:ring-slate-900"
+              title={user?.name || 'User Profile'}
             >
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
-                {user?.name ? user.name[0].toUpperCase() : 'U'}
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 mr-1" />
+              {user?.name ? user.name[0].toUpperCase() : 'J'}
             </button>
 
             {showUserMenu && (
-              <div className="absolute right-0 top-full mt-2 w-52 p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1 space-y-1.5">
-                <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
-                  <p className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                    {user?.name || user?.email || 'Admin User'}
+              <div className="absolute right-0 top-full mt-1.5 w-56 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-800 p-3 z-50 text-xs space-y-2">
+                <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                    {user?.name || 'Administrator'}
                   </p>
-                  <p className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold uppercase mt-0.5">
-                    {user?.role || 'Staff'} • {isOwner ? 'Proprietor' : 'Staff'}
-                  </p>
+                  <p className="text-[11px] text-slate-400 truncate">{user?.phone || user?.role}</p>
                 </div>
+
                 <button
                   onClick={logout}
-                  className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition text-left"
+                  className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold transition"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>{t('logout')} / வெளியேறு</span>
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout / வெளியேறு</span>
                 </button>
               </div>
             )}

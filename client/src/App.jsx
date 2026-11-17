@@ -222,6 +222,7 @@ export function App() {
             setWhatsappHubProps(props || {});
             setShowWhatsAppHub(true);
           }}
+          onOpenLoanForm={() => setShowLoanFormModal(true)}
           unreadNotificationsCount={notificationCount}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapsed={toggleSidebar}

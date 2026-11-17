@@ -20,8 +20,10 @@ import {
   Search,
   Eye,
   CreditCard,
-  AlertCircle,
-  TrendingUp,
+  AlertTriangle,
+  Coins,
+  Wallet,
+  Users,
   FileText,
   Smartphone,
   Download,
@@ -32,9 +34,29 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
-  Landmark,
-  X,
+  Keyboard,
+  ChevronRight as ArrowRight,
 } from 'lucide-react';
+
+// Colorful avatar helper matching the mockup (letter M in blue, R in purple, S in emerald, K in rose, A in sky blue)
+const getAvatarStyle = (name = '') => {
+  const char = (name || 'B').trim().charAt(0).toUpperCase();
+  const palette = [
+    { bg: 'bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 ring-1 ring-blue-300/40' },
+    { bg: 'bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 ring-1 ring-purple-300/40' },
+    { bg: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 ring-1 ring-emerald-300/40' },
+    { bg: 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 ring-1 ring-rose-300/40' },
+    { bg: 'bg-sky-100 text-sky-700 dark:bg-sky-950/70 dark:text-sky-300 ring-1 ring-sky-300/40' },
+    { bg: 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 ring-1 ring-amber-300/40' },
+    { bg: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 ring-1 ring-indigo-300/40' },
+    { bg: 'bg-teal-100 text-teal-700 dark:bg-teal-950/70 dark:text-teal-300 ring-1 ring-teal-300/40' },
+  ];
+  const code = char.charCodeAt(0) || 0;
+  return {
+    char,
+    classes: palette[code % palette.length].bg,
+  };
+};
 
 export const Loans = ({ initialType = 'all', onViewLoan }) => {
   const { t, lang } = useLanguage();
@@ -59,7 +81,6 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
   // Dropdown & Modals state
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRef = useRef(null);
-  const searchInputRef = useRef(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [payLoanItem, setPayLoanItem] = useState(null);
@@ -255,6 +276,19 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
     [overdueLoansList]
   );
 
+  // Live Counts for Quick Chips
+  const chipCounts = useMemo(() => {
+    const s = summarySource;
+    return {
+      all: s.length,
+      daily: s.filter((l) => l.financeType === 'daily').length,
+      weekly: s.filter((l) => l.financeType === 'weekly').length,
+      monthly: s.filter((l) => l.financeType === 'monthly').length,
+      overdue: s.filter((l) => l.status === 'overdue').length,
+      closed: s.filter((l) => l.status === 'completed').length,
+    };
+  }, [summarySource]);
+
   // Pagination calculation
   const totalPages = Math.max(1, Math.ceil(loans.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
@@ -263,6 +297,20 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
     () => loans.slice(startIndex, endIndex),
     [loans, startIndex, endIndex]
   );
+
+  // Page Numbers List Generator
+  const paginationRange = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalPages];
+    }
+    if (currentPage >= totalPages - 3) {
+      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+  }, [totalPages, currentPage]);
 
   // Clear all filters
   const handleClearFilters = () => {
@@ -275,157 +323,184 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
   const isFiltering = search || typeFilter !== 'all' || statusFilter !== 'all';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-w-full">
       {/* 1. PAGE HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            {t('loans')} / கடன் கணக்குகள்
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {lang === 'ta'
-              ? 'தினசரி, வார மற்றும் மாதத் தவணைக் கடன்களின் முழு விவரம்'
-              : 'Complete credit portfolio for daily thandal, weekly, and monthly installment loans'}
-          </p>
+        {/* Left: Big Coin Icon + Title + 2 Subtitle Lines */}
+        <div className="flex items-center space-x-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 shadow-sm border border-sky-200/60 dark:border-sky-800/40">
+            <Coins className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              Loans / கடன் கணக்குகள்
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+              Manage customer loans, installments and collections in one place.
+            </p>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-snug">
+              வாடிக்கையாளர் கடன்கள், தவணைகள் மற்றும் வசூல்களை ஒரே இடத்தில் நிர்வகிக்கவும்.
+            </p>
+          </div>
         </div>
 
-        {/* Exactly 2 Buttons: New Loan (primary) and Application Form (secondary) */}
+        {/* Right Buttons: + New Loan (N) and Application Form */}
         <div className="flex items-center space-x-2.5 shrink-0 self-start sm:self-auto">
+          {/* Primary: + New Loan (N) with Tamil subtitle */}
+          {isOwner && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="h-11 px-4 rounded-xl bg-sky-500 hover:bg-sky-600 text-white shadow-md shadow-sky-500/25 flex items-center space-x-2 active:scale-95 transition"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <div className="text-left">
+                <p className="text-xs font-black leading-tight">New Loan (N)</p>
+                <p className="text-[10px] text-sky-100 leading-tight">புதிய கடன்</p>
+              </div>
+            </button>
+          )}
+
+          {/* Secondary: Application Form with Tamil subtitle */}
           <button
             onClick={() => {
               setSelectedFormLoan(null);
               setShowFormModal(true);
             }}
-            className="h-10 px-3.5 rounded-xl bg-white/80 dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center space-x-1.5 shadow-xs active:scale-95 transition"
+            className="h-11 px-3.5 rounded-xl bg-white/90 dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 shadow-xs flex items-center space-x-2 active:scale-95 transition"
             title="Download or Print Blank Loan Application Form"
           >
-            <FileText className="w-4 h-4 text-sky-500" />
-            <span>{lang === 'ta' ? 'விண்ணப்பப் படிவம்' : 'Application Form'}</span>
+            <FileText className="w-4 h-4 text-sky-500 shrink-0" />
+            <div className="text-left">
+              <p className="text-xs font-bold leading-tight">Application Form</p>
+              <p className="text-[10px] text-slate-400 leading-tight">கடன் விண்ணப்ப படிவம்</p>
+            </div>
           </button>
-
-          {isOwner && (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="h-10 px-4 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-black shadow-md shadow-sky-500/25 flex items-center space-x-2 active:scale-95 transition"
-            >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>{t('newLoan')} (N)</span>
-            </button>
-          )}
         </div>
       </div>
 
-      {/* 2. SUMMARY CARDS (4-grid above table) */}
+      {/* 2. SUMMARY CARDS (4 Cards Grid) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Total Active Loans */}
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-            <CreditCard className="w-5 h-5" />
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center space-x-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
-              {lang === 'ta' ? 'நடப்புக் கடன்கள்' : 'Total Active Loans'}
+            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+              Total Active Loans
             </p>
-            <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight">
+            <p className="text-[10px] text-slate-400 truncate">
+              செயலில் உள்ள கடன்கள்
+            </p>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight mt-0.5">
               {activeLoansCount}
             </p>
           </div>
         </div>
 
         {/* Card 2: Total Principal */}
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-            <Landmark className="w-5 h-5" />
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center space-x-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+            <Coins className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
-              {lang === 'ta' ? 'மொத்த அசல்' : 'Total Principal'}
+            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+              Total Principal
             </p>
-            <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight truncate">
+            <p className="text-[10px] text-slate-400 truncate">
+              மொத்த முதற்கடன் தொகை
+            </p>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight mt-0.5 truncate">
               {formatCurrency(totalPrincipal)}
             </p>
           </div>
         </div>
 
         {/* Card 3: Collected Today */}
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <TrendingUp className="w-5 h-5" />
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center space-x-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <Wallet className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
-              {lang === 'ta' ? 'இன்று வசூல்' : 'Collected Today'}
+            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+              Collected Today
             </p>
-            <p className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight truncate">
+            <p className="text-[10px] text-slate-400 truncate">
+              இன்று வசூலித்த தொகை
+            </p>
+            <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight mt-0.5 truncate">
               {formatCurrency(todayCollected)}
             </p>
           </div>
         </div>
 
-        {/* Card 4: Overdue Amount (Red accent, clickable to filter overdue) */}
+        {/* Card 4: Overdue Amount (Red accent, clickable with arrow) */}
         <button
           onClick={() => {
             setStatusFilter(statusFilter === 'overdue' ? 'all' : 'overdue');
             setCurrentPage(1);
           }}
-          className={`text-left rounded-2xl p-3.5 sm:p-4 border shadow-sm flex items-center space-x-3 transition active:scale-[0.98] ${
+          className={`text-left rounded-2xl p-4 border shadow-sm flex items-center justify-between transition active:scale-[0.98] ${
             statusFilter === 'overdue'
               ? 'bg-rose-500 text-white border-rose-600 ring-2 ring-rose-400'
-              : 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200/80 dark:border-rose-900/40 hover:border-rose-300'
+              : 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-200/80 dark:border-rose-900/50 hover:border-rose-300'
           }`}
           title="Click to filter overdue loans"
         >
-          <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-              statusFilter === 'overdue'
-                ? 'bg-white/20 text-white'
-                : 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400'
-            }`}
-          >
-            <AlertCircle className="w-5 h-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between">
-              <p
-                className={`text-[11px] font-medium truncate ${
-                  statusFilter === 'overdue' ? 'text-rose-100' : 'text-rose-700 dark:text-rose-300'
-                }`}
-              >
-                {lang === 'ta' ? 'தவணை தவறிய தொகை' : 'Overdue Amount'}
-              </p>
-              <span
-                className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                  statusFilter === 'overdue'
-                    ? 'bg-white/20 text-white'
-                    : 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300'
-                }`}
-              >
-                {overdueLoansList.length}
-              </span>
-            </div>
-            <p
-              className={`text-lg sm:text-xl font-black tabular-nums tracking-tight truncate ${
-                statusFilter === 'overdue' ? 'text-white' : 'text-rose-600 dark:text-rose-400'
+          <div className="flex items-center space-x-3.5 min-w-0">
+            <div
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                statusFilter === 'overdue'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-rose-100 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400'
               }`}
             >
-              {formatCurrency(overdueAmount)}
-            </p>
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p
+                className={`text-xs font-bold truncate ${
+                  statusFilter === 'overdue' ? 'text-white' : 'text-rose-700 dark:text-rose-300'
+                }`}
+              >
+                Overdue Amount
+              </p>
+              <p
+                className={`text-[10px] truncate ${
+                  statusFilter === 'overdue' ? 'text-rose-100' : 'text-rose-600/70 dark:text-rose-400/70'
+                }`}
+              >
+                கால அவகாசம் மீறிய தொகை
+              </p>
+              <p
+                className={`text-xl sm:text-2xl font-black tabular-nums tracking-tight mt-0.5 truncate ${
+                  statusFilter === 'overdue' ? 'text-white' : 'text-rose-600 dark:text-rose-400'
+                }`}
+              >
+                {formatCurrency(overdueAmount)}
+              </p>
+            </div>
           </div>
+          <ArrowRight
+            className={`w-5 h-5 shrink-0 ml-2 ${
+              statusFilter === 'overdue' ? 'text-white' : 'text-rose-400'
+            }`}
+          />
         </button>
       </div>
 
-      {/* 3. FILTER BAR (One row + Quick chips) */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
-        {/* Main Controls Row */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
-          {/* Search Box with "/" focus */}
+      {/* 3. FILTER BAR (Matching Mockup with Labeled Dropdowns & Chips) */}
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3.5">
+        {/* Top Filter Row: Search Input + Scheme Select + Status Select + Clear Filters */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-end justify-between gap-3">
+          {/* Search Box */}
           <div className="relative flex-1">
             <SmartNameInput
               id="loans-search-input"
               value={search}
               onChange={setSearch}
               isSearch={true}
-              placeholder="Search loan #, customer, phone... (/ to focus)"
+              placeholder="Search loan #, customer, phone... ( / )"
               existingCustomers={loans
                 .map((l) => ({
                   _id: l._id,
@@ -438,53 +513,72 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                 setSearch(cust.name);
                 saveRecentName(cust.name);
               }}
-              inputClassName="w-full h-10 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 text-xs text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 transition"
+              inputClassName="w-full h-10 pl-9 pr-8 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-400 transition"
             />
           </div>
 
-          {/* Scheme & Status Dropdowns */}
-          <div className="flex items-center gap-2">
+          {/* Scheme Dropdown with Label on Top */}
+          <div className="flex flex-col space-y-1">
+            <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+              Scheme / திட்டம்
+            </label>
             <select
               value={typeFilter}
               onChange={(e) => {
                 setTypeFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer"
+              className="h-10 px-3 min-w-[150px] rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer"
             >
-              <option value="all">All Schemes / அனைத்து திட்டம்</option>
+              <option value="all">All Schemes</option>
               <option value="daily">Daily Thandal (தினசரி)</option>
               <option value="weekly">Weekly (வாரத்தவணை)</option>
               <option value="monthly">Monthly (மாதத்தவணை)</option>
             </select>
+          </div>
 
+          {/* Status Dropdown with Label on Top */}
+          <div className="flex flex-col space-y-1">
+            <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+              Status / நிலை
+            </label>
             <select
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer"
+              className="h-10 px-3 min-w-[150px] rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer"
             >
-              <option value="all">All Status / அனைத்து நிலை</option>
+              <option value="all">All Status</option>
               <option value="active">Active (நடப்பில் உள்ளது)</option>
               <option value="overdue">Overdue (தவணை தவறியது)</option>
               <option value="completed">Closed (முடிவுற்றது)</option>
             </select>
           </div>
+
+          {/* Clear Filters Link */}
+          <div className="pb-1">
+            <button
+              onClick={handleClearFilters}
+              className="h-10 px-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold text-sky-600 dark:text-sky-400 flex items-center space-x-1.5 transition"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Clear filters</span>
+            </button>
+          </div>
         </div>
 
-        {/* Quick Chips & Result Count */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
-          {/* Chips */}
-          <div className="flex flex-wrap items-center gap-1.5">
+        {/* Bottom Row: Quick Filter Chips with Live Counts + Showing Count */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex flex-wrap items-center gap-2">
             {[
-              { id: 'all', label: 'All', onClick: () => { setTypeFilter('all'); setStatusFilter('all'); } },
-              { id: 'daily', label: 'Daily', onClick: () => setTypeFilter('daily') },
-              { id: 'weekly', label: 'Weekly', onClick: () => setTypeFilter('weekly') },
-              { id: 'monthly', label: 'Monthly', onClick: () => setTypeFilter('monthly') },
-              { id: 'overdue', label: 'Overdue', onClick: () => setStatusFilter('overdue') },
-              { id: 'completed', label: 'Closed', onClick: () => setStatusFilter('completed') },
+              { id: 'all', label: `All (${chipCounts.all})`, onClick: () => { setTypeFilter('all'); setStatusFilter('all'); } },
+              { id: 'daily', label: `Daily (${chipCounts.daily})`, onClick: () => setTypeFilter('daily') },
+              { id: 'weekly', label: `Weekly (${chipCounts.weekly})`, onClick: () => setTypeFilter('weekly') },
+              { id: 'monthly', label: `Monthly (${chipCounts.monthly})`, onClick: () => setTypeFilter('monthly') },
+              { id: 'overdue', label: `Overdue (${chipCounts.overdue})`, isOverduePill: true, onClick: () => setStatusFilter('overdue') },
+              { id: 'completed', label: `Closed (${chipCounts.closed})`, onClick: () => setStatusFilter('completed') },
             ].map((chip) => {
               const isActive =
                 chip.id === 'all'
@@ -502,10 +596,14 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                     chip.onClick();
                     setCurrentPage(1);
                   }}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs ${
                     isActive
-                      ? 'bg-sky-500 text-white shadow-xs'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      ? chip.isOverduePill
+                        ? 'bg-rose-500 text-white'
+                        : 'bg-sky-500 text-white'
+                      : chip.isOverduePill
+                      ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   {chip.label}
@@ -514,44 +612,37 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
             })}
           </div>
 
-          {/* Result Count and Clear Filters */}
-          <div className="flex items-center space-x-3 text-xs text-slate-500 dark:text-slate-400">
-            <span>
-              Showing <strong className="text-slate-800 dark:text-slate-200">{paginatedLoans.length}</strong> of{' '}
-              <strong className="text-slate-800 dark:text-slate-200">{loans.length}</strong> loans
-            </span>
-
-            {isFiltering && (
-              <button
-                onClick={handleClearFilters}
-                className="text-sky-600 dark:text-sky-400 font-semibold hover:underline flex items-center space-x-1"
-              >
-                <X className="w-3 h-3" />
-                <span>Clear filters</span>
-              </button>
-            )}
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            Showing <strong className="text-slate-800 dark:text-slate-200">{paginatedLoans.length}</strong> of{' '}
+            <strong className="text-slate-800 dark:text-slate-200">{loans.length}</strong> loans
           </div>
         </div>
       </div>
 
-      {/* 4. MAIN TABLE / MOBILE CARDS */}
+      {/* 4. TABLE OR MOBILE CARDS */}
       {isMobile ? (
-        /* Mobile Stacked Cards */
+        /* Mobile View (Responsive Card matching Mockup preview) */
         <div className="space-y-3">
           {loading ? (
             <div className="p-8 text-center text-xs text-slate-400 bg-white/60 dark:bg-slate-900/60 rounded-2xl">
               Loading loans...
             </div>
           ) : loans.length === 0 ? (
-            <div className="py-12 text-center space-y-3 bg-white/60 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <Search className="w-8 h-8 mx-auto text-slate-300" />
-              <p className="text-xs text-slate-500 font-medium">No loans match your search or filters.</p>
-              {isFiltering && (
+            /* Empty State matching Mockup */
+            <div className="py-12 px-4 text-center space-y-3 bg-white/90 dark:bg-slate-900/90 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-sky-50 text-sky-500 flex items-center justify-center">
+                <FileText className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                No loans found
+              </h3>
+              <p className="text-xs text-slate-400">கடன் பதிவுகள் இல்லை</p>
+              {isOwner && (
                 <button
-                  onClick={handleClearFilters}
-                  className="px-3 py-1.5 rounded-xl bg-sky-50 text-sky-600 text-xs font-bold"
+                  onClick={() => setShowAddModal(true)}
+                  className="px-4 py-2 rounded-xl bg-sky-500 text-white text-xs font-bold"
                 >
-                  Clear filters
+                  + New Loan (N)
                 </button>
               )}
             </div>
@@ -559,12 +650,12 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
             paginatedLoans.map((loan) => {
               const cust = resolveCustomer(loan);
               const parsed = parseCustomerName(cust.name);
+              const avatar = getAvatarStyle(cust.name);
               const recoveryPct =
                 loan.totalPayable > 0
                   ? Math.round(((loan.totalCollected || 0) / loan.totalPayable) * 100)
                   : 0;
               const isOverdue = loan.status === 'overdue';
-              const isClosed = loan.status === 'completed';
               const daysOverdue = isOverdue
                 ? getOverdueDays(loan.endDate || loan.startDate)
                 : 0;
@@ -572,246 +663,92 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
               return (
                 <div
                   key={loan._id}
-                  className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
+                  className="bg-white/90 dark:bg-slate-900/90 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
                 >
-                  {/* Row 1: Customer Avatar + Name + Installment */}
-                  <div className="flex items-start justify-between gap-3">
+                  {/* Top: Customer Avatar + Name + Loan # */}
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center space-x-3 min-w-0">
-                      <div className="w-9 h-9 rounded-full bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold flex items-center justify-center text-xs shrink-0 ring-1 ring-sky-300/40">
-                        {(cust.name || 'B').charAt(0).toUpperCase()}
+                      <div className={`w-9 h-9 rounded-full ${avatar.classes} font-bold text-xs flex items-center justify-center shrink-0`}>
+                        {avatar.char}
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
                           {parsed.primary}
                         </p>
-                        <p className="text-[11px] text-slate-400 truncate">
-                          {cust.phone || 'No phone'} {cust.area ? `• ${cust.area}` : ''}
+                        <p className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                          {loan.loanNo}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-bold tabular-nums text-sm text-slate-900 dark:text-white">
-                        {formatCurrency(loan.installmentAmount)}
-                      </p>
-                      <span className="text-[10px] text-slate-400">
-                        /{loan.financeType === 'daily' ? 'day' : loan.financeType === 'weekly' ? 'wk' : 'mo'}
-                      </span>
-                    </div>
-                  </div>
 
-                  {/* Row 2: Loan # • Scheme • Status */}
-                  <div className="flex items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center space-x-2 min-w-0">
-                      <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
-                        {loan.loanNo}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold whitespace-nowrap ${
-                          loan.financeType === 'daily'
-                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/80'
-                            : loan.financeType === 'weekly'
-                            ? 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200/80'
-                            : 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200/80'
-                        }`}
-                      >
-                        {loan.financeType === 'daily'
-                          ? `Daily • ${loan.duration || 100}`
-                          : loan.financeType === 'weekly'
-                          ? `Weekly • ${loan.duration || 10}`
-                          : `Monthly • ${loan.duration || 12}`}
-                      </span>
-                    </div>
-
-                    {/* Status badge with dot */}
                     <div className="text-right">
-                      <span
-                        className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                          isOverdue
-                            ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/80'
-                            : isClosed
-                            ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200'
-                            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/80'
-                        }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            isOverdue
-                              ? 'bg-rose-500'
-                              : isClosed
-                              ? 'bg-slate-400'
-                              : 'bg-emerald-500'
-                          }`}
-                        />
-                        <span className="capitalize">{loan.status}</span>
+                      <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        isOverdue ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isOverdue ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                        <span>{isOverdue ? `Overdue • ${daysOverdue}d` : 'Active'}</span>
                       </span>
-                      {isOverdue && daysOverdue > 0 && (
-                        <span className="block text-[10px] text-rose-500 font-semibold mt-0.5">
-                          {daysOverdue}d overdue
-                        </span>
-                      )}
                     </div>
                   </div>
 
-                  {/* Row 3: Principal & Disbursed */}
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 bg-slate-50/80 dark:bg-slate-800/50 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <span>
-                      Principal:{' '}
-                      <strong className="text-slate-800 dark:text-slate-200">
+                  {/* Principal & Installment */}
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <div>
+                      <p className="text-base font-black text-slate-900 dark:text-white tabular-nums">
                         {formatCurrency(loan.principal)}
-                      </strong>
-                    </span>
-                    <span>
-                      Disbursed:{' '}
-                      <strong className="text-slate-800 dark:text-slate-200">
-                        {formatCurrency(
-                          loan.disbursedAmount || (loan.principal - (loan.chargeAmount || 0))
-                        )}
-                      </strong>
-                    </span>
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        {formatCurrency(loan.installmentAmount)}{' '}
+                        <span className="text-[10px] text-slate-400 font-normal">/ day</span>
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Row 4: Progress Bar */}
+                  {/* Progress Bar */}
                   <div className="space-y-1">
-                    <div className="flex justify-between items-center text-[11px] text-slate-500 tabular-nums">
-                      <span>
-                        {formatCurrency(loan.totalCollected || 0)} of {formatCurrency(loan.totalPayable)}
-                      </span>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                        {recoveryPct}%
-                      </span>
+                    <div className="flex justify-between items-center text-[10px] text-slate-500 tabular-nums">
+                      <span>{formatCurrency(loan.totalCollected || 0)} of {formatCurrency(loan.totalPayable)} ({recoveryPct}%)</span>
                     </div>
                     <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
                       <div
-                        className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
+                        className="bg-emerald-500 h-1.5 rounded-full"
                         style={{ width: `${Math.min(100, Math.max(0, recoveryPct))}%` }}
                       />
                     </div>
                   </div>
 
-                  {/* Row 5: Actions (Pay + View + Overflow) */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center space-x-2">
-                      {loan.remainingBalance > 0 ? (
-                        <button
-                          onClick={() => setPayLoanItem(buildPayItem(loan, cust))}
-                          className="h-8 px-4 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-sm shadow-sky-500/20 flex items-center space-x-1.5 active:scale-95 transition"
-                        >
-                          <CreditCard className="w-3.5 h-3.5" />
-                          <span>Pay / வரவு</span>
-                        </button>
-                      ) : (
-                        <span className="h-8 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold flex items-center border border-emerald-200/60">
-                          ✓ Paid
-                        </span>
-                      )}
-
+                  {/* Actions Row */}
+                  <div className="flex items-center space-x-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    {loan.remainingBalance > 0 ? (
                       <button
-                        onClick={() => onViewLoan && onViewLoan(loan._id)}
-                        className="h-8 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center space-x-1 active:scale-95 transition"
+                        onClick={() => setPayLoanItem(buildPayItem(loan, cust))}
+                        className="flex-1 h-8 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs flex items-center justify-center space-x-1"
                       >
-                        <Eye className="w-3.5 h-3.5 text-sky-500" />
-                        <span>View</span>
+                        <CreditCard className="w-3.5 h-3.5" />
+                        <span>Pay</span>
                       </button>
-                    </div>
+                    ) : (
+                      <div className="flex-1 h-8 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs flex items-center justify-center">
+                        ✓ Paid
+                      </div>
+                    )}
 
-                    {/* Overflow Dropdown */}
-                    <div className="relative">
-                      <button
-                        onClick={() => setOpenMenuId(openMenuId === loan._id ? null : loan._id)}
-                        className="h-8 w-8 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition border border-transparent hover:border-slate-200"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
+                    <button
+                      onClick={() => onViewLoan && onViewLoan(loan._id)}
+                      className="px-3 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center space-x-1"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-sky-500" />
+                      <span>View</span>
+                    </button>
 
-                      {openMenuId === loan._id && (
-                        <div
-                          ref={menuRef}
-                          className="absolute right-0 bottom-full mb-1.5 w-52 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-40"
-                        >
-                          <button
-                            onClick={() => {
-                              setEditingLoan(loan);
-                              setOpenMenuId(null);
-                            }}
-                            className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition"
-                          >
-                            <Pencil className="w-3.5 h-3.5 text-amber-500" />
-                            <span>Edit Loan / திருத்து</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              downloadLoanAgreementPDF(loan, cust);
-                              setOpenMenuId(null);
-                            }}
-                            className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition"
-                          >
-                            <Download className="w-3.5 h-3.5 text-sky-500" />
-                            <span>Agreement PDF / ஒப்பந்தம்</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              downloadRepaymentSchedulePDF(loan, cust);
-                              setOpenMenuId(null);
-                            }}
-                            className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition"
-                          >
-                            <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-                            <span>Repayment Schedule PDF</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setSelectedFormLoan(loan);
-                              setShowFormModal(true);
-                              setOpenMenuId(null);
-                            }}
-                            className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition"
-                          >
-                            <FileText className="w-3.5 h-3.5 text-sky-500" />
-                            <span>Application Form / படிவம்</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setWhatsappHubLoan(loan);
-                              setOpenMenuId(null);
-                            }}
-                            className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600 transition"
-                          >
-                            <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
-                            <span>WhatsApp / வாட்ஸ்அப்</span>
-                          </button>
-
-                          <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
-
-                          <button
-                            onClick={async () => {
-                              setOpenMenuId(null);
-                              const borrowerName = cust.name || loan.customerName || 'Borrower';
-                              if (
-                                window.confirm(
-                                  `Are you sure you want to permanently delete Loan ${loan.loanNo} (${borrowerName})?`
-                                )
-                              ) {
-                                try {
-                                  await api.deleteLoan(loan._id);
-                                  fetchLoans();
-                                  fetchSummaryLoans();
-                                } catch (err) {
-                                  alert(err.message || 'Failed to delete loan');
-                                }
-                              }
-                            }}
-                            className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                            <span>Delete Loan / நீக்கு</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    <button
+                      onClick={() => setOpenMenuId(openMenuId === loan._id ? null : loan._id)}
+                      className="h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 flex items-center justify-center"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               );
@@ -819,27 +756,51 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
           )}
         </div>
       ) : (
-        /* Desktop & Tablet Mode: Simplified Modern Glass Table */
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm">
+        /* Desktop & Tablet Table (Exact 1:1 Match of Mockup) */
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              {/* Sticky Header */}
-              <thead className="sticky top-0 z-10 bg-slate-50/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              {/* Sticky Table Header with English on top, Tamil underneath */}
+              <thead className="sticky top-0 z-10 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80">
                 <tr>
-                  <th className="py-3 px-4">Customer</th>
-                  <th className="py-3 px-4">Loan</th>
-                  <th className="py-3 px-4">Scheme</th>
-                  <th className="py-3 px-4">Principal</th>
-                  <th className="py-3 px-4">Installment</th>
-                  <th className="py-3 px-4">Progress</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Customer</p>
+                    <p className="text-[10px] text-slate-400 font-medium">வாடிக்கையாளர்</p>
+                  </th>
+                  <th className="py-3 px-4">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Loan</p>
+                    <p className="text-[10px] text-slate-400 font-medium">கடன் விவரம்</p>
+                  </th>
+                  <th className="py-3 px-4">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Scheme</p>
+                    <p className="text-[10px] text-slate-400 font-medium">திட்டம்</p>
+                  </th>
+                  <th className="py-3 px-4">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Principal</p>
+                    <p className="text-[10px] text-slate-400 font-medium">முதற்கடன்</p>
+                  </th>
+                  <th className="py-3 px-4">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Installment</p>
+                    <p className="text-[10px] text-slate-400 font-medium">தவணை</p>
+                  </th>
+                  <th className="py-3 px-4">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Progress</p>
+                    <p className="text-[10px] text-slate-400 font-medium">செலுத்திய முன்னேற்றம்</p>
+                  </th>
+                  <th className="py-3 px-4">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Status</p>
+                    <p className="text-[10px] text-slate-400 font-medium">நிலை</p>
+                  </th>
+                  <th className="py-3 px-4 text-right">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Actions</p>
+                    <p className="text-[10px] text-slate-400 font-medium">செயல்கள்</p>
+                  </th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                 {loading ? (
-                  /* Loading Skeletons */
+                  /* Loading Skeleton matching Mockup */
                   [...Array(6)].map((_, i) => (
                     <tr key={i} className="animate-pulse">
                       <td className="py-4 px-4">
@@ -887,30 +848,28 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                     </tr>
                   ))
                 ) : loans.length === 0 ? (
-                  /* Empty State */
+                  /* Empty State matching Mockup */
                   <tr>
                     <td colSpan={8} className="py-16 text-center">
                       <div className="max-w-xs mx-auto space-y-3">
-                        <div className="w-12 h-12 mx-auto rounded-2xl bg-sky-50 dark:bg-sky-950/40 text-sky-500 flex items-center justify-center">
-                          <Search className="w-6 h-6 stroke-[1.5]" />
+                        <div className="w-14 h-14 mx-auto rounded-2xl bg-sky-50 dark:bg-sky-950/40 text-sky-500 flex items-center justify-center">
+                          <FileText className="w-7 h-7 stroke-[1.5]" />
                         </div>
                         <div className="space-y-1">
                           <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">
-                            {lang === 'ta' ? 'கடன்கள் எதுவும் கிடைக்கவில்லை' : 'No loans match your search'}
+                            No loans found
                           </h3>
-                          <p className="text-xs text-slate-400">
-                            {lang === 'ta'
-                              ? 'தேடல் சொல் அல்லது வடிகட்டிகளை மாற்றி மீண்டும் முயற்சிக்கவும்'
-                              : 'Try adjusting your search terms or filter criteria'}
+                          <p className="text-xs text-slate-400">கடன் பதிவுகள் இல்லை</p>
+                          <p className="text-[11px] text-slate-400">
+                            Try changing the filters or add a new loan.
                           </p>
                         </div>
-                        {isFiltering && (
+                        {isOwner && (
                           <button
-                            onClick={handleClearFilters}
-                            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-300 font-bold text-xs hover:bg-sky-100 transition"
+                            onClick={() => setShowAddModal(true)}
+                            className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-md shadow-sky-500/20 active:scale-95 transition"
                           >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                            <span>{lang === 'ta' ? 'வடிகட்டிகளை மீட்டமைக்க' : 'Clear all filters'}</span>
+                            + New Loan (N)
                           </button>
                         )}
                       </div>
@@ -920,6 +879,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                   paginatedLoans.map((loan) => {
                     const cust = resolveCustomer(loan);
                     const parsed = parseCustomerName(cust.name);
+                    const avatar = getAvatarStyle(cust.name);
                     const recoveryPct =
                       loan.totalPayable > 0
                         ? Math.round(((loan.totalCollected || 0) / loan.totalPayable) * 100)
@@ -933,23 +893,18 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                     return (
                       <tr
                         key={loan._id}
-                        className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition duration-150"
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition duration-150"
                       >
-                        {/* 1. Customer Cell */}
+                        {/* 1. Customer Cell (Colorful Initial Avatar + Bold Name + Phone • Area) */}
                         <td className="py-3 px-4">
                           <div className="flex items-center space-x-3">
-                            <div className="w-9 h-9 rounded-full bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold flex items-center justify-center text-xs shrink-0 ring-1 ring-sky-300/40">
-                              {(cust.name || 'B').charAt(0).toUpperCase()}
+                            <div className={`w-9 h-9 rounded-full ${avatar.classes} font-bold text-xs flex items-center justify-center shrink-0`}>
+                              {avatar.char}
                             </div>
                             <div className="min-w-0 max-w-[170px]">
                               <div className="font-bold text-slate-900 dark:text-white truncate">
                                 {parsed.primary}
                               </div>
-                              {parsed.secondary && (
-                                <div className="text-[10px] text-slate-400 truncate">
-                                  {parsed.secondary}
-                                </div>
-                              )}
                               <div className="text-[11px] text-slate-400 truncate">
                                 {cust.phone || 'No phone'} {cust.area ? `• ${cust.area}` : ''}
                               </div>
@@ -957,7 +912,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                           </div>
                         </td>
 
-                        {/* 2. Loan Cell (Single line monospace #, grey date range below) */}
+                        {/* 2. Loan Cell (Monospace Loan # + Date Range) */}
                         <td className="py-3 px-4">
                           <div className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
                             {loan.loanNo}
@@ -967,7 +922,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                           </div>
                         </td>
 
-                        {/* 3. Scheme Badge (Single line pill: Daily • 100) */}
+                        {/* 3. Scheme Cell (Compact single line pill: Daily • 100, etc.) */}
                         <td className="py-3 px-4">
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap ${
@@ -986,7 +941,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                           </span>
                         </td>
 
-                        {/* 4. Principal Cell (Bold amount, second line small grey) */}
+                        {/* 4. Principal Cell (Bold Amount + Disbursed/Charge Sub-line) */}
                         <td className="py-3 px-4">
                           <div className="font-bold text-sm text-slate-900 dark:text-white tabular-nums">
                             {formatCurrency(loan.principal)}
@@ -1004,17 +959,17 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                           </div>
                         </td>
 
-                        {/* 5. Installment Cell (Bold amount with grey frequency) */}
+                        {/* 5. Installment Cell (Bold amount with frequency) */}
                         <td className="py-3 px-4">
                           <div className="font-bold text-sm text-slate-900 dark:text-white tabular-nums">
                             {formatCurrency(loan.installmentAmount)}
                             <span className="font-normal text-xs text-slate-400 ml-1">
-                              /{loan.financeType === 'daily' ? 'day' : loan.financeType === 'weekly' ? 'wk' : 'mo'}
+                              /{loan.financeType === 'daily' ? 'day' : loan.financeType === 'weekly' ? 'week' : 'month'}
                             </span>
                           </div>
                         </td>
 
-                        {/* 6. Progress Cell (Real progress bar with ₹ collected of total and %) */}
+                        {/* 6. Progress Cell (Real green bar with Collected of Total and %) */}
                         <td className="py-3 px-4 min-w-[160px]">
                           <div className="w-full max-w-[170px] space-y-1">
                             <div className="flex items-center justify-between text-[11px] tabular-nums">
@@ -1035,20 +990,20 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                           </div>
                         </td>
 
-                        {/* 7. Status Badge (Soft pill with dot, X days overdue under it) */}
+                        {/* 7. Status Cell (Dot + Status + Overdue/Next Sub-line) */}
                         <td className="py-3 px-4">
                           <div>
                             <span
-                              className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                              className={`inline-flex items-center space-x-1.5 text-xs font-bold ${
                                 isOverdue
-                                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/80'
+                                  ? 'text-rose-600 dark:text-rose-400'
                                   : isClosed
-                                  ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200'
-                                  : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/80'
+                                  ? 'text-slate-500 dark:text-slate-400'
+                                  : 'text-emerald-600 dark:text-emerald-400'
                               }`}
                             >
                               <span
-                                className={`w-1.5 h-1.5 rounded-full ${
+                                className={`w-2 h-2 rounded-full ${
                                   isOverdue
                                     ? 'bg-rose-500'
                                     : isClosed
@@ -1058,25 +1013,26 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                               />
                               <span className="capitalize">{loan.status}</span>
                             </span>
-                            {isOverdue && daysOverdue > 0 && (
-                              <span className="block text-[10px] text-rose-500 font-semibold mt-0.5">
-                                {daysOverdue} days overdue
-                              </span>
-                            )}
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              {isOverdue && daysOverdue > 0
+                                ? `${daysOverdue} days overdue`
+                                : isClosed
+                                ? 'Completed'
+                                : `Next: ${formatDate(loan.endDate)}`}
+                            </div>
                           </div>
                         </td>
 
-                        {/* 8. Actions (ONLY 2 visible: Pay + View, rest in ⋮) */}
+                        {/* 8. Actions (Pay + View + Overflow ⋮) */}
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end space-x-1.5">
-                            {/* 1. Pay Button */}
+                            {/* Pay Button */}
                             {loan.remainingBalance > 0 ? (
                               <button
                                 onClick={() => setPayLoanItem(buildPayItem(loan, cust))}
-                                className="h-8 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-xs hover:shadow flex items-center space-x-1.5 active:scale-95 transition whitespace-nowrap"
+                                className="h-8 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-xs hover:shadow flex items-center space-x-1 active:scale-95 transition whitespace-nowrap"
                               >
-                                <CreditCard className="w-3.5 h-3.5" />
-                                <span>Pay</span>
+                                <span>₹ Pay</span>
                               </button>
                             ) : (
                               <span className="h-8 px-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center border border-emerald-200/60 whitespace-nowrap">
@@ -1084,32 +1040,33 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                               </span>
                             )}
 
-                            {/* 2. View (Eye) Button */}
+                            {/* View (Eye) Button */}
                             <button
                               onClick={() => onViewLoan && onViewLoan(loan._id)}
-                              className="h-8 w-8 rounded-xl text-slate-500 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 hover:bg-sky-50 dark:hover:bg-slate-800 flex items-center justify-center transition border border-transparent hover:border-sky-200/60"
-                              title="View Ledger / தவணை விவரம்"
+                              className="h-8 w-8 rounded-xl text-slate-500 dark:text-slate-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-slate-800 flex items-center justify-center transition border border-transparent hover:border-sky-200/60"
+                              title="View Ledger / விவரம்"
                             >
                               <Eye className="w-4 h-4 text-sky-500" />
                             </button>
 
-                            {/* 3. Overflow Menu (⋮) */}
+                            {/* Overflow ⋮ Button */}
                             <div className="relative inline-block text-left">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setOpenMenuId(openMenuId === loan._id ? null : loan._id);
                                 }}
-                                className="h-8 w-8 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition border border-transparent hover:border-slate-200"
+                                className="h-8 w-8 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition"
                                 title="More Actions"
                               >
                                 <MoreVertical className="w-4 h-4" />
                               </button>
 
+                              {/* Dropdown Menu matching Mockup */}
                               {openMenuId === loan._id && (
                                 <div
                                   ref={menuRef}
-                                  className="absolute right-0 top-full mt-1.5 w-56 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-40 text-left animate-in fade-in zoom-in-95 duration-100"
+                                  className="absolute right-0 top-full mt-1.5 w-52 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-40 text-left animate-in fade-in zoom-in-95 duration-100"
                                 >
                                   <button
                                     onClick={() => {
@@ -1118,8 +1075,8 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                                     }}
                                     className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition"
                                   >
-                                    <Pencil className="w-3.5 h-3.5 text-amber-500" />
-                                    <span>Edit Loan / திருத்து</span>
+                                    <Pencil className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Edit Loan</span>
                                   </button>
 
                                   <button
@@ -1129,8 +1086,8 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                                     }}
                                     className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition"
                                   >
-                                    <Download className="w-3.5 h-3.5 text-sky-500" />
-                                    <span>Agreement PDF / ஒப்பந்தம்</span>
+                                    <Download className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Download</span>
                                   </button>
 
                                   <button
@@ -1140,8 +1097,8 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                                     }}
                                     className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition"
                                   >
-                                    <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-                                    <span>Repayment Schedule / அட்டவணை</span>
+                                    <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Calendar / Schedule</span>
                                   </button>
 
                                   <button
@@ -1152,8 +1109,8 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                                     }}
                                     className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition"
                                   >
-                                    <FileText className="w-3.5 h-3.5 text-sky-500" />
-                                    <span>Application Form / படிவம்</span>
+                                    <FileText className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Statement</span>
                                   </button>
 
                                   <button
@@ -1164,7 +1121,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                                     className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600 transition"
                                   >
                                     <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
-                                    <span>WhatsApp / வாட்ஸ்அப்</span>
+                                    <span>WhatsApp</span>
                                   </button>
 
                                   <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
@@ -1190,7 +1147,7 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                                     className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
                                   >
                                     <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                    <span>Delete Loan / நீக்கு</span>
+                                    <span>Delete</span>
                                   </button>
                                 </div>
                               )}
@@ -1204,63 +1161,97 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
 
-      {/* 5. BOTTOM PAGINATION BAR */}
-      {loans.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
-          {/* Left: Range and Rows per Page */}
-          <div className="flex items-center space-x-3">
-            <span className="font-medium">
-              Showing <strong className="text-slate-900 dark:text-white">{startIndex + 1}</strong>–
-              <strong className="text-slate-900 dark:text-white">{endIndex}</strong> of{' '}
-              <strong className="text-slate-900 dark:text-white">{loans.length}</strong> loans
-            </span>
-            <div className="flex items-center space-x-1.5 pl-2 border-l border-slate-200 dark:border-slate-700">
-              <span className="text-slate-400">Per page:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold outline-none cursor-pointer"
-              >
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
+          {/* 5. PAGINATION (Bottom of Table matching Mockup) */}
+          {loans.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-white/95 dark:bg-slate-900/95 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
+              {/* Left: Rows per page: [ 25 ▾ ] */}
+              <div className="flex items-center space-x-2">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Rows per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold outline-none cursor-pointer"
+                >
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
+              {/* Right: Numbered Navigation buttons < 1 2 3 4 5 ... 14 > */}
+              <div className="flex items-center space-x-1.5">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center text-xs"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {paginationRange.map((page, index) => {
+                  if (page === '...') {
+                    return (
+                      <span key={`ellipsis-${index}`} className="px-1 text-slate-400 font-bold">
+                        ...
+                      </span>
+                    );
+                  }
+                  const isCurrent = currentPage === page;
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-8 h-8 rounded-lg font-bold text-xs transition flex items-center justify-center ${
+                        isCurrent
+                          ? 'bg-sky-500 text-white shadow-xs'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+
+                <button
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center text-xs"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          </div>
-
-          {/* Right: Previous / Next Controls */}
-          <div className="flex items-center space-x-2">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center space-x-1"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span>Previous</span>
-            </button>
-            <span className="font-bold px-2 tabular-nums">
-              {currentPage} / {totalPages}
-            </span>
-            <button
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center space-x-1"
-            >
-              <span>Next</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          )}
         </div>
       )}
+
+      {/* 6. BOTTOM BAR: KEYBOARD SHORTCUTS (Exact match from Mockup) */}
+      <div className="flex flex-wrap items-center space-x-3 px-4 py-2.5 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 shadow-2xs">
+        <div className="flex items-center space-x-2 font-bold text-slate-700 dark:text-slate-300">
+          <Keyboard className="w-4 h-4 text-sky-500" />
+          <span>Keyboard Shortcuts / விசைப்பலகை குறுக்குவழிகள்:</span>
+        </div>
+
+        <div className="flex items-center space-x-1.5 font-medium">
+          <kbd className="px-2 py-0.5 rounded-md bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-mono font-bold text-[11px] border border-sky-200/60 dark:border-sky-800/60">
+            N
+          </kbd>
+          <span>– New Loan (புதிய கடன்)</span>
+        </div>
+
+        <div className="flex items-center space-x-1.5 font-medium">
+          <kbd className="px-2 py-0.5 rounded-md bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-mono font-bold text-[11px] border border-sky-200/60 dark:border-sky-800/60">
+            /
+          </kbd>
+          <span>– Focus Search (தேடல்)</span>
+        </div>
+      </div>
 
       {/* MODALS */}
-      {/* 1. Add Loan Modal */}
       {showAddModal && (
         <LoanModal
           customers={customers}
@@ -1272,7 +1263,6 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
         />
       )}
 
-      {/* 2. Payment Recording Modal */}
       {payLoanItem && (
         <PaymentModal
           loanItem={payLoanItem}
@@ -1286,7 +1276,6 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
         />
       )}
 
-      {/* 3. Receipt Modal */}
       {receiptPayment && (
         <ReceiptModal
           payment={receiptPayment}
@@ -1294,7 +1283,6 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
         />
       )}
 
-      {/* 4. WhatsApp Pre-filled Reminder Modal */}
       {whatsappItem && (
         <WhatsAppReminderModal
           item={whatsappItem}
@@ -1302,7 +1290,6 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
         />
       )}
 
-      {/* 5. WhatsApp Hub Modal (Manual Web Automation) */}
       {whatsappHubLoan && (
         <WhatsAppHubModal
           isOpen={!!whatsappHubLoan}
@@ -1311,7 +1298,6 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
         />
       )}
 
-      {/* 6. Official Loan Application Form (Print & Download) */}
       <LoanApplicationFormModal
         isOpen={showFormModal}
         prefillData={selectedFormLoan}
@@ -1326,7 +1312,6 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
         }}
       />
 
-      {/* 7. Edit Loan Modal */}
       {editingLoan && (
         <EditLoanModal
           isOpen={Boolean(editingLoan)}

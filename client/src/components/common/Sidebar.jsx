@@ -5,18 +5,18 @@ import { useDeviceMode } from '../../context/DeviceModeContext';
 import {
   LayoutDashboard,
   Users,
-  Banknote,
+  Coins,
   Receipt,
-  FileSpreadsheet,
-  CalendarDays,
+  FileText,
+  BookmarkCheck,
+  BarChart3,
+  ArrowLeftRight,
   Settings as SettingsIcon,
-  ShieldAlert,
   PanelLeftClose,
   PanelLeftOpen,
-  Keyboard,
-  TrendingUp,
   Bell,
   Smartphone,
+  Keyboard,
 } from 'lucide-react';
 
 export const Sidebar = ({
@@ -27,98 +27,139 @@ export const Sidebar = ({
   unreadNotificationsCount = 0,
   isCollapsed = false,
   onToggleCollapsed,
+  onOpenLoanForm,
 }) => {
-  const { t, lang } = useLanguage();
-  const { isOwner, isClient } = useAuth();
+  const { lang } = useLanguage();
+  const { user, isOwner, isClient } = useAuth();
   const { isLaptop, isMobile } = useDeviceMode();
 
   if (isMobile) {
-    // Hidden on Mobile mode (uses BottomNav)
     return null;
   }
 
+  // Navigation Items matching the exact mockup
   const navItems = isClient
     ? [
-        { id: 'dashboard', label: lang === 'ta' ? 'முகப்பு' : 'Overview', icon: LayoutDashboard },
-        { id: 'loans', label: lang === 'ta' ? 'எனது கடன்கள்' : 'My Loans', icon: Banknote },
-        { id: 'payments', label: lang === 'ta' ? 'செலுத்திய விவரம்' : 'Payment History', icon: Receipt },
-        { id: 'settings', label: lang === 'ta' ? 'சுயவிவரம் & அமைப்புகள்' : 'Profile & Settings', icon: SettingsIcon },
+        { id: 'dashboard', en: 'Dashboard', ta: 'முகப்பு', icon: LayoutDashboard },
+        { id: 'loans', en: 'My Loans', ta: 'எனது கடன்கள்', icon: Coins },
+        { id: 'payments', en: 'Collections', ta: 'செலுத்திய விவரம்', icon: Receipt },
+        { id: 'settings', en: 'Settings', ta: 'அமைப்புகள்', icon: SettingsIcon },
       ]
     : [
-        { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
-        { id: 'customers', label: t('customers'), icon: Users },
-        { id: 'loans', label: t('loans'), icon: Banknote },
-        { id: 'payments', label: t('payments'), icon: Receipt },
-        { id: 'expenses', label: t('expenses'), icon: Receipt },
-        ...(isOwner ? [{ id: 'investments', label: t('investments'), icon: TrendingUp }] : []),
-        { id: 'dailyClosing', label: t('dailyClosing'), icon: FileSpreadsheet },
-        { id: 'calendar', label: t('calendar'), icon: CalendarDays },
-        { id: 'settings', label: t('settings'), icon: SettingsIcon },
+        { id: 'dashboard', en: 'Dashboard', ta: 'முகப்பு', icon: LayoutDashboard },
+        { id: 'loans', en: 'Loans', ta: 'கடன் கணக்குகள்', icon: Coins },
+        { id: 'payments', en: 'Collections', ta: 'தவணை வசூல்', icon: Receipt },
+        { id: 'customers', en: 'Customers', ta: 'வாடிக்கையாளர்கள்', icon: Users },
+        {
+          id: 'applications',
+          en: 'Applications',
+          ta: 'கடன் விண்ணப்பங்கள்',
+          icon: FileText,
+          action: onOpenLoanForm,
+        },
+        { id: 'schemes', en: 'Schemes', ta: 'திட்டங்கள்', icon: BookmarkCheck },
+        { id: 'dailyClosing', en: 'Reports', ta: 'அறிக்கைகள்', icon: BarChart3 },
+        { id: 'expenses', en: 'Transactions', ta: 'பரிவர்த்தனைகள்', icon: ArrowLeftRight },
+        { id: 'settings', en: 'Settings', ta: 'அமைப்புகள்', icon: SettingsIcon },
       ];
+
+  const cappedNotificationBadge =
+    unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount;
 
   return (
     <aside
-      className={`glass-panel border-r border-white/60 dark:border-sky-800/40 min-h-[calc(100vh-4rem)] space-y-4 transition-all duration-300 flex flex-col shrink-0 select-none ${
-        isCollapsed ? 'w-16 sm:w-20 p-2 sm:p-2.5 items-center' : 'w-64 p-3 sm:p-4'
+      className={`min-h-[calc(100vh-4rem)] bg-gradient-to-b from-[#0284c7] via-[#0369a1] to-[#075985] text-white transition-all duration-300 flex flex-col shrink-0 select-none shadow-xl border-r border-sky-900/40 relative z-20 ${
+        isCollapsed ? 'w-16 sm:w-20 p-2 sm:p-2.5 items-center' : 'w-64 p-3.5 sm:p-4'
       }`}
     >
-      {/* Sidebar Header with Minimize / Expand Option */}
+      {/* 1. Sidebar Brand Header */}
       {isCollapsed ? (
-        <div className="w-full flex justify-center pb-1">
+        <div className="w-full flex flex-col items-center pb-3 border-b border-sky-400/20">
+          <div className="w-10 h-10 rounded-2xl bg-white text-sky-600 font-black text-sm flex items-center justify-center shadow-md">
+            VK
+          </div>
           {onToggleCollapsed && (
             <button
               onClick={onToggleCollapsed}
-              className="w-11 h-11 flex items-center justify-center rounded-2xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200/80 dark:border-sky-800 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition shadow-xs active:scale-95"
-              title={lang === 'ta' ? 'வழிசெலுத்தல் விரிவாக்கு (M)' : 'Expand Navigation (Press M)'}
-              aria-label="Expand Navigation"
+              className="mt-3 p-1.5 rounded-xl bg-sky-900/60 hover:bg-sky-800 text-sky-200 transition"
+              title="Expand Navigation (M)"
             >
-              <PanelLeftOpen className="w-5 h-5 stroke-[2.5]" />
+              <PanelLeftOpen className="w-4 h-4" />
             </button>
           )}
         </div>
       ) : (
-        <div className="flex items-center justify-between px-1.5 pb-2.5 border-b border-sky-100/70 dark:border-sky-900/40">
-          <span className="text-[11px] font-black uppercase tracking-wider text-sky-800/70 dark:text-sky-300/70">
-            {lang === 'ta' ? 'வழிசெலுத்தல்' : 'Navigation'}
-          </span>
+        <div className="flex items-center justify-between pb-3.5 border-b border-sky-400/20">
+          <div className="flex items-center space-x-2.5 min-w-0">
+            {/* VK Shield Logo */}
+            <div className="w-9 h-9 rounded-2xl bg-white text-sky-600 font-black text-base flex items-center justify-center shadow-md shrink-0">
+              VK
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-black text-sm text-white tracking-tight leading-tight truncate">
+                VK Banker's & Finance
+              </h2>
+              <p className="text-[10px] text-sky-200 font-medium truncate">
+                வி.கே. பேங்கர்ஸ் & பைனான்ஸ்
+              </p>
+            </div>
+          </div>
+
           {onToggleCollapsed && (
             <button
               onClick={onToggleCollapsed}
-              className="p-1.5 rounded-xl hover:bg-sky-50 dark:hover:bg-sky-950/60 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 border border-transparent hover:border-sky-200 dark:hover:border-sky-800 transition active:scale-95"
-              title={lang === 'ta' ? 'வழிசெலுத்தல் சுருக்கு (M)' : 'Minimize Navigation (Press M)'}
-              aria-label="Minimize Navigation"
+              className="p-1 rounded-xl hover:bg-white/10 text-sky-200 hover:text-white transition"
+              title="Collapse Navigation (M)"
             >
-              <PanelLeftClose className="w-4 h-4 stroke-[2.5]" />
+              <PanelLeftClose className="w-4 h-4" />
             </button>
           )}
         </div>
       )}
 
-      {/* Nav Items List */}
-      <div className="space-y-1.5 flex-1 w-full">
-        <nav className="space-y-1.5 w-full">
+      {/* 2. Navigation Items List */}
+      <div className="space-y-1 mt-3 flex-1 w-full overflow-y-auto no-scrollbar">
+        <nav className="space-y-1 w-full">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
+
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  if (item.action) {
+                    item.action();
+                  } else {
+                    setActiveTab(item.id);
+                  }
+                }}
                 className={`w-full flex items-center ${
-                  isCollapsed ? 'justify-center p-2.5' : 'space-x-2.5 px-3 py-2.5'
-                } rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 text-left ${
+                  isCollapsed ? 'justify-center p-2.5' : 'space-x-3 px-3.5 py-2.5'
+                } rounded-xl text-left transition-all duration-200 relative ${
                   isActive
-                    ? 'bg-gradient-to-r from-sky-400 to-sky-500 text-white shadow-md shadow-sky-500/25 ring-1 ring-sky-300'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-sky-950/40 hover:text-sky-600 dark:hover:text-sky-300'
+                    ? 'bg-sky-400/90 text-white font-bold shadow-md shadow-sky-900/30 ring-1 ring-white/30'
+                    : 'text-sky-100/85 hover:text-white hover:bg-white/10 font-medium'
                 }`}
-                title={item.label}
+                title={`${item.en} / ${item.ta}`}
               >
                 <Icon
-                  className={`w-4 h-4 shrink-0 ${
-                    isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'
+                  className={`w-5 h-5 shrink-0 ${
+                    isActive ? 'text-white' : 'text-sky-200/90'
                   }`}
                 />
-                {!isCollapsed && <span className="truncate">{item.label}</span>}
+                {!isCollapsed && (
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-[13px] font-bold leading-tight truncate">
+                      {item.en}
+                    </p>
+                    <p className={`text-[10px] leading-tight truncate ${
+                      isActive ? 'text-sky-100' : 'text-sky-200/70'
+                    }`}>
+                      {item.ta}
+                    </p>
+                  </div>
+                )}
               </button>
             );
           })}
@@ -127,95 +168,75 @@ export const Sidebar = ({
           <button
             onClick={onOpenNotifications}
             className={`w-full flex items-center ${
-              isCollapsed ? 'justify-center p-2.5' : 'space-x-2.5 px-3 py-2.5'
-            } rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 text-left text-slate-600 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-sky-950/40 hover:text-sky-600 dark:hover:text-sky-300`}
-            title={lang === 'ta' ? 'அறிவிப்புகள்' : 'Notifications & Alerts'}
+              isCollapsed ? 'justify-center p-2.5' : 'space-x-3 px-3.5 py-2.5'
+            } rounded-xl text-left transition-all duration-200 text-sky-100/85 hover:text-white hover:bg-white/10`}
+            title="Notifications / அறிவிப்புகள்"
           >
             <div className="relative shrink-0">
-              <Bell className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+              <Bell className="w-5 h-5 text-sky-200/90" />
               {unreadNotificationsCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-400" />
               )}
             </div>
             {!isCollapsed && (
-              <div className="flex items-center justify-between flex-1 min-w-0">
-                <span className="truncate">{lang === 'ta' ? 'அறிவிப்புகள்' : 'Notifications'}</span>
+              <div className="min-w-0 flex-1 flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-[13px] font-bold leading-tight">Notifications</p>
+                  <p className="text-[10px] text-sky-200/70 leading-tight">அறிவிப்புகள்</p>
+                </div>
+                {unreadNotificationsCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black">
+                    {cappedNotificationBadge}
+                  </span>
+                )}
               </div>
             )}
           </button>
-
-          {/* WhatsApp Hub Quick Item - Staff/Owner only */}
-          {!isClient && (
-            <button
-              onClick={onOpenWhatsAppHub}
-              className={`w-full flex items-center ${
-                isCollapsed ? 'justify-center p-3' : 'space-x-3 px-3.5 py-3'
-              } rounded-2xl text-xs sm:text-sm font-bold transition-all duration-200 text-left text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40`}
-              title={lang === 'ta' ? 'வாட்ஸ்அப் லாகின் & செய்தி' : 'WhatsApp Web & Quick Send'}
-            >
-              <Smartphone className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              {!isCollapsed && (
-                <div className="flex items-center justify-between flex-1 min-w-0">
-                  <span className="truncate">{lang === 'ta' ? 'வாட்ஸ்அப்' : 'WhatsApp Web'}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px]">
-                    Send
-                  </span>
-                </div>
-              )}
-            </button>
-          )}
         </nav>
       </div>
 
-      {/* Laptop Keyboard Shortcuts Legend */}
-      {isLaptop && !isCollapsed && (
-        <div className="p-3 rounded-2xl glass border border-sky-200/50 dark:border-sky-800/40 text-[11px] space-y-1.5">
-          <div className="flex items-center space-x-1.5 text-sky-700 dark:text-sky-300 font-bold">
-            <Keyboard className="w-3.5 h-3.5" />
-            <span>Shortcuts</span>
+      {/* 3. Bottom Growth Chart & Coin Graphic Illustration */}
+      {!isCollapsed && (
+        <div className="pt-2 mt-auto">
+          <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/15 relative overflow-hidden">
+            {/* Background SVG Graphic: Growth Arrow with Coin Stacks */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-white">VK Portfolio</p>
+                <p className="text-[9px] text-sky-200">Daily Financial Ledger</p>
+              </div>
+              <div className="w-12 h-10 shrink-0 opacity-90">
+                <svg viewBox="0 0 64 48" fill="none" className="w-full h-full">
+                  {/* Upward Line */}
+                  <path
+                    d="M 6 38 L 22 28 L 36 32 L 56 12"
+                    stroke="#38bdf8"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {/* Arrowhead */}
+                  <path
+                    d="M 46 12 H 56 V 22"
+                    stroke="#38bdf8"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {/* Coin Stacks */}
+                  <ellipse cx="18" cy="40" rx="7" ry="2.5" fill="#bae6fd" />
+                  <ellipse cx="18" cy="37" rx="7" ry="2.5" fill="#7dd3fc" />
+                  <ellipse cx="32" cy="40" rx="8" ry="3" fill="#bae6fd" />
+                  <ellipse cx="32" cy="36" rx="8" ry="3" fill="#7dd3fc" />
+                  <ellipse cx="32" cy="32" rx="8" ry="3" fill="#38bdf8" />
+                  <ellipse cx="48" cy="40" rx="9" ry="3.5" fill="#bae6fd" />
+                  <ellipse cx="48" cy="35" rx="9" ry="3.5" fill="#7dd3fc" />
+                  <ellipse cx="48" cy="30" rx="9" ry="3.5" fill="#38bdf8" />
+                  <ellipse cx="48" cy="25" rx="9" ry="3.5" fill="#ffffff" />
+                </svg>
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-4 gap-1 text-[10px] font-mono text-slate-500 dark:text-slate-400">
-            <div className="flex items-center space-x-1">
-              <kbd className="px-1 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-800 dark:text-sky-200 font-bold">N</kbd>
-              <span>Loan</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <kbd className="px-1 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-800 dark:text-sky-200 font-bold">P</kbd>
-              <span>Pay</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <kbd className="px-1 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-800 dark:text-sky-200 font-bold">M</kbd>
-              <span>Nav</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <kbd className="px-1 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-800 dark:text-sky-200 font-bold">/</kbd>
-              <span>Find</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Role Indicator / Reminder */}
-      {isCollapsed ? (
-        <div
-          className="w-10 h-10 rounded-2xl bg-sky-50 dark:bg-sky-950/60 flex items-center justify-center text-sky-600 dark:text-sky-400 border border-sky-200/60 dark:border-sky-800/40 cursor-default"
-          title={isOwner ? 'Financier Account (நிர்வாகி)' : isClient ? 'Client Account (வாடிக்கையாளர்)' : 'Field Agent Mode (வசூல் முகவர்)'}
-        >
-          <ShieldAlert className="w-5 h-5 text-sky-500" />
-        </div>
-      ) : (
-        <div className="mt-auto p-3.5 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/50 dark:to-slate-900/80 border border-sky-100 dark:border-sky-800/40 text-xs">
-          <div className="flex items-center space-x-2 text-sky-700 dark:text-sky-300 font-bold mb-1">
-            <ShieldAlert className="w-4 h-4 text-sky-500" />
-            <span>{isOwner ? 'Financier Account' : isClient ? 'Client Account' : 'Field Agent Mode'}</span>
-          </div>
-          <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
-            {isOwner
-              ? 'Full administrative control over loans, WhatsApp, audit logs, and settings.'
-              : isClient
-              ? 'Personal account: view your registered loans, repayment dues, and profile.'
-              : 'Authorized for daily collection recording and customer view.'}
-          </p>
         </div>
       )}
     </aside>
