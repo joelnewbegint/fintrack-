@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -17,7 +17,6 @@ import {
   Menu,
   Search,
   Bell,
-  User,
   Download,
   FileText,
   Smartphone,
@@ -27,6 +26,8 @@ import {
   RefreshCw,
   CloudOff,
   Zap,
+  MoreHorizontal,
+  ChevronDown,
 } from 'lucide-react';
 
 export const Navbar = ({
@@ -49,6 +50,10 @@ export const Navbar = ({
 
   const [syncState, setSyncState] = useState(() => api.getSyncStatus?.() || { status: 'synced', pendingCount: 0 });
   const [isManualSyncing, setIsManualSyncing] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const moreMenuRef = useRef(null);
+  const userMenuRef = useRef(null);
 
   useEffect(() => {
     const handleStatus = (e) => {
@@ -58,13 +63,30 @@ export const Navbar = ({
     return () => window.removeEventListener('fintrack:sync-status', handleStatus);
   }, []);
 
+  // Click outside listener for dropdowns
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
+        setShowMoreMenu(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
   const handleSyncClick = async () => {
     setIsManualSyncing(true);
     try {
       if (api.flushOfflineQueue) {
         const res = await api.flushOfflineQueue();
         if (res && res.remaining > 0) {
-          // If queue could not flush due to stale/conflicting local mutations, purge them to unblock UI
           if (api.clearSyncQueue) {
             await api.clearSyncQueue();
           }
@@ -78,98 +100,86 @@ export const Navbar = ({
     }
   };
 
-  // ----------------------------------------------------
-  // MOBILE HEADER (Max 56px, glass, safe-area-inset-top)
-  // ----------------------------------------------------
+  const cappedNotificationBadge =
+    unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount;
+
+  // -------------------------------------------------------------------------
+  // MOBILE TOP BAR (Streamlined & Clean)
+  // -------------------------------------------------------------------------
   if (isMobile) {
     return (
       <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/60 dark:border-sky-800/40 transition-colors pt-safe">
         <div className="px-3 h-14 flex items-center justify-between gap-2 max-w-full">
-          {/* Left: Logo Icon + "VK BANKER'S" title only */}
-          <div className="flex items-center space-x-2.5 shrink-0 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-400 via-sky-500 to-sky-600 flex items-center justify-center text-white shadow-md shadow-sky-500/25 border border-white/60 shrink-0">
+          {/* Left: Menu toggle + Logo + Title */}
+          <div className="flex items-center space-x-2 shrink-0 min-w-0">
+            {onToggleMobileMenu && (
+              <button
+                onClick={onToggleMobileMenu}
+                className="p-1.5 -ml-1 text-slate-600 dark:text-slate-300"
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+              </button>
+            )}
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-400 via-sky-500 to-sky-600 flex items-center justify-center text-white shadow-md shadow-sky-500/25 shrink-0">
               <Wallet className="w-4 h-4" />
             </div>
-            <span className="font-black text-base tracking-tight bg-gradient-to-r from-sky-600 to-sky-500 dark:from-sky-300 dark:to-sky-400 bg-clip-text text-transparent truncate">
+            <span className="font-black text-sm sm:text-base tracking-tight bg-gradient-to-r from-sky-600 to-sky-500 dark:from-sky-300 dark:to-sky-400 bg-clip-text text-transparent truncate">
               VK BANKER'S
             </span>
           </div>
 
-          {/* Right: Install (if applicable) + Bell + Avatar Button */}
+          {/* Right: Quick Enter + Sync Pill + Bell + Avatar */}
           <div className="flex items-center space-x-1.5 shrink-0">
-            {/* Mobile Cloud Sync Indicator */}
+            {/* Quick Enter button */}
+            <button
+              onClick={onAddPayment}
+              className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold text-[11px] shadow-sm active:scale-95 flex items-center space-x-1"
+              title="Quick Collection Entry"
+            >
+              <Zap className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+              <span>Quick Enter</span>
+            </button>
+
+            {/* Sync Status: Small Dot + Status */}
             <button
               onClick={handleSyncClick}
-              className={`p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border transition active:scale-95 shadow-sm ${
-                isManualSyncing || syncState.status === 'syncing'
-                  ? 'border-sky-300/80 dark:border-sky-700/60 text-sky-600 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/30'
-                  : syncState.status === 'synced'
-                  ? 'border-emerald-300/80 dark:border-emerald-700/60 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30'
-                  : 'border-amber-300/80 dark:border-amber-700/60 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30'
-              }`}
-              title="Cloud Sync Status (Tap to sync or clear)"
-              aria-label="Cloud Sync"
+              className="flex items-center space-x-1 px-2 py-1 rounded-xl glass border border-slate-200/60 dark:border-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300 active:scale-95"
+              title="Cloud Sync Status"
             >
-              {(isManualSyncing || syncState.status === 'syncing') && <RefreshCw className="w-4 h-4 text-sky-500 animate-spin" />}
-              {!isManualSyncing && syncState.status === 'synced' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-              {!isManualSyncing && syncState.status === 'offline' && <CloudOff className="w-4 h-4 text-amber-500" />}
+              {isManualSyncing || syncState.status === 'syncing' ? (
+                <RefreshCw className="w-2.5 h-2.5 text-sky-500 animate-spin" />
+              ) : syncState.status === 'synced' ? (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              ) : (
+                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+              )}
+              <span className="hidden xs:inline">
+                {syncState.status === 'synced' ? 'Synced' : 'Offline'}
+              </span>
             </button>
 
-            {/* WhatsApp Hub Button */}
-            <button
-              onClick={onOpenWhatsAppHub}
-              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border border-emerald-300/80 dark:border-emerald-700/60 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 active:scale-95 transition shadow-sm"
-              aria-label="WhatsApp"
-              title={lang === 'ta' ? 'வாட்ஸ்அப் லாகின் & நேரடி செய்தி' : 'WhatsApp Web & Quick Send'}
-            >
-              <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            </button>
-
-            {/* Loan Application Form Button */}
-            <button
-              onClick={onOpenLoanForm}
-              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border border-sky-300/70 dark:border-sky-700/60 text-sky-600 dark:text-sky-400 active:scale-95 transition"
-              aria-label="Loan Form"
-              title={lang === 'ta' ? 'கடன் விண்ணப்பப் படிவம்' : 'Download Loan Application Form'}
-            >
-              <FileText className="w-4 h-4 text-sky-500" />
-            </button>
-
-            {!isInstalled && (
-              <button
-                onClick={promptInstall}
-                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border border-amber-300/70 dark:border-amber-700/60 text-amber-600 dark:text-amber-400 active:scale-95 transition"
-                aria-label="Install App"
-                title={lang === 'ta' ? 'செயலியை நிறுவுக' : 'Install VK BANKER\'S App'}
-              >
-                <Download className="w-4 h-4 text-amber-500" />
-              </button>
-            )}
-
-            {/* Bell / Notification Button */}
+            {/* Notification Bell (Capped at 99+) */}
             <button
               onClick={onOpenNotifications}
-              className="relative p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-slate-700 dark:text-slate-300 active:scale-95 transition"
+              className="relative p-2 rounded-xl glass text-slate-700 dark:text-slate-300 active:scale-95"
               aria-label="Notifications"
-              title="Notifications / அறிவிப்புகள்"
             >
               <Bell className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-              {unreadNotificationsCount > 0 ? (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white dark:ring-slate-900 animate-pulse">
-                  {unreadNotificationsCount}
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white dark:ring-slate-900">
+                  {cappedNotificationBadge}
                 </span>
-              ) : (
-                <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-white dark:ring-slate-900" />
               )}
             </button>
 
-            {/* Avatar Button -> Opens Slide-in More Sheet */}
+            {/* Avatar / More Sheet */}
             <button
               onClick={onOpenMoreSheet}
-              className="p-1 min-h-[44px] min-w-[44px] flex items-center justify-center active:scale-95 transition"
-              aria-label="User profile and settings"
+              className="p-0.5 active:scale-95"
+              aria-label="Profile and menu"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-sky-600 text-white font-black text-xs flex items-center justify-center shadow-md shadow-sky-500/25 border border-white/80 ring-2 ring-sky-300/60 dark:ring-sky-700/60">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-sky-600 text-white font-bold text-xs flex items-center justify-center shadow-md shadow-sky-500/25">
                 {user?.name ? user.name[0].toUpperCase() : 'U'}
               </div>
             </button>
@@ -179,34 +189,23 @@ export const Navbar = ({
     );
   }
 
-  // ----------------------------------------------------
-  // DESKTOP & TABLET HEADER
-  // ----------------------------------------------------
+  // -------------------------------------------------------------------------
+  // DESKTOP & TABLET TOP BAR (Simplified & Cleaned)
+  // -------------------------------------------------------------------------
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/60 dark:border-sky-800/40 transition-colors">
-      <div className={`mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 ${isTablet ? 'max-w-6xl' : 'w-full max-w-[1720px] 2xl:max-w-[1920px]'}`}>
-        {/* Brand / Logo + Navigation Minimizer Toggle */}
-        <div className="flex items-center space-x-2 sm:space-x-2.5 shrink-0">
-          {onToggleMobileMenu && (
-            <button
-              onClick={onToggleMobileMenu}
-              className="md:hidden p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition"
-              aria-label="Open menu"
-            >
-              <Menu className="w-5 h-5 text-sky-600 dark:text-sky-400" />
-            </button>
-          )}
-
-          {/* Desktop & Tablet Navigation Minimizer Button */}
+      <div
+        className={`mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 ${
+          isTablet ? 'max-w-6xl' : 'w-full max-w-[1720px] 2xl:max-w-[1920px]'
+        }`}
+      >
+        {/* Left: Sidebar Toggle + Logo & Brand */}
+        <div className="flex items-center space-x-3 shrink-0">
           {onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
-              className="hidden md:flex p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/60 border border-transparent hover:border-sky-200/80 dark:hover:border-sky-800/80 transition active:scale-95 shadow-xs"
-              title={
-                isSidebarCollapsed
-                  ? 'Expand Navigation (M) / வழிசெலுத்தல் விரிவாக்கு'
-                  : 'Minimize Navigation (M) / வழிசெலுத்தல் சுருக்கு'
-              }
+              className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/60 border border-transparent hover:border-sky-200/80 dark:hover:border-sky-800/80 transition active:scale-95 shadow-xs"
+              title={isSidebarCollapsed ? 'Expand Navigation (M)' : 'Minimize Navigation (M)'}
               aria-label="Toggle Navigation"
             >
               {isSidebarCollapsed ? (
@@ -218,186 +217,212 @@ export const Navbar = ({
           )}
 
           <div className="flex items-center space-x-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-400 via-sky-500 to-sky-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/30 border border-white/60">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-sky-400 via-sky-500 to-sky-600 flex items-center justify-center text-white shadow-md shadow-sky-500/30 border border-white/60">
               <Wallet className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center space-x-1.5 sm:space-x-2">
-                <span className="font-black text-lg sm:text-xl tracking-tight bg-gradient-to-r from-sky-600 to-sky-500 dark:from-sky-300 dark:to-sky-400 bg-clip-text text-transparent">
+              <div className="flex items-center space-x-2">
+                <span className="font-black text-lg tracking-tight bg-gradient-to-r from-sky-600 to-sky-500 dark:from-sky-300 dark:to-sky-400 bg-clip-text text-transparent">
                   VK BANKER'S & FINANCE
                 </span>
-                <span className="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 border border-sky-200/60 dark:border-sky-700/60">
-                  {lang === 'ta' ? 'வி.கே. பேங்கர்ஸ்' : "VK BANKER'S"}
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">
+                  {lang === 'ta' ? 'வி.கே. பேங்கர்ஸ்' : 'FINANCE'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-none hidden sm:block">
-                {t('appSubtitle')}
-              </p>
             </div>
           </div>
         </div>
 
-        {/* Laptop Mode Search Bar with '/' Shortcut */}
-        {isLaptop && (
-          <div className="hidden lg:flex items-center flex-1 max-w-xs mx-4">
-            <button
-              onClick={onOpenSearch}
-              className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs text-slate-400 hover:border-sky-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all shadow-sm"
-              title="Search loans and customers (Press /)"
-            >
-              <div className="flex items-center space-x-2">
-                <Search className="w-3.5 h-3.5 text-sky-500" />
-                <span>தேடல் / Search...</span>
-              </div>
-              <kbd className="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 font-mono text-[10px] font-bold border border-sky-200/60 dark:border-sky-700/60">
-                /
-              </kbd>
-            </button>
-          </div>
-        )}
+        {/* Center: ONE Global Search */}
+        <div className="flex-1 max-w-md mx-2 sm:mx-6">
+          <button
+            onClick={onOpenSearch}
+            className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl glass border border-slate-200/80 dark:border-slate-800/80 text-xs text-slate-400 hover:border-sky-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all shadow-xs"
+            title="Search loans and customers (Press /)"
+          >
+            <div className="flex items-center space-x-2">
+              <Search className="w-3.5 h-3.5 text-sky-500" />
+              <span>Search loans, customers, phone... / தேடல்...</span>
+            </div>
+            <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-[10px] font-bold border border-slate-200 dark:border-slate-700">
+              /
+            </kbd>
+          </button>
+        </div>
 
-        {/* Action Controls & Device Switcher */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2.5">
-          {/* Cloud Sync Status Pill */}
+        {/* Right: Quick Enter + Sync Status + Bell + "⋯ More" Dropdown + Profile */}
+        <div className="flex items-center space-x-2 shrink-0">
+          {/* Quick Enter Button */}
+          <button
+            onClick={onAddPayment}
+            className="flex items-center space-x-1.5 px-3 py-1.5 min-h-[38px] rounded-xl bg-gradient-to-r from-sky-500 via-sky-600 to-blue-600 text-white text-xs font-bold shadow-md shadow-sky-500/20 hover:shadow-lg active:scale-95 transition"
+            title="Quick Payment / Collection Entry"
+          >
+            <Zap className="w-3.5 h-3.5 fill-amber-300 text-amber-300 shrink-0" />
+            <span>Quick Enter</span>
+          </button>
+
+          {/* Sync Status: Small Green Dot + "Synced" */}
           <button
             onClick={handleSyncClick}
-            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border whitespace-nowrap transition active:scale-95 shadow-xs ${
-              isManualSyncing || syncState.status === 'syncing'
-                ? 'bg-sky-50/80 dark:bg-sky-950/50 border-sky-300/80 dark:border-sky-700/60 text-sky-700 dark:text-sky-300'
-                : syncState.status === 'synced'
-                ? 'bg-emerald-50/80 dark:bg-emerald-950/50 border-emerald-300/80 dark:border-emerald-700/60 text-emerald-700 dark:text-emerald-300'
-                : 'bg-amber-50/80 dark:bg-amber-950/50 border-amber-300/80 dark:border-amber-700/60 text-amber-700 dark:text-amber-300'
-            }`}
-            title="MongoDB Atlas Cloud Sync (Click to sync or clear stuck items)"
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 min-h-[38px] rounded-xl text-xs font-bold glass border border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-200 transition active:scale-95"
+            title="Cloud Sync Status (Click to sync)"
           >
-            {(isManualSyncing || syncState.status === 'syncing') && (
-              <RefreshCw className="w-3.5 h-3.5 text-sky-600 animate-spin shrink-0" />
+            {isManualSyncing || syncState.status === 'syncing' ? (
+              <RefreshCw className="w-3.5 h-3.5 text-sky-500 animate-spin" />
+            ) : syncState.status === 'synced' ? (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 shadow-xs" />
+            ) : (
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
             )}
-            {!isManualSyncing && syncState.status === 'synced' && (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            )}
-            {!isManualSyncing && syncState.status === 'offline' && (
-              <CloudOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            )}
-            <span className="hidden md:inline whitespace-nowrap">
+            <span className="text-[11px] font-semibold">
               {isManualSyncing || syncState.status === 'syncing'
-                ? lang === 'ta' ? 'ஒத்திசைக்கிறது...' : 'Syncing...'
+                ? 'Syncing...'
                 : syncState.status === 'synced'
-                ? lang === 'ta' ? 'இணைக்கப்பட்டது' : 'Synced'
-                : syncState.pendingCount > 0
-                ? `${lang === 'ta' ? 'ஆஃப்லைன்' : 'Offline'} (${syncState.pendingCount})`
-                : lang === 'ta' ? 'ஆஃப்லைன்' : 'Offline'}
+                ? 'Synced'
+                : `Offline (${syncState.pendingCount || 0})`}
             </span>
           </button>
 
-          {/* Display Mode Switcher (Mobile / Tablet / Laptop / Auto) */}
-          <DisplayModeSwitcher compact={false} />
-
-          {/* Desktop Notification Bell */}
+          {/* Notification Bell (Single Badge, Capped at 99+) */}
           <button
             onClick={onOpenNotifications}
-            className="relative p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-slate-700 dark:text-slate-200 hover:border-sky-400 hover:text-sky-600 transition shadow-sm active:scale-95"
-            title="Notifications & Alerts / அறிவிப்புகள்"
+            className="relative p-2 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-xl glass border border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-200 hover:border-sky-400 transition active:scale-95"
+            title="Notifications & Alerts"
             aria-label="Notifications"
           >
             <Bell className="w-4 h-4 text-sky-500" />
-            {unreadNotificationsCount > 0 ? (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white dark:ring-slate-900 animate-pulse">
-                {unreadNotificationsCount}
+            {unreadNotificationsCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-sm">
+                {cappedNotificationBadge}
               </span>
-            ) : (
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-white dark:ring-slate-900" />
             )}
           </button>
 
-          {/* WhatsApp Web & Messenger Button */}
-          <button
-            onClick={onOpenWhatsAppHub}
-            className="flex items-center space-x-1.5 px-3 py-1.5 min-h-[40px] rounded-xl glass border border-emerald-300/80 dark:border-emerald-600/60 bg-gradient-to-r from-emerald-500/15 to-green-500/15 text-slate-800 dark:text-slate-100 text-xs font-bold hover:border-emerald-500 hover:shadow-md transition active:scale-95 shadow-sm"
-            title={lang === 'ta' ? 'வாட்ஸ்அப் லாகின் & செய்தி அனுப்ப' : 'WhatsApp Web Login & Quick Send'}
-          >
-            <Smartphone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="hidden sm:inline font-bold text-emerald-700 dark:text-emerald-300">
-              WhatsApp
-            </span>
-          </button>
-
-          {/* Loan Application Form Button */}
-          <button
-            onClick={onOpenLoanForm}
-            className="flex items-center space-x-1.5 px-3 py-1.5 min-h-[40px] rounded-xl glass border border-sky-300/70 dark:border-sky-600/50 bg-gradient-to-r from-sky-500/10 to-indigo-500/10 text-slate-800 dark:text-slate-100 text-xs font-bold hover:border-sky-400 hover:shadow-md transition active:scale-95 shadow-sm"
-            title={lang === 'ta' ? 'கடன் விண்ணப்பப் படிவத்தை அச்சிட / பதிவிறக்க' : 'Print or Download Loan Application Form'}
-          >
-            <FileText className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-            <span className="hidden sm:inline font-bold text-sky-700 dark:text-sky-300">
-              {lang === 'ta' ? 'கடன் படிவம்' : 'Loan Form'}
-            </span>
-          </button>
-
-          {/* Desktop Install App Button */}
-          {!isInstalled && (
+          {/* "⋯ More" Dropdown (Consolidates Device, WhatsApp, Loan Form, Install, Lang, Theme) */}
+          <div ref={moreMenuRef} className="relative">
             <button
-              onClick={promptInstall}
-              className="flex items-center space-x-1.5 px-3 py-1.5 min-h-[40px] rounded-xl glass border border-amber-300/70 dark:border-amber-600/50 bg-gradient-to-r from-amber-500/10 to-sky-500/10 text-slate-800 dark:text-slate-100 text-xs font-bold hover:border-amber-400 hover:shadow-md transition active:scale-95 shadow-sm"
-              title={lang === 'ta' ? "VK BANKER'S செயலியை உங்கள் சாதனத்தில் நிறுவுக" : "Install VK BANKER'S App on your device"}
+              onClick={() => setShowMoreMenu(!showMoreMenu)}
+              className="flex items-center space-x-1 px-2.5 py-1.5 min-h-[38px] rounded-xl glass border border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-200 hover:border-sky-400 transition active:scale-95 text-xs font-bold"
+              title="More Utilities & Settings"
+              aria-label="More options"
             >
-              <Download className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span className="hidden sm:inline font-bold text-amber-600 dark:text-amber-400">
-                {lang === 'ta' ? 'நிறுவுக' : 'Install'}
-              </span>
+              <MoreHorizontal className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+              <span className="text-[11px] hidden xl:inline">More</span>
             </button>
-          )}
 
-          {/* Language Toggle */}
-          <button
-            onClick={toggleLanguage}
-            className="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 min-h-[40px] rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-slate-700 dark:text-slate-200 text-xs font-bold hover:border-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition active:scale-95 shadow-sm"
-            title="Toggle Language / மொழி மாற்றம்"
-          >
-            <Globe className="w-3.5 h-3.5 text-sky-500" />
-            <span className="hidden sm:inline">{lang === 'ta' ? 'English' : 'தமிழ்'}</span>
-          </button>
+            {showMoreMenu && (
+              <div className="absolute right-0 top-full mt-2 w-64 p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1 divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
+                {/* Section A: Device Layout Switcher */}
+                <div className="p-1.5 pb-2">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1">
+                    Display Layout
+                  </div>
+                  <DisplayModeSwitcher compact={false} />
+                </div>
 
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-slate-700 dark:text-slate-200 hover:text-amber-500 hover:border-sky-400 transition shadow-sm active:scale-95"
-            title="Toggle Dark / Light Theme"
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : (
-              <Moon className="w-4 h-4 text-sky-600" />
-            )}
-          </button>
+                {/* Section B: External Actions */}
+                <div className="p-1.5 space-y-1">
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      if (onOpenWhatsAppHub) onOpenWhatsAppHub();
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 transition text-left font-medium"
+                  >
+                    <Smartphone className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>WhatsApp Web & Quick Send</span>
+                  </button>
 
-          {/* User Role Badge */}
-          {user && (
-            <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs font-medium">
-              {isOwner ? (
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              ) : (
-                <UserCheck className="w-4 h-4 text-sky-500" />
-              )}
-              <div className="flex flex-col text-left">
-                <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[100px]">
-                  {(user?.name || user?.email || 'User').split(' ')[0]}
-                </span>
-                <span className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold capitalize">
-                  {user?.role || 'User'}
-                </span>
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      if (onOpenLoanForm) onOpenLoanForm();
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 transition text-left font-medium"
+                  >
+                    <FileText className="w-4 h-4 text-sky-500 shrink-0" />
+                    <span>Print Loan Application Form</span>
+                  </button>
+
+                  {!isInstalled && (
+                    <button
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        promptInstall();
+                      }}
+                      className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-amber-700 transition text-left font-medium"
+                    >
+                      <Download className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span>Install App on Device</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Section C: Language & Theme Toggles */}
+                <div className="p-1.5 pt-2 flex items-center justify-between">
+                  <button
+                    onClick={toggleLanguage}
+                    className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition font-bold"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-sky-500" />
+                    <span>{lang === 'ta' ? 'English' : 'தமிழ்'}</span>
+                  </button>
+
+                  <button
+                    onClick={toggleTheme}
+                    className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition font-bold"
+                  >
+                    {theme === 'dark' ? (
+                      <>
+                        <Sun className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Light</span>
+                      </>
+                    ) : (
+                      <>
+                        <Moon className="w-3.5 h-3.5 text-sky-600" />
+                        <span>Dark</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Logout */}
-          <button
-            onClick={logout}
-            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition active:scale-95"
-            title={t('logout')}
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          {/* Profile / Menu Dropdown */}
+          <div ref={userMenuRef} className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center space-x-2 p-1 rounded-xl glass border border-slate-200/80 dark:border-slate-800/80 hover:border-sky-400 transition"
+              aria-label="User Profile"
+            >
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                {user?.name ? user.name[0].toUpperCase() : 'U'}
+              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 mr-1" />
+            </button>
+
+            {showUserMenu && (
+              <div className="absolute right-0 top-full mt-2 w-52 p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1 space-y-1.5">
+                <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
+                  <p className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                    {user?.name || user?.email || 'Admin User'}
+                  </p>
+                  <p className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold uppercase mt-0.5">
+                    {user?.role || 'Staff'} • {isOwner ? 'Proprietor' : 'Staff'}
+                  </p>
+                </div>
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition text-left"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>{t('logout')} / வெளியேறு</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>

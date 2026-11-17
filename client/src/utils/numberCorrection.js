@@ -93,3 +93,4 @@ export const clearRecentNumbers = (type = 'all') => {
     }
   } catch (e) {}
 };
+
