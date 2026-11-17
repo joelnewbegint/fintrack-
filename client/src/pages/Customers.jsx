@@ -187,12 +187,12 @@ export const Customers = ({ onViewCustomer }) => {
 
                     {/* Status Loan Pill */}
                     <span
-                      className={`px-2.5 py-1 rounded-full text-[10.5px] font-black border shrink-0 whitespace-nowrap shadow-xs ${
+                      className={`px-2.5 py-1 rounded-full text-[10.5px] font-bold border shrink-0 whitespace-nowrap shadow-xs ${
                         c.activeLoanCount > 0
-                          ? 'bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-950/70 dark:text-sky-300'
+                          ? 'badge-duetoday bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-950/70 dark:text-sky-300'
                           : (c.totalLoansCount || 0) > 0
-                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-300'
-                          : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400'
+                          ? 'badge-paid bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-300'
+                          : 'badge-pending bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400'
                       }`}
                     >
                       {c.activeLoanCount > 0

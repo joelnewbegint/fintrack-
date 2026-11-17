@@ -994,16 +994,16 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
                         <td className="py-3 px-4">
                           <div>
                             <span
-                              className={`inline-flex items-center space-x-1.5 text-xs font-bold ${
+                              className={`inline-flex items-center space-x-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${
                                 isOverdue
-                                  ? 'text-rose-600 dark:text-rose-400'
+                                  ? 'badge-overdue text-rose-600 dark:text-rose-400'
                                   : isClosed
-                                  ? 'text-slate-500 dark:text-slate-400'
-                                  : 'text-emerald-600 dark:text-emerald-400'
+                                  ? 'badge-paid text-slate-500 dark:text-slate-400'
+                                  : 'badge-duetoday text-emerald-600 dark:text-emerald-400'
                               }`}
                             >
                               <span
-                                className={`w-2 h-2 rounded-full ${
+                                className={`w-1.5 h-1.5 rounded-full ${
                                   isOverdue
                                     ? 'bg-rose-500'
                                     : isClosed

@@ -111,11 +111,12 @@ export const ComfortSettings = () => {
                 <Sun className="w-4 h-4 text-sky-500" />
                 <span>Theme Mode / வண்ண தீம்</span>
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
+                  { id: 'lavender-glass', label: 'Lavender Glass', icon: Sparkles, tamil: 'லாவெண்டர்' },
                   { id: 'light', label: 'Light', icon: Sun, tamil: 'பகல்' },
                   { id: 'dark', label: 'Dark', icon: Moon, tamil: 'இரவு' },
-                  { id: 'auto', label: 'Auto', icon: Sparkles, tamil: 'கணினி வழி' },
+                  { id: 'auto', label: 'Auto', icon: RotateCcw, tamil: 'தானியங்கி' },
                 ].map((th) => {
                   const Icon = th.icon;
                   return (

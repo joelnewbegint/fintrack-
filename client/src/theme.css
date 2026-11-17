@@ -1,0 +1,394 @@
+/* ==========================================================================
+   LAVENDER GLASS THEME (VK Banker's & Finance)
+   Scoped to: [data-theme="lavender-glass"]
+   Non-breaking additive theme with frosted glassmorphism & soft pastel tokens
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. CSS VARIABLES (DESIGN TOKENS)
+   -------------------------------------------------------------------------- */
+[data-theme="lavender-glass"] {
+  /* Brand & Theme Colors */
+  --lg-bg: #F7F3FB;
+  --lg-blob-lavender: #E3DBF4;
+  --lg-blob-sky: #CFE6F2;
+  --lg-blob-cream: #FBF6EA;
+
+  /* Glass Surface Tokens */
+  --lg-glass-bg: rgba(255, 255, 255, 0.60);
+  --lg-glass-fallback: rgba(255, 255, 255, 0.90);
+  --lg-glass-border: rgba(255, 255, 255, 0.95);
+  --lg-glass-radius: 16px;
+  --lg-glass-shadow: 0 8px 32px rgba(139, 123, 208, 0.12);
+  --lg-glass-blur: blur(18px) saturate(140%);
+
+  /* Primary Interactive */
+  --lg-primary: #8B7BD0;
+  --lg-primary-hover: #7867C2;
+  --lg-primary-active: #6757B3;
+  --lg-primary-text: #FFFFFF;
+  --lg-primary-shadow: 0 6px 20px rgba(139, 123, 208, 0.30);
+
+  /* Soft Accent & Highlights */
+  --lg-accent-soft: #E3DBF4;
+  --lg-accent-text: #4B3C8A;
+  --lg-sky-highlight: #CFE6F2;
+  --lg-sky-text: #1F4E6B;
+
+  /* Typography Colors (WCAG AA compliant against #F7F3FB & glass surfaces) */
+  --lg-text-primary: #3C3550;
+  --lg-text-secondary: #7B7390;
+  --lg-text-muted: #9D96AF;
+
+  /* Status Pills */
+  --lg-status-paid-bg: #DDF0E6;
+  --lg-status-paid-text: #2F7D5B;
+  --lg-status-duetoday-bg: #E3DBF4;
+  --lg-status-duetoday-text: #4B3C8A;
+  --lg-status-overdue-bg: #FBE3DC;
+  --lg-status-overdue-text: #A8442C;
+  --lg-status-pending-bg: #EEE7D8;
+  --lg-status-pending-text: #6B7C8C;
+
+  /* Transitions & Radii */
+  --lg-transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --lg-radius-sm: 10px;
+  --lg-radius-md: 14px;
+  --lg-radius-lg: 16px;
+  --lg-radius-xl: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   2. GLOBAL BODY & BACKGROUND BLOBS
+   -------------------------------------------------------------------------- */
+[data-theme="lavender-glass"] body {
+  background-color: var(--lg-bg) !important;
+  color: var(--lg-text-primary) !important;
+  font-family: 'Inter', 'Noto Sans Tamil', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-weight: 400;
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Ambient Blurred Glass Orbs (Fixed Backdrop) */
+[data-theme="lavender-glass"] body::before,
+[data-theme="lavender-glass"] body::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(60px);
+  -webkit-filter: blur(60px);
+  opacity: 0.85;
+}
+
+[data-theme="lavender-glass"] body::before {
+  top: -120px;
+  right: -80px;
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, var(--lg-blob-lavender) 0%, rgba(227, 219, 244, 0.2) 70%, transparent 100%);
+}
+
+[data-theme="lavender-glass"] body::after {
+  bottom: -140px;
+  left: -100px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--lg-blob-sky) 0%, rgba(207, 230, 242, 0.25) 50%, var(--lg-blob-cream) 80%, transparent 100%);
+}
+
+/* Ensure app wrapper is positioned above ambient orbs */
+[data-theme="lavender-glass"] #root {
+  position: relative;
+  z-index: 1;
+}
+
+/* --------------------------------------------------------------------------
+   3. TYPOGRAPHY RULES (Weights 400 & 500 only, Tabular Numbers)
+   -------------------------------------------------------------------------- */
+[data-theme="lavender-glass"] h1,
+[data-theme="lavender-glass"] h2,
+[data-theme="lavender-glass"] h3,
+[data-theme="lavender-glass"] h4,
+[data-theme="lavender-glass"] strong,
+[data-theme="lavender-glass"] b,
+[data-theme="lavender-glass"] .font-black,
+[data-theme="lavender-glass"] .font-extrabold,
+[data-theme="lavender-glass"] .font-bold,
+[data-theme="lavender-glass"] .font-semibold {
+  font-weight: 500 !important;
+  color: var(--lg-text-primary);
+}
+
+[data-theme="lavender-glass"] p,
+[data-theme="lavender-glass"] span,
+[data-theme="lavender-glass"] label,
+[data-theme="lavender-glass"] input,
+[data-theme="lavender-glass"] select,
+[data-theme="lavender-glass"] textarea {
+  font-weight: 400;
+}
+
+[data-theme="lavender-glass"] .tabular-nums,
+[data-theme="lavender-glass"] .font-mono {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   4. GLASS CARDS & PANELS OVERRIDES
+   -------------------------------------------------------------------------- */
+[data-theme="lavender-glass"] .glass,
+[data-theme="lavender-glass"] .glass-card,
+[data-theme="lavender-glass"] .glass-panel {
+  background: var(--lg-glass-bg) !important;
+  backdrop-filter: var(--lg-glass-blur) !important;
+  -webkit-backdrop-filter: var(--lg-glass-blur) !important;
+  border: 1px solid var(--lg-glass-border) !important;
+  border-radius: var(--lg-glass-radius) !important;
+  box-shadow: var(--lg-glass-shadow) !important;
+  color: var(--lg-text-primary) !important;
+  transition: var(--lg-transition);
+}
+
+/* Card Hover Lift (2px lift, 150ms transition) */
+[data-theme="lavender-glass"] .glass-hover:hover,
+[data-theme="lavender-glass"] .glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(139, 123, 208, 0.18) !important;
+}
+
+/* Fallback when backdrop-filter is unsupported */
+@supports not (backdrop-filter: blur(18px)) {
+  [data-theme="lavender-glass"] .glass,
+  [data-theme="lavender-glass"] .glass-card,
+  [data-theme="lavender-glass"] .glass-panel {
+    background: var(--lg-glass-fallback) !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. BUTTONS & CONTROLS
+   -------------------------------------------------------------------------- */
+[data-theme="lavender-glass"] .btn-sky-primary,
+[data-theme="lavender-glass"] .btn-primary {
+  background: var(--lg-primary) !important;
+  color: var(--lg-primary-text) !important;
+  font-weight: 500 !important;
+  border-radius: var(--lg-radius-md) !important;
+  box-shadow: var(--lg-primary-shadow) !important;
+  border: none !important;
+  transition: var(--lg-transition) !important;
+}
+
+[data-theme="lavender-glass"] .btn-sky-primary:hover,
+[data-theme="lavender-glass"] .btn-primary:hover {
+  background: var(--lg-primary-hover) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(139, 123, 208, 0.38) !important;
+}
+
+[data-theme="lavender-glass"] .btn-sky-primary:active,
+[data-theme="lavender-glass"] .btn-primary:active {
+  background: var(--lg-primary-active) !important;
+  transform: scale(0.98) !important;
+}
+
+[data-theme="lavender-glass"] .btn-sky-secondary,
+[data-theme="lavender-glass"] .btn-secondary {
+  background: var(--lg-accent-soft) !important;
+  color: var(--lg-accent-text) !important;
+  font-weight: 500 !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  border-radius: var(--lg-radius-md) !important;
+  box-shadow: 0 4px 16px rgba(139, 123, 208, 0.08) !important;
+  transition: var(--lg-transition) !important;
+}
+
+[data-theme="lavender-glass"] .btn-sky-secondary:hover,
+[data-theme="lavender-glass"] .btn-secondary:hover {
+  background: #D8CCE8 !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Form Inputs in Glass */
+[data-theme="lavender-glass"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="lavender-glass"] select,
+[data-theme="lavender-glass"] textarea,
+[data-theme="lavender-glass"] .input-glass {
+  background: rgba(255, 255, 255, 0.70) !important;
+  border: 1px solid rgba(227, 219, 244, 0.9) !important;
+  color: var(--lg-text-primary) !important;
+  border-radius: var(--lg-radius-md) !important;
+  transition: var(--lg-transition);
+}
+
+[data-theme="lavender-glass"] input:focus,
+[data-theme="lavender-glass"] select:focus,
+[data-theme="lavender-glass"] textarea:focus,
+[data-theme="lavender-glass"] .input-glass:focus {
+  border-color: var(--lg-primary) !important;
+  box-shadow: 0 0 0 3px rgba(139, 123, 208, 0.25) !important;
+  background: rgba(255, 255, 255, 0.90) !important;
+  outline: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. SIDEBAR & TOP BAR (LAVENDER GLASS LAYOUT)
+   -------------------------------------------------------------------------- */
+/* Frosted Glass Sidebar */
+[data-theme="lavender-glass"] aside {
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: var(--lg-glass-blur) !important;
+  -webkit-backdrop-filter: var(--lg-glass-blur) !important;
+  border-right: 1px solid var(--lg-glass-border) !important;
+  box-shadow: 4px 0 24px rgba(139, 123, 208, 0.08) !important;
+}
+
+/* Active Sidebar Navigation Pill (Soft Lavender) */
+[data-theme="lavender-glass"] aside .active-nav-pill,
+[data-theme="lavender-glass"] aside nav a.bg-sky-500,
+[data-theme="lavender-glass"] aside nav a.bg-blue-600,
+[data-theme="lavender-glass"] aside nav a[aria-current="page"] {
+  background: var(--lg-accent-soft) !important;
+  color: var(--lg-accent-text) !important;
+  border-radius: var(--lg-radius-md) !important;
+  font-weight: 500 !important;
+  box-shadow: 0 4px 14px rgba(139, 123, 208, 0.16) !important;
+}
+
+[data-theme="lavender-glass"] aside nav a:hover:not(.active-nav-pill) {
+  background: rgba(227, 219, 244, 0.40) !important;
+  color: var(--lg-text-primary) !important;
+}
+
+/* Top Navigation Bar */
+[data-theme="lavender-glass"] header {
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: var(--lg-glass-blur) !important;
+  -webkit-backdrop-filter: var(--lg-glass-blur) !important;
+  border-bottom: 1px solid var(--lg-glass-border) !important;
+  box-shadow: 0 4px 20px rgba(139, 123, 208, 0.06) !important;
+}
+
+/* --------------------------------------------------------------------------
+   7. STATUS PILLS (PAID, DUE TODAY, OVERDUE, PENDING)
+   -------------------------------------------------------------------------- */
+[data-theme="lavender-glass"] .badge-paid,
+[data-theme="lavender-glass"] .status-paid {
+  background-color: var(--lg-status-paid-bg) !important;
+  color: var(--lg-status-paid-text) !important;
+  border: 1px solid rgba(47, 125, 91, 0.2) !important;
+  border-radius: 9999px !important;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="lavender-glass"] .badge-duetoday,
+[data-theme="lavender-glass"] .status-duetoday {
+  background-color: var(--lg-status-duetoday-bg) !important;
+  color: var(--lg-status-duetoday-text) !important;
+  border: 1px solid rgba(75, 60, 138, 0.2) !important;
+  border-radius: 9999px !important;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="lavender-glass"] .badge-overdue,
+[data-theme="lavender-glass"] .status-overdue {
+  background-color: var(--lg-status-overdue-bg) !important;
+  color: var(--lg-status-overdue-text) !important;
+  border: 1px solid rgba(168, 68, 44, 0.2) !important;
+  border-radius: 9999px !important;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="lavender-glass"] .badge-pending,
+[data-theme="lavender-glass"] .status-pending {
+  background-color: var(--lg-status-pending-bg) !important;
+  color: var(--lg-status-pending-text) !important;
+  border: 1px solid rgba(107, 124, 140, 0.2) !important;
+  border-radius: 9999px !important;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+/* --------------------------------------------------------------------------
+   8. SKY BLUE KPI CARD (EMI DUE TODAY / OVERDUE)
+   -------------------------------------------------------------------------- */
+[data-theme="lavender-glass"] .card-sky-kpi {
+  background: linear-gradient(135deg, rgba(207, 230, 242, 0.85) 0%, rgba(227, 219, 244, 0.70) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 8px 30px rgba(31, 78, 107, 0.12) !important;
+  color: var(--lg-sky-text) !important;
+  border-radius: var(--lg-glass-radius) !important;
+}
+
+[data-theme="lavender-glass"] .card-sky-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(31, 78, 107, 0.18) !important;
+}
+
+/* --------------------------------------------------------------------------
+   9. GLASS TABLE ROWS & MOBILE STACKED CARDS
+   -------------------------------------------------------------------------- */
+[data-theme="lavender-glass"] table tbody tr {
+  background: rgba(255, 255, 255, 0.45);
+  transition: var(--lg-transition);
+  border-bottom: 1px solid rgba(227, 219, 244, 0.6);
+}
+
+[data-theme="lavender-glass"] table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+[data-theme="lavender-glass"] table thead {
+  background: rgba(247, 243, 251, 0.85) !important;
+  backdrop-filter: blur(12px);
+  color: var(--lg-text-secondary) !important;
+}
+
+/* --------------------------------------------------------------------------
+   10. GLASS SKELETON LOADERS
+   -------------------------------------------------------------------------- */
+[data-theme="lavender-glass"] .skeleton-glass {
+  background: linear-gradient(
+    90deg,
+    rgba(227, 219, 244, 0.35) 25%,
+    rgba(255, 255, 255, 0.65) 50%,
+    rgba(227, 219, 244, 0.35) 75%
+  );
+  background-size: 200% 100%;
+  animation: lg-shimmer 1.6s infinite;
+  border-radius: var(--lg-radius-sm);
+}
+
+@keyframes lg-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   11. ACCESSIBILITY & PREFERS-REDUCED-MOTION
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="lavender-glass"] *,
+  [data-theme="lavender-glass"] *::before,
+  [data-theme="lavender-glass"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+

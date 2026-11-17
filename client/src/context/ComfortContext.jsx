@@ -26,7 +26,7 @@ export const ComfortProvider = ({ children }) => {
   });
 
   const [themeMode, setThemeModeState] = useState(() => {
-    return localStorage.getItem(THEME_MODE_KEY) || 'light'; // 'light' | 'dark' | 'auto'
+    return localStorage.getItem(THEME_MODE_KEY) || localStorage.getItem('fintrack_theme') || 'lavender-glass'; // 'lavender-glass' | 'light' | 'dark' | 'auto'
   });
 
   // Apply attributes to <html>
@@ -48,7 +48,7 @@ export const ComfortProvider = ({ children }) => {
     localStorage.setItem(REDUCED_MOTION_KEY, reducedMotion.toString());
   }, [reducedMotion]);
 
-  // Apply dark mode based on themeMode
+  // Apply theme based on themeMode
   useEffect(() => {
     const root = document.documentElement;
     const applyTheme = (isDark) => {
@@ -59,14 +59,20 @@ export const ComfortProvider = ({ children }) => {
       }
     };
 
-    if (themeMode === 'auto') {
-      const media = window.matchMedia('(prefers-color-scheme: dark)');
-      applyTheme(media.matches);
-      const listener = (e) => applyTheme(e.matches);
-      media.addEventListener('change', listener);
-      return () => media.removeEventListener('change', listener);
+    if (themeMode === 'lavender-glass') {
+      root.setAttribute('data-theme', 'lavender-glass');
+      root.classList.remove('dark');
     } else {
-      applyTheme(themeMode === 'dark');
+      root.removeAttribute('data-theme');
+      if (themeMode === 'auto') {
+        const media = window.matchMedia('(prefers-color-scheme: dark)');
+        applyTheme(media.matches);
+        const listener = (e) => applyTheme(e.matches);
+        media.addEventListener('change', listener);
+        return () => media.removeEventListener('change', listener);
+      } else {
+        applyTheme(themeMode === 'dark');
+      }
     }
 
     localStorage.setItem(THEME_MODE_KEY, themeMode);

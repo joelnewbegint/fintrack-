@@ -48,6 +48,7 @@ import {
   CalendarRange,
   Layers,
   ArrowRight,
+  Users,
   Check,
   Printer,
   PieChart as PieChartIcon,
@@ -148,6 +149,19 @@ export const Dashboard = ({
   const financeTypes = stats?.financeTypes || {};
   const todayDueList = stats?.todayDueList || [];
   const overdueLoans = stats?.overdueLoans || [];
+  const todayDueTotal = todayDueList.reduce((acc, item) => acc + (Number(item.dueAmount) || 0), 0);
+  const overdueTotal = overdueLoans.reduce((acc, item) => acc + (Number(item.remainingBalance || item.dueAmount) || 0), 0);
+  const totalDueAndOverdue = todayDueTotal + overdueTotal;
+
+  const [agentList, setAgentList] = useState([]);
+
+  useEffect(() => {
+    if (isOwner) {
+      api.getAgents().then((res) => {
+        if (Array.isArray(res)) setAgentList(res);
+      }).catch(() => {});
+    }
+  }, [isOwner]);
   const collectionTrend = stats?.collectionTrend || [];
   const financeTypeSplit = (stats?.financeTypeSplit || []).map((item) => {
     let c = '#0EA5E9'; // sky
@@ -864,6 +878,36 @@ export const Dashboard = ({
 
               {/* 2. Horizontal Swipe Carousel of Key Metric Cards (Snap scrolling) */}
               <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 scrollbar-none -mx-3 px-3">
+                {/* NEW: Sky Blue KPI Card: EMI Due Today / Overdue */}
+                <div
+                  onClick={() => {
+                    setMobileTab('due');
+                    const el = document.getElementById('mobile-collection-tabs');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="w-[84%] shrink-0 snap-center card-sky-kpi rounded-3xl p-4 border shadow-lg cursor-pointer active:scale-98 transition relative overflow-hidden"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-[#1F4E6B] dark:text-[#CFE6F2]">
+                      {lang === 'ta' ? 'இன்றைய தவணை & நிலுவை' : 'EMI Due Today / Overdue'}
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-[#CFE6F2] text-[#1F4E6B] flex items-center justify-center shadow-md">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <p className="text-xl sm:text-2xl font-bold tabular-nums mt-1 whitespace-nowrap text-[#1F4E6B] dark:text-[#CFE6F2]">
+                    {formatCurrency(totalDueAndOverdue)}
+                  </p>
+                  <div className="flex items-center justify-between mt-1 text-[10px] text-slate-600 dark:text-slate-300">
+                    <span>
+                      {lang === 'ta' ? 'இன்று' : 'Due'}: {formatCurrency(todayDueTotal)} ({todayDueList.length})
+                    </span>
+                    <span className="text-[#A8442C] font-semibold">
+                      {lang === 'ta' ? 'நிலுவை' : 'Overdue'}: {formatCurrency(overdueTotal)} ({overdueLoans.length})
+                    </span>
+                  </div>
+                </div>
+
                 {/* Available Capital / Investment Card (Minus Loans Disbursed, Add to Lend) */}
                 <div
                   onClick={() => onOpenInvestment && onOpenInvestment()}
@@ -1584,6 +1628,42 @@ export const Dashboard = ({
                     : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
                 } items-stretch`}
               >
+                {/* NEW: Sky Blue KPI Card: EMI Due Today / Overdue */}
+                <div
+                  onClick={() => {
+                    const el = document.getElementById('today-due-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="card-sky-kpi p-5 rounded-2xl sm:rounded-3xl border flex flex-col justify-between cursor-pointer active:scale-98 transition shadow-md"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#1F4E6B] dark:text-[#CFE6F2]">
+                        {lang === 'ta' ? 'இன்றைய தவணை & நிலுவை' : 'EMI Due Today / Overdue'}
+                      </span>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                        {todayDueList.length} {lang === 'ta' ? 'இன்று தவணை' : 'due today'} • {overdueLoans.length} {lang === 'ta' ? 'தாமதம்' : 'overdue'}
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 rounded-2xl bg-[#CFE6F2] text-[#1F4E6B] flex items-center justify-center shadow-sm shrink-0">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-2xl font-bold tabular-nums text-[#1F4E6B] dark:text-[#CFE6F2]">
+                      {formatCurrency(totalDueAndOverdue)}
+                    </p>
+                    <div className="flex items-center justify-between text-[11px] mt-1 pt-2 border-t border-white/60 dark:border-white/10">
+                      <span className="text-slate-600 dark:text-slate-300">
+                        {lang === 'ta' ? 'இன்று' : 'Due Today'}: {formatCurrency(todayDueTotal)}
+                      </span>
+                      <span className="text-[#A8442C] font-semibold">
+                        {lang === 'ta' ? 'நிலுவை' : 'Overdue'}: {formatCurrency(overdueTotal)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 <StatCard
                   title={t('netCollected')}
                   amount={
@@ -1740,6 +1820,43 @@ export const Dashboard = ({
                   onClick={() => onSelectFinanceType && onSelectFinanceType('monthly')}
                 />
               </div>
+
+              {/* 2.5 Per-Agent Summary Cards for Owners */}
+              {isOwner && agentList.length > 0 && (
+                <div className="glass rounded-3xl p-5 border border-white/80 dark:border-white/10 shadow-md space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Users className="w-4 h-4 text-[#8B7BD0]" />
+                      <h3 className="text-sm font-medium text-slate-900 dark:text-white">
+                        {lang === 'ta' ? 'கள முகவர்கள் வசூல் விவரம் (Agent Performance)' : 'Field Collection Agents Performance'}
+                      </h3>
+                    </div>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                      {agentList.length} {lang === 'ta' ? 'செயலில் உள்ள முகவர்கள்' : 'Active Agents'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {agentList.map((agent) => (
+                      <div
+                        key={agent._id || agent.id}
+                        className="p-3.5 rounded-2xl bg-white/50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
+                            {agent.name}
+                          </p>
+                          <p className="text-[10.5px] text-slate-400 truncate mt-0.5">
+                            {agent.phone || agent.email}
+                          </p>
+                        </div>
+                        <span className="badge-paid px-2.5 py-1 text-[10px] font-medium rounded-full shrink-0">
+                          {lang === 'ta' ? 'செயலில்' : 'Active'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* 3. Laptop Split Layout: 7 Cols Left (Charts) vs 5 Cols Right (Collection Panel) */}
               {isLaptop ? (

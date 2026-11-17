@@ -4,21 +4,32 @@ const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('fintrack_theme') || 'dark';
+    // Default to 'lavender-glass' for new users; respect existing preference
+    return localStorage.getItem('fintrack_theme') || 'lavender-glass';
   });
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
+    if (theme === 'lavender-glass') {
+      root.setAttribute('data-theme', 'lavender-glass');
       root.classList.remove('dark');
+    } else {
+      root.removeAttribute('data-theme');
+      if (theme === 'dark') {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
     }
     localStorage.setItem('fintrack_theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    setTheme((prev) => {
+      if (prev === 'lavender-glass') return 'light';
+      if (prev === 'light') return 'dark';
+      return 'lavender-glass';
+    });
   };
 
   return (

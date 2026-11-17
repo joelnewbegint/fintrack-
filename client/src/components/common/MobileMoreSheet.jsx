@@ -122,13 +122,19 @@ export const MobileMoreSheet = ({
             onClick={toggleTheme}
             className="p-3 rounded-2xl glass border border-sky-200/60 dark:border-sky-800/60 flex items-center space-x-2.5 text-left active:scale-95 transition"
           >
-            <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950 flex items-center justify-center text-amber-500 shrink-0">
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4 text-sky-600" />}
+            <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-600 shrink-0">
+              {theme === 'lavender-glass' ? (
+                <Sparkles className="w-4 h-4 text-[#8B7BD0]" />
+              ) : theme === 'dark' ? (
+                <Sun className="w-4 h-4 text-amber-500" />
+              ) : (
+                <Moon className="w-4 h-4 text-sky-600" />
+              )}
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] text-slate-400 uppercase font-black">Theme</p>
+              <p className="text-[10px] text-slate-400 uppercase font-black">Theme / தீம்</p>
               <p className="text-xs font-bold text-slate-800 dark:text-slate-200 capitalize">
-                {theme} Mode
+                {theme === 'lavender-glass' ? 'Lavender Glass' : `${theme} Mode`}
               </p>
             </div>
           </button>

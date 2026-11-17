@@ -2,12 +2,14 @@ import React, { Component } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
+import './theme.css';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ComfortProvider } from './context/ComfortContext';
 import { DeviceModeProvider } from './context/DeviceModeContext';
 import { PWAProvider } from './context/PWAContext';
+import { ToastProvider } from './components/common/Toast';
 
 export const getApiBase = () => {
   if (typeof window !== 'undefined') {
@@ -115,7 +117,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <LanguageProvider>
               <AuthProvider>
                 <PWAProvider>
-                  <App />
+                  <ToastProvider>
+                    <App />
+                  </ToastProvider>
                 </PWAProvider>
               </AuthProvider>
             </LanguageProvider>

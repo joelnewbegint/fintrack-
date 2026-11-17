@@ -138,7 +138,7 @@ export const Sidebar = ({
                   isCollapsed ? 'justify-center p-2.5' : 'space-x-3 px-3.5 py-2.5'
                 } rounded-xl text-left transition-all duration-200 relative ${
                   isActive
-                    ? 'bg-sky-400/90 text-white font-bold shadow-md shadow-sky-900/30 ring-1 ring-white/30'
+                    ? 'active-nav-pill bg-sky-400/90 text-white font-bold shadow-md shadow-sky-900/30 ring-1 ring-white/30'
                     : 'text-sky-100/85 hover:text-white hover:bg-white/10 font-medium'
                 }`}
                 title={`${item.en} / ${item.ta}`}

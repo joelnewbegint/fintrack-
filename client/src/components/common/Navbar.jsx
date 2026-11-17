@@ -23,6 +23,7 @@ import {
   RefreshCw,
   ChevronDown,
   MoreHorizontal,
+  Sparkles,
 } from 'lucide-react';
 
 export const Navbar = ({
@@ -39,7 +40,7 @@ export const Navbar = ({
 }) => {
   const { user, logout, isOwner, isClient } = useAuth();
   const { lang, toggleLanguage, t } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme, toggleTheme } = useTheme();
   const { isLaptop, isTablet, isMobile } = useDeviceMode();
   const { isInstalled, promptInstall } = usePWA();
 
@@ -47,8 +48,18 @@ export const Navbar = ({
   const [isManualSyncing, setIsManualSyncing] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [agentList, setAgentList] = useState([]);
+  const [selectedAgent, setSelectedAgent] = useState('all');
   const moreMenuRef = useRef(null);
   const userMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (isOwner) {
+      api.getAgents().then((res) => {
+        if (Array.isArray(res)) setAgentList(res);
+      }).catch(() => {});
+    }
+  }, [isOwner]);
 
   useEffect(() => {
     const handleStatus = (e) => {
@@ -182,14 +193,19 @@ export const Navbar = ({
             <div className="w-9 h-9 rounded-full bg-sky-500 flex items-center justify-center text-white font-black text-sm shadow-sm shrink-0">
               VK
             </div>
-            <span className="font-black text-base sm:text-lg text-slate-900 dark:text-white tracking-tight">
-              VK Banker's & Finance
-            </span>
+            <div className="min-w-0">
+              <span className="font-black text-base sm:text-lg text-slate-900 dark:text-white tracking-tight block leading-tight">
+                VK Banker's
+              </span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium block truncate">
+                {lang === 'ta' ? 'வணக்கம்' : 'Hello'}, {user?.name?.split(' ')[0] || 'Sir'}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Center: Search input "Search customer, loan #, phone... ( / to focus )" */}
-        <div className="flex-1 max-w-lg mx-4">
+        <div className="flex-1 max-w-lg mx-3 sm:mx-4">
           <button
             onClick={onOpenSearch}
             className="w-full h-10 flex items-center justify-between px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-400 hover:border-sky-400 hover:text-slate-600 dark:hover:text-slate-200 transition shadow-xs"
@@ -201,8 +217,54 @@ export const Navbar = ({
           </button>
         </div>
 
-        {/* Right: Synced Pill + Bell with 99+ + ⋯ More ▾ + Profile Avatar J */}
-        <div className="flex items-center space-x-2.5 shrink-0">
+        {/* Right: Agent Filter (Owner only) + EN/த toggle + Theme Switcher + Synced Pill + Bell + ⋯ More ▾ + Profile Avatar */}
+        <div className="flex items-center space-x-2 shrink-0">
+          {/* Agent Filter (Owner only) */}
+          {isOwner && agentList.length > 0 && (
+            <select
+              value={selectedAgent}
+              onChange={(e) => {
+                setSelectedAgent(e.target.value);
+                window.dispatchEvent(new CustomEvent('fintrack:filter-agent', { detail: e.target.value }));
+              }}
+              className="h-9 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200 border-none outline-none cursor-pointer hidden xl:block"
+              title="Filter by Collection Agent / கள முகவர்"
+            >
+              <option value="all">{lang === 'ta' ? 'அனைத்து முகவர்கள்' : 'All Agents'}</option>
+              {agentList.map((a) => (
+                <option key={a._id || a.id} value={a._id || a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {/* Quick EN/த Language Toggle */}
+          <button
+            onClick={toggleLanguage}
+            className="h-9 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center space-x-1 transition active:scale-95"
+            title="Toggle Language / மொழி மாற்றம்"
+          >
+            <Globe className="w-3.5 h-3.5 text-sky-500" />
+            <span className="text-[11px] font-black uppercase">{lang === 'ta' ? 'தமிழ்' : 'EN'}</span>
+          </button>
+
+          {/* Quick Theme Switcher Pill */}
+          <button
+            onClick={toggleTheme}
+            className="h-9 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center space-x-1.5 transition active:scale-95"
+            title="Cycle Theme (Lavender Glass / Light / Dark)"
+          >
+            {theme === 'lavender-glass' ? (
+              <Sparkles className="w-3.5 h-3.5 text-[#8B7BD0]" />
+            ) : theme === 'dark' ? (
+              <Moon className="w-3.5 h-3.5 text-sky-400" />
+            ) : (
+              <Sun className="w-3.5 h-3.5 text-amber-500" />
+            )}
+            <span className="text-[11px] capitalize hidden md:inline">
+              {theme === 'lavender-glass' ? 'Lavender' : theme}
+            </span>
+          </button>
 
           {/* ● Synced Pill */}
           <button
@@ -341,23 +403,47 @@ export const Navbar = ({
                   </span>
                 </button>
 
-                {/* Dark Theme Toggle */}
-                <button
-                  onClick={toggleTheme}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left"
-                >
-                  <div className="flex items-center space-x-2.5">
-                    {theme === 'dark' ? (
-                      <Sun className="w-4 h-4 text-amber-500 shrink-0" />
-                    ) : (
-                      <Moon className="w-4 h-4 text-slate-500 shrink-0" />
-                    )}
-                    <span>Theme</span>
-                  </div>
-                  <span className="text-[11px] text-slate-400 font-medium capitalize">
-                    {theme}
+                {/* Theme Selector (Lavender Glass / Light / Dark) */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5 px-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    Theme / வண்ண தீம்
                   </span>
-                </button>
+                  <div className="grid grid-cols-3 gap-1">
+                    <button
+                      onClick={() => setTheme('lavender-glass')}
+                      className={`py-1.5 px-2 rounded-lg text-[10.5px] font-bold flex items-center justify-center space-x-1 transition ${
+                        theme === 'lavender-glass'
+                          ? 'bg-[#E3DBF4] text-[#4B3C8A] shadow-xs ring-1 ring-[#8B7BD0]'
+                          : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      <Sparkles className="w-3 h-3 text-[#8B7BD0]" />
+                      <span>Lavender</span>
+                    </button>
+                    <button
+                      onClick={() => setTheme('light')}
+                      className={`py-1.5 px-2 rounded-lg text-[10.5px] font-bold flex items-center justify-center space-x-1 transition ${
+                        theme === 'light'
+                          ? 'bg-sky-100 text-sky-800 shadow-xs ring-1 ring-sky-300'
+                          : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      <Sun className="w-3 h-3 text-amber-500" />
+                      <span>Light</span>
+                    </button>
+                    <button
+                      onClick={() => setTheme('dark')}
+                      className={`py-1.5 px-2 rounded-lg text-[10.5px] font-bold flex items-center justify-center space-x-1 transition ${
+                        theme === 'dark'
+                          ? 'bg-slate-800 text-white shadow-xs ring-1 ring-slate-600'
+                          : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      <Moon className="w-3 h-3 text-sky-400" />
+                      <span>Dark</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

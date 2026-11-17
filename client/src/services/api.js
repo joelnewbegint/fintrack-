@@ -1932,6 +1932,16 @@ export const api = {
     return local ? JSON.parse(local) : null;
   },
 
+  getAgents: async () => {
+    try {
+      const res = await safeFetchJson('/api/auth/agents', { headers: getHeaders() });
+      if (res.ok && Array.isArray(res.data?.agents)) {
+        return res.data.agents;
+      }
+    } catch (e) {}
+    return [];
+  },
+
   updateUserProfile: async (profileData) => {
     const result = await safeFetchJson('/api/auth/profile', {
       method: 'PUT',
