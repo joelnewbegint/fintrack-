@@ -96,11 +96,20 @@ export const generateEMISchedule = (principal, annualRatePercent, months, type =
  */
 export const getEMIDashboardStats = async (req, res, next) => {
   try {
-    const agentFilter = {};
+    let agentFilter = {};
     if (!req.user.isOwner) {
-      agentFilter.assignedAgentId = req.user._id;
+      agentFilter = {
+        $or: [
+          { assignedAgentId: req.user._id },
+          { assignedAgentId: null },
+          { assignedAgentId: { $exists: false } },
+          ...(Array.isArray(req.user.assignedAreas) && req.user.assignedAreas.length > 0
+            ? [{ customerArea: { $in: req.user.assignedAreas } }]
+            : []),
+        ],
+      };
     } else if (req.query.agentId && req.query.agentId !== 'all') {
-      agentFilter.assignedAgentId = req.query.agentId;
+      agentFilter = { assignedAgentId: req.query.agentId };
     }
 
     const today = new Date();
@@ -252,30 +261,43 @@ export const getEMIDashboardStats = async (req, res, next) => {
 export const getEMILoans = async (req, res, next) => {
   try {
     const { status, search, area, agentId, page = 1, limit = 50 } = req.query;
-    const query = {};
+    const andConditions = [];
 
     if (!req.user.isOwner) {
-      query.assignedAgentId = req.user._id;
+      andConditions.push({
+        $or: [
+          { assignedAgentId: req.user._id },
+          { assignedAgentId: null },
+          { assignedAgentId: { $exists: false } },
+          ...(Array.isArray(req.user.assignedAreas) && req.user.assignedAreas.length > 0
+            ? [{ customerArea: { $in: req.user.assignedAreas } }]
+            : []),
+        ],
+      });
     } else if (agentId && agentId !== 'all') {
-      query.assignedAgentId = agentId;
+      andConditions.push({ assignedAgentId: agentId });
     }
 
     if (status && status !== 'all') {
-      query.status = status;
+      andConditions.push({ status });
     }
 
     if (area && area !== 'all') {
-      query.customerArea = new RegExp(area, 'i');
+      andConditions.push({ customerArea: new RegExp(area, 'i') });
     }
 
     if (search) {
       const s = search.trim();
-      query.$or = [
-        { customerName: new RegExp(s, 'i') },
-        { emiNo: new RegExp(s, 'i') },
-        { customerPhone: new RegExp(s, 'i') },
-      ];
+      andConditions.push({
+        $or: [
+          { customerName: new RegExp(s, 'i') },
+          { emiNo: new RegExp(s, 'i') },
+          { customerPhone: new RegExp(s, 'i') },
+        ],
+      });
     }
+
+    const query = andConditions.length > 0 ? { $and: andConditions } : {};
 
     const total = await EMILoan.countDocuments(query);
     const loans = await EMILoan.find(query)
@@ -309,8 +331,14 @@ export const getEMILoanById = async (req, res, next) => {
     }
 
     // Role safety check
-    if (!req.user.isOwner && String(loan.assignedAgentId?._id) !== String(req.user._id)) {
-      return res.status(403).json({ success: false, message: 'Access denied: You are not assigned to this EMI loan' });
+    if (!req.user.isOwner) {
+      const isAssigned =
+        !loan.assignedAgentId ||
+        String(loan.assignedAgentId?._id || loan.assignedAgentId) === String(req.user._id) ||
+        (Array.isArray(req.user.assignedAreas) && req.user.assignedAreas.includes(loan.customerArea));
+      if (!isAssigned) {
+        return res.status(403).json({ success: false, message: 'Access denied: You are not assigned to this EMI loan' });
+      }
     }
 
     // Fetch payments associated with this EMI loan
@@ -360,9 +388,14 @@ export const createEMILoan = async (req, res, next) => {
     const finalCustomerPhone = customerPhone || (cust ? cust.phone : '');
     const finalCustomerArea = customerArea || (cust ? cust.area : 'Main Area');
 
-    const agent = assignedAgentId
-      ? await User.findById(assignedAgentId)
-      : (req.user.isOwner ? null : req.user);
+    let agent = null;
+    if (assignedAgentId) {
+      agent = await User.findById(assignedAgentId);
+    } else if (!req.user.isOwner) {
+      agent = req.user;
+    } else {
+      agent = await User.findOne({ role: 'emi_agent', status: 'active' });
+    }
 
     // Calculate Amortization Schedule
     const schedule = generateEMISchedule(
@@ -455,8 +488,14 @@ export const recordEMIPayment = async (req, res, next) => {
     }
 
     // Role access check
-    if (!req.user.isOwner && String(loan.assignedAgentId) !== String(req.user._id)) {
-      return res.status(403).json({ success: false, message: 'Access denied: You are not assigned to this loan' });
+    if (!req.user.isOwner) {
+      const isAssigned =
+        !loan.assignedAgentId ||
+        String(loan.assignedAgentId?._id || loan.assignedAgentId) === String(req.user._id) ||
+        (Array.isArray(req.user.assignedAreas) && req.user.assignedAreas.includes(loan.customerArea));
+      if (!isAssigned) {
+        return res.status(403).json({ success: false, message: 'Access denied: You are not assigned to this loan' });
+      }
     }
 
     const payNum = Number(amount);
@@ -779,24 +818,37 @@ export const rescheduleInstallment = async (req, res, next) => {
 export const getEMICustomers = async (req, res, next) => {
   try {
     const { search, area, page = 1, limit = 50 } = req.query;
-    const query = {};
+    const andConditions = [];
 
     if (!req.user.isOwner) {
-      query.assignedAgentId = req.user._id;
+      andConditions.push({
+        $or: [
+          { assignedAgentId: req.user._id },
+          { assignedAgentId: null },
+          { assignedAgentId: { $exists: false } },
+          ...(Array.isArray(req.user.assignedAreas) && req.user.assignedAreas.length > 0
+            ? [{ area: { $in: req.user.assignedAreas } }]
+            : []),
+        ],
+      });
     }
 
     if (area && area !== 'all') {
-      query.area = new RegExp(area, 'i');
+      andConditions.push({ area: new RegExp(area, 'i') });
     }
 
     if (search) {
       const s = search.trim();
-      query.$or = [
-        { name: new RegExp(s, 'i') },
-        { phone: new RegExp(s, 'i') },
-        { area: new RegExp(s, 'i') },
-      ];
+      andConditions.push({
+        $or: [
+          { name: new RegExp(s, 'i') },
+          { phone: new RegExp(s, 'i') },
+          { area: new RegExp(s, 'i') },
+        ],
+      });
     }
+
+    const query = andConditions.length > 0 ? { $and: andConditions } : {};
 
     const total = await EMICustomer.countDocuments(query);
     const customers = await EMICustomer.find(query)
@@ -839,10 +891,18 @@ export const createEMICustomer = async (req, res, next) => {
     }
 
     const clientId = `emi_cust_${Date.now()}`;
+    let customerAgentId = null;
+    if (!req.user.isOwner) {
+      customerAgentId = req.user._id;
+    } else {
+      const activeEmiAgent = await User.findOne({ role: 'emi_agent', status: 'active' });
+      customerAgentId = activeEmiAgent ? activeEmiAgent._id : null;
+    }
+
     const customer = await EMICustomer.create({
       clientId,
       createdBy: req.user._id,
-      assignedAgentId: req.user.isOwner ? null : req.user._id,
+      assignedAgentId: customerAgentId,
       name: name.trim(),
       tamilName: tamilName.trim(),
       phone: phone.trim(),
