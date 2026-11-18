@@ -19,6 +19,7 @@ import LoanApplicationFormModal from './components/common/LoanApplicationFormMod
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Loans from './pages/Loans';
+import SchemeLoansPage from './pages/SchemeLoansPage';
 import LoanDetail from './pages/LoanDetail';
 import Customers from './pages/Customers';
 import CustomerDetail from './pages/CustomerDetail';
@@ -72,6 +73,36 @@ export function App() {
   const [selectedEMILoanId, setSelectedEMILoanId] = useState(null);
   const [loanFilterType, setLoanFilterType] = useState('all');
   const [emiListFilter, setEmiListFilter] = useState('active');
+  const [selectedScheme, setSelectedScheme] = useState('daily');
+
+  // Synchronize URL route with scheme loans pages (/loans/daily, /loans/weekly, /loans/monthly)
+  useEffect(() => {
+    const handleUrlRouting = () => {
+      try {
+        const path = window.location.pathname.toLowerCase();
+        if (path === '/loans/daily') {
+          setSelectedScheme('daily');
+          setActiveTab('scheme-loans');
+          setOwnerMode('loans');
+        } else if (path === '/loans/weekly') {
+          setSelectedScheme('weekly');
+          setActiveTab('scheme-loans');
+          setOwnerMode('loans');
+        } else if (path === '/loans/monthly') {
+          setSelectedScheme('monthly');
+          setActiveTab('scheme-loans');
+          setOwnerMode('loans');
+        } else if (path === '/loans') {
+          setActiveTab('loans');
+          setOwnerMode('loans');
+        }
+      } catch (e) {}
+    };
+
+    handleUrlRouting();
+    window.addEventListener('popstate', handleUrlRouting);
+    return () => window.removeEventListener('popstate', handleUrlRouting);
+  }, []);
 
   // Enforce role isolation & redirect to appropriate default on role mismatch
   useEffect(() => {
@@ -226,7 +257,28 @@ export function App() {
 
     if (tab === 'overview') setOwnerMode('overview');
     else if (tab === 'emiDashboard' || tab === 'emiList') setOwnerMode('emi');
-    else if (tab === 'dashboard' || tab === 'loans') setOwnerMode('loans');
+    else if (tab === 'dashboard' || tab === 'loans' || tab === 'scheme-loans') setOwnerMode('loans');
+  };
+
+  const handleNavigateToScheme = (scheme) => {
+    setSelectedLoanId(null);
+    setSelectedCustomerId(null);
+    setSelectedEMILoanId(null);
+    setSelectedScheme(scheme);
+    setActiveTab('scheme-loans');
+    setOwnerMode('loans');
+    try {
+      window.history.pushState({ scheme }, '', `/loans/${scheme}`);
+    } catch (e) {}
+  };
+
+  const handleBackFromScheme = () => {
+    setSelectedLoanId(null);
+    setActiveTab('loans');
+    setOwnerMode('loans');
+    try {
+      window.history.pushState({}, '', '/loans');
+    } catch (e) {}
   };
 
   return (
@@ -412,6 +464,16 @@ export function App() {
                 <Loans
                   initialType={loanFilterType}
                   onViewLoan={(id) => setSelectedLoanId(id)}
+                  onSelectScheme={handleNavigateToScheme}
+                />
+              )}
+
+              {activeTab === 'scheme-loans' && (
+                <SchemeLoansPage
+                  schemeType={selectedScheme}
+                  onBack={handleBackFromScheme}
+                  onViewLoan={(id) => setSelectedLoanId(id)}
+                  onOpenNewLoan={(scheme) => setShowGlobalLoanModal(true)}
                 />
               )}
 

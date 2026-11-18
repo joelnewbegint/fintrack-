@@ -82,7 +82,7 @@ export const BottomNav = ({ activeTab, setActiveTab, onOpenMoreSheet }) => {
       <nav className="pointer-events-auto h-16 w-full glass-panel border-t border-white/70 dark:border-sky-800/40 px-2 flex items-center justify-around shadow-2xl pb-safe">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+          const isActive = activeTab === tab.id || (tab.id === 'loans' && activeTab === 'scheme-loans');
 
           if (tab.isMore) {
             return (

@@ -115,7 +115,7 @@ export const Sidebar = ({
         <nav className="space-y-1 w-full">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const isActive = activeTab === item.id || (item.id === 'loans' && activeTab === 'scheme-loans');
 
             return (
               <button

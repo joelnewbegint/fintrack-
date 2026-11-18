@@ -36,6 +36,9 @@ import {
   RotateCcw,
   Keyboard,
   ChevronRight as ArrowRight,
+  Clock,
+  CalendarRange,
+  CalendarCheck,
 } from 'lucide-react';
 
 // Colorful avatar helper matching the mockup (letter M in blue, R in purple, S in emerald, K in rose, A in sky blue)
@@ -58,7 +61,7 @@ const getAvatarStyle = (name = '') => {
   };
 };
 
-export const Loans = ({ initialType = 'all', onViewLoan }) => {
+export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
   const { t, lang } = useLanguage();
   const { isOwner } = useAuth();
   const { isMobile } = useDeviceMode();
@@ -276,6 +279,24 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
     [overdueLoansList]
   );
 
+  // Scheme statistics for the 3 clickable summary cards
+  const schemeStats = useMemo(() => {
+    const s = summarySource;
+    const calc = (type) => {
+      const typeLoans = s.filter((l) => (l.financeType || 'daily').toLowerCase() === type);
+      return {
+        count: typeLoans.length,
+        principal: typeLoans.reduce((sum, l) => sum + (Number(l.principal) || 0), 0),
+        overdueCount: typeLoans.filter((l) => l.status === 'overdue').length,
+      };
+    };
+    return {
+      daily: calc('daily'),
+      weekly: calc('weekly'),
+      monthly: calc('monthly'),
+    };
+  }, [summarySource]);
+
   // Live Counts for Quick Chips
   const chipCounts = useMemo(() => {
     const s = summarySource;
@@ -486,6 +507,147 @@ export const Loans = ({ initialType = 'all', onViewLoan }) => {
               statusFilter === 'overdue' ? 'text-white' : 'text-rose-400'
             }`}
           />
+        </button>
+      </div>
+
+      {/* 2.5 SCHEME SUMMARY CARDS (Clickable: Daily / Weekly / Monthly -> Opens Scheme Loan Page) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+        {/* Daily Scheme Card */}
+        <button
+          type="button"
+          onClick={() => (onSelectScheme ? onSelectScheme('daily') : setTypeFilter('daily'))}
+          className="group relative text-left bg-gradient-to-br from-white/95 to-amber-50/40 dark:from-slate-900/90 dark:to-amber-950/20 backdrop-blur-md rounded-2xl p-4 border border-amber-200/70 dark:border-amber-900/40 shadow-sm hover:shadow-lg hover:shadow-amber-500/10 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white tracking-tight truncate">
+                    Daily Finance
+                  </h3>
+                  {schemeStats.daily.overdueCount > 0 && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300">
+                      {schemeStats.daily.overdueCount} due
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] font-medium text-amber-700/80 dark:text-amber-400/80">
+                  தினசரி கடன் ({schemeStats.daily.count})
+                </p>
+              </div>
+            </div>
+            <div className="w-7 h-7 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/60 transition-all">
+              <ArrowRight className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-amber-100/80 dark:border-amber-950/50 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                Principal / முதல்
+              </p>
+              <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums tracking-tight">
+                {formatCurrency(schemeStats.daily.principal)}
+              </p>
+            </div>
+            <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 group-hover:underline">
+              View daily loans →
+            </span>
+          </div>
+        </button>
+
+        {/* Weekly Scheme Card */}
+        <button
+          type="button"
+          onClick={() => (onSelectScheme ? onSelectScheme('weekly') : setTypeFilter('weekly'))}
+          className="group relative text-left bg-gradient-to-br from-white/95 to-sky-50/40 dark:from-slate-900/90 dark:to-sky-950/20 backdrop-blur-md rounded-2xl p-4 border border-sky-200/70 dark:border-sky-900/40 shadow-sm hover:shadow-lg hover:shadow-sky-500/10 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <CalendarRange className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white tracking-tight truncate">
+                    Weekly Finance
+                  </h3>
+                  {schemeStats.weekly.overdueCount > 0 && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300">
+                      {schemeStats.weekly.overdueCount} due
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] font-medium text-sky-700/80 dark:text-sky-400/80">
+                  வாராந்திர கடன் ({schemeStats.weekly.count})
+                </p>
+              </div>
+            </div>
+            <div className="w-7 h-7 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 group-hover:bg-sky-100 dark:group-hover:bg-sky-900/60 transition-all">
+              <ArrowRight className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-sky-100/80 dark:border-sky-950/50 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                Principal / முதல்
+              </p>
+              <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums tracking-tight">
+                {formatCurrency(schemeStats.weekly.principal)}
+              </p>
+            </div>
+            <span className="text-[11px] font-bold text-sky-600 dark:text-sky-400 group-hover:underline">
+              View weekly loans →
+            </span>
+          </div>
+        </button>
+
+        {/* Monthly Scheme Card */}
+        <button
+          type="button"
+          onClick={() => (onSelectScheme ? onSelectScheme('monthly') : setTypeFilter('monthly'))}
+          className="group relative text-left bg-gradient-to-br from-white/95 to-emerald-50/40 dark:from-slate-900/90 dark:to-emerald-950/20 backdrop-blur-md rounded-2xl p-4 border border-emerald-200/70 dark:border-emerald-900/40 shadow-sm hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <CalendarCheck className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white tracking-tight truncate">
+                    Monthly Finance
+                  </h3>
+                  {schemeStats.monthly.overdueCount > 0 && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300">
+                      {schemeStats.monthly.overdueCount} due
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] font-medium text-emerald-700/80 dark:text-emerald-400/80">
+                  மாதாந்திர கடன் ({schemeStats.monthly.count})
+                </p>
+              </div>
+            </div>
+            <div className="w-7 h-7 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/60 transition-all">
+              <ArrowRight className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-emerald-100/80 dark:border-emerald-950/50 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                Principal / முதல்
+              </p>
+              <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums tracking-tight">
+                {formatCurrency(schemeStats.monthly.principal)}
+              </p>
+            </div>
+            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 group-hover:underline">
+              View monthly loans →
+            </span>
+          </div>
         </button>
       </div>
 
