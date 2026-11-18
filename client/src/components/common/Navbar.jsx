@@ -138,18 +138,24 @@ export const Navbar = ({
             {onToggleMobileMenu && (
               <button
                 onClick={onToggleMobileMenu}
-                className="p-1.5 -ml-1 text-slate-600 dark:text-slate-300"
+                className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition -ml-1"
                 aria-label="Open menu"
               >
                 <Menu className="w-5 h-5 text-sky-600 dark:text-sky-400" />
               </button>
             )}
-            <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white font-black text-xs shadow-md shrink-0">
-              VK
+            <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-sky-500 via-sky-600 to-blue-600 flex items-center justify-center text-white font-black text-xs shadow-sm shrink-0">
+              <Wallet className="w-4 h-4" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-1.5 ring-white dark:ring-slate-900" />
             </div>
-            <span className="font-black text-sm text-slate-900 dark:text-white truncate">
-              VK Banker's & Finance
-            </span>
+            <div className="min-w-0">
+              <span className="font-black text-xs sm:text-sm text-slate-900 dark:text-white truncate block leading-tight">
+                {lang === 'ta' ? 'வி.கே. பேங்கர்ஸ்' : "VK BANKER'S"}
+              </span>
+              <span className="text-[9px] text-slate-400 font-medium block truncate leading-none mt-0.5">
+                {lang === 'ta' ? 'தவணை நிதி மேலாண்மை' : 'Finance Ledger'}
+              </span>
+            </div>
           </div>
 
           {/* Right: Sync Pill + Bell + Avatar */}
@@ -194,33 +200,40 @@ export const Navbar = ({
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
       <div className="w-full px-3 sm:px-5 h-16 flex items-center justify-between gap-2.5">
-        {/* Left: Sidebar Toggle + Wallet Icon Box + VK BANKER'S & FINANCE */}
-        <div className="flex items-center space-x-2 sm:space-x-2.5 shrink-0">
+        {/* Left: Sidebar Toggle + Luxury Wallet Monogram + VK BANKER'S & FINANCE */}
+        <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
           {onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
-              className="p-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95"
               title="Toggle Sidebar (M)"
+              aria-label="Toggle Navigation Sidebar"
             >
               <Menu className="w-5 h-5" />
             </button>
           )}
 
-          <div className="w-9 h-9 rounded-xl bg-sky-500 text-white flex items-center justify-center shadow-md shadow-sky-500/25 shrink-0">
-            <Wallet className="w-5 h-5" />
+          {/* Premium Fintech Brand Icon */}
+          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 via-sky-600 to-blue-600 text-white flex items-center justify-center shadow-md shadow-sky-500/25 shrink-0">
+            <Wallet className="w-5 h-5 drop-shadow-xs" />
+            <span
+              className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900"
+              title="System Online"
+            />
           </div>
 
-          <div className="min-w-0">
+          {/* Brand Name & Tagline (Bilingual, Neat & Zero Redundant Text) */}
+          <div className="flex flex-col justify-center min-w-0">
             <div className="flex items-center space-x-2">
-              <span className="font-black text-sm sm:text-base text-sky-600 dark:text-sky-400 tracking-tight block leading-tight">
-                VK BANKER'S & FINANCE
+              <span className="font-black text-sm sm:text-base text-slate-900 dark:text-white tracking-tight leading-tight">
+                {lang === 'ta' ? 'வி.கே. பேங்கர்ஸ் & பைனான்ஸ்' : "VK BANKER'S & FINANCE"}
               </span>
-              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full border border-sky-300 bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-300 hidden md:inline">
-                VK BANKER'S
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/70 text-sky-600 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/80 tracking-wide hidden md:inline-flex items-center">
+                {lang === 'ta' ? "VK Banker's" : 'வி.கே.'}
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 font-medium block truncate leading-none mt-0.5">
-              Banker's & Finance Ledger
+            <span className="text-[10px] text-slate-400 dark:text-slate-400 font-medium tracking-normal leading-tight mt-0.5">
+              {lang === 'ta' ? 'தவணை நிதி மேலாண்மை • கோவை' : 'Daily & Monthly Loan Ledger • Coimbatore'}
             </span>
           </div>
         </div>
