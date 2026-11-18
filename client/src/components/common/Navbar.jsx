@@ -19,15 +19,20 @@ import {
   Download,
   FileText,
   Smartphone,
+  Tablet,
+  Laptop,
   CheckCircle2,
   RefreshCw,
   ChevronDown,
+  ChevronRight,
   MoreHorizontal,
   Sparkles,
   Layers,
   Wallet,
   Check,
   MessageSquare,
+  RotateCcw,
+  X,
 } from 'lucide-react';
 
 export const Navbar = ({
@@ -45,7 +50,7 @@ export const Navbar = ({
   const { user, logout, isOwner, isClient } = useAuth();
   const { lang, toggleLanguage, t } = useLanguage();
   const { theme, setTheme, toggleTheme } = useTheme();
-  const { isLaptop, isTablet, isMobile } = useDeviceMode();
+  const { isLaptop, isTablet, isMobile, mode, setMode, resetToAuto, isOverride } = useDeviceMode();
   const { isInstalled, promptInstall } = usePWA();
 
   const [syncState, setSyncState] = useState(() => api.getSyncStatus?.() || { status: 'synced', pendingCount: 0 });
@@ -83,11 +88,19 @@ export const Navbar = ({
         setShowUserMenu(false);
       }
     };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowMoreMenu(false);
+        setShowUserMenu(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('touchstart', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -312,104 +325,247 @@ export const Navbar = ({
             </button>
 
             {showMoreMenu && (
-              <div
-                className="absolute right-0 top-full mt-2 w-72 rounded-2xl glass-panel bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl border border-sky-200/80 dark:border-sky-800/80 p-2.5 z-50 text-xs space-y-1.5 animate-in fade-in zoom-in-95 duration-150"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* 1. Layout Mode Switcher */}
-                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                    Layout Mode / திரை வடிவம்
-                  </p>
-                  <DisplayModeSwitcher compact={false} showLabel={true} />
-                </div>
+              <>
+                {/* Click-outside dimmed backdrop with 15% black and light blur */}
+                <div
+                  className="fixed inset-0 bg-black/15 dark:bg-black/40 backdrop-blur-[2px] z-40 transition-opacity duration-150"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMoreMenu(false);
+                  }}
+                  aria-hidden="true"
+                />
 
-                {/* 2. WhatsApp Web Hub */}
-                {onOpenWhatsAppHub && !isClient && (
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      onOpenWhatsAppHub();
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-300 transition text-left group"
-                  >
-                    <div className="flex items-center space-x-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 flex items-center justify-center shrink-0">
-                        <MessageSquare className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-xs">WhatsApp Hub</p>
-                        <p className="text-[10px] text-slate-400">Share notices & receipts</p>
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">
-                      Active
-                    </span>
-                  </button>
-                )}
+                {/* More Popup Panel: Desktop/Tablet dropdown (w-[340px], right-aligned) & Mobile bottom sheet */}
+                <div
+                  className="fixed inset-x-0 bottom-0 z-50 w-full max-w-md mx-auto rounded-t-[24px] rounded-b-none border-t border-x-0 border-b-0 p-3.5 pb-safe sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2.5 sm:w-[340px] sm:max-w-none sm:rounded-[20px] sm:border bg-[#FCFDFE]/95 dark:bg-slate-900/95 backdrop-blur-[20px] shadow-2xl border-sky-200/80 dark:border-slate-800 p-3 text-xs space-y-2.5 animate-in fade-in zoom-in-95 duration-150 origin-top-right"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Small arrow notch pointing to the More button (Desktop & Tablet only) */}
+                  <div className="hidden sm:block absolute right-8 -top-1.5 w-3 h-3 rotate-45 bg-[#FCFDFE] dark:bg-slate-900 border-t border-l border-sky-200/80 dark:border-slate-800 pointer-events-none" />
 
-                {/* 3. Loan Application Form */}
-                {onOpenLoanForm && (
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      onOpenLoanForm();
-                    }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-700 dark:hover:text-sky-300 transition text-left"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-950/70 text-sky-600 flex items-center justify-center shrink-0">
-                      <FileText className="w-4 h-4" />
+                  {/* Mobile Drag Handle & Header */}
+                  <div className="sm:hidden flex flex-col items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto mb-2 shrink-0" />
+                    <div className="w-full flex items-center justify-between px-1">
+                      <span className="font-bold text-xs text-slate-800 dark:text-white">
+                        {lang === 'ta' ? 'கூடுதல் விருப்பங்கள் / More Options' : 'More Options & Utilities'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowMoreMenu(false)}
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 active:scale-95"
+                        aria-label="Close"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
-                    <div>
-                      <p className="font-bold text-xs">Loan Application Form</p>
-                      <p className="text-[10px] text-slate-400">Print blank borrower form</p>
-                    </div>
-                  </button>
-                )}
-
-                {/* 4. Install App (PWA) */}
-                {!isInstalled && promptInstall && (
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                      promptInstall();
-                    }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-amber-700 dark:hover:text-amber-300 transition text-left"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-950/70 text-amber-600 flex items-center justify-center shrink-0">
-                      <Download className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-xs">Install Web App</p>
-                      <p className="text-[10px] text-slate-400">Add to Desktop / Mobile home</p>
-                    </div>
-                  </button>
-                )}
-
-                {/* 5. Agent Filter for Owner */}
-                {isOwner && agentList.length > 0 && (
-                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Filter Agent / கள முகவர்
-                    </p>
-                    <select
-                      value={selectedAgent}
-                      onChange={(e) => {
-                        setSelectedAgent(e.target.value);
-                        window.dispatchEvent(new CustomEvent('fintrack:filter-agent', { detail: e.target.value }));
-                      }}
-                      className="w-full h-8 px-2 rounded-lg bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 outline-none cursor-pointer"
-                    >
-                      <option value="all">All Agents / அனைத்து முகவர்கள்</option>
-                      {agentList.map((a) => (
-                        <option key={a._id || a.id} value={a._id || a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                    </select>
                   </div>
-                )}
-              </div>
+
+                  {/* SECTION 1: Layout Mode / திரை வடிவம் */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between px-1">
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">
+                        {lang === 'ta' ? 'திரை வடிவம் / Layout Mode' : 'Layout Mode / திரை வடிவம்'}
+                      </p>
+                      {isOverride && (
+                        <button
+                          type="button"
+                          onClick={resetToAuto}
+                          className="text-[10px] font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center space-x-1"
+                          title="Reset to Auto Screen Detection"
+                        >
+                          <RotateCcw className="w-2.5 h-2.5" />
+                          <span>Reset</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Segmented Control: 4 equal buttons (Mobile, Tablet, Laptop, Auto), 2x2 grid on small screens */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 rounded-2xl bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60">
+                      {/* Mobile Button */}
+                      <button
+                        type="button"
+                        onClick={() => setMode('mobile')}
+                        className={`min-h-[44px] py-2 px-1 flex flex-col items-center justify-center rounded-xl text-center transition-all duration-150 active:scale-95 ${
+                          mode === 'mobile'
+                            ? 'bg-sky-500 text-white shadow-sm font-bold ring-1 ring-sky-300 dark:ring-sky-600'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700/60 font-semibold'
+                        }`}
+                        title="Mobile View (< 768px)"
+                      >
+                        <Smartphone className="w-4 h-4 mb-1 shrink-0" />
+                        <span className="text-[11px] leading-tight">Mobile</span>
+                      </button>
+
+                      {/* Tablet Button */}
+                      <button
+                        type="button"
+                        onClick={() => setMode('tablet')}
+                        className={`min-h-[44px] py-2 px-1 flex flex-col items-center justify-center rounded-xl text-center transition-all duration-150 active:scale-95 ${
+                          mode === 'tablet'
+                            ? 'bg-sky-500 text-white shadow-sm font-bold ring-1 ring-sky-300 dark:ring-sky-600'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700/60 font-semibold'
+                        }`}
+                        title="Tablet View (768 - 1199px)"
+                      >
+                        <Tablet className="w-4 h-4 mb-1 shrink-0" />
+                        <span className="text-[11px] leading-tight">Tablet</span>
+                      </button>
+
+                      {/* Laptop Button */}
+                      <button
+                        type="button"
+                        onClick={() => setMode('laptop')}
+                        className={`min-h-[44px] py-2 px-1 flex flex-col items-center justify-center rounded-xl text-center transition-all duration-150 active:scale-95 ${
+                          mode === 'laptop'
+                            ? 'bg-sky-500 text-white shadow-sm font-bold ring-1 ring-sky-300 dark:ring-sky-600'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700/60 font-semibold'
+                        }`}
+                        title="Laptop View (≥ 1200px)"
+                      >
+                        <Laptop className="w-4 h-4 mb-1 shrink-0" />
+                        <span className="text-[11px] leading-tight">Laptop</span>
+                      </button>
+
+                      {/* Auto Button */}
+                      <button
+                        type="button"
+                        onClick={() => setMode('auto')}
+                        className={`min-h-[44px] py-2 px-1 flex flex-col items-center justify-center rounded-xl text-center transition-all duration-150 active:scale-95 ${
+                          mode === 'auto'
+                            ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm font-bold'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700/60 font-semibold'
+                        }`}
+                        title="Auto Screen Detection"
+                      >
+                        <Sparkles className="w-4 h-4 mb-1 text-amber-400 shrink-0" />
+                        <span className="text-[11px] leading-tight">Auto</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Section Divider */}
+                  <div className="my-2 border-t border-slate-200/70 dark:border-slate-800" />
+
+                  {/* SECTION 2: Menu Rows (WhatsApp Hub, Loan Application Form, Install Web App) */}
+                  <div className="space-y-2">
+                    {/* 1. WhatsApp Hub */}
+                    {onOpenWhatsAppHub && !isClient && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMoreMenu(false);
+                          onOpenWhatsAppHub();
+                        }}
+                        className="w-full min-h-[58px] p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/50 hover:bg-sky-50/70 dark:hover:bg-sky-950/40 border border-slate-200/60 dark:border-slate-700/60 hover:border-sky-300 dark:hover:border-sky-700 flex items-center justify-between text-left transition-all duration-150 active:scale-[0.98] group"
+                      >
+                        <div className="flex items-center space-x-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                            <MessageSquare className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-xs text-slate-800 dark:text-white truncate">
+                              WhatsApp Hub
+                            </p>
+                            <p className="text-[11px] text-slate-400 dark:text-slate-400 truncate">
+                              {lang === 'ta' ? 'அறிவிப்புகள் & ரசீதுகள் அனுப்ப' : 'Share notices & receipts'}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="ml-2 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200/80 dark:border-emerald-800/60 shrink-0">
+                          Active
+                        </span>
+                      </button>
+                    )}
+
+                    {/* 2. Loan Application Form */}
+                    {onOpenLoanForm && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMoreMenu(false);
+                          onOpenLoanForm();
+                        }}
+                        className="w-full min-h-[58px] p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/50 hover:bg-sky-50/70 dark:hover:bg-sky-950/40 border border-slate-200/60 dark:border-slate-700/60 hover:border-sky-300 dark:hover:border-sky-700 flex items-center justify-between text-left transition-all duration-150 active:scale-[0.98] group"
+                      >
+                        <div className="flex items-center space-x-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-950/70 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-xs text-slate-800 dark:text-white truncate">
+                              Loan Application Form
+                            </p>
+                            <p className="text-[11px] text-slate-400 dark:text-slate-400 truncate">
+                              {lang === 'ta' ? 'கடன் விண்ணப்ப படிவம்' : 'Print blank borrower form'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-700/60 text-slate-400 dark:text-slate-300 flex items-center justify-center shrink-0 group-hover:text-sky-600 group-hover:bg-sky-100 dark:group-hover:bg-sky-900/60 group-hover:translate-x-0.5 transition-all">
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
+                      </button>
+                    )}
+
+                    {/* 3. Install Web App */}
+                    {!isInstalled && promptInstall && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMoreMenu(false);
+                          promptInstall();
+                        }}
+                        className="w-full min-h-[58px] p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/50 hover:bg-sky-50/70 dark:hover:bg-sky-950/40 border border-slate-200/60 dark:border-slate-700/60 hover:border-sky-300 dark:hover:border-sky-700 flex items-center justify-between text-left transition-all duration-150 active:scale-[0.98] group"
+                      >
+                        <div className="flex items-center space-x-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/70 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                            <Download className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-xs text-slate-800 dark:text-white truncate">
+                              Install Web App
+                            </p>
+                            <p className="text-[11px] text-slate-400 dark:text-slate-400 truncate">
+                              {lang === 'ta' ? 'செயலியை நிறுவுக' : 'Add to Desktop / Mobile home'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-700/60 text-slate-400 dark:text-slate-300 flex items-center justify-center shrink-0 group-hover:text-amber-600 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/60 group-hover:translate-x-0.5 transition-all">
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 4. Agent Filter for Owner */}
+                  {isOwner && agentList.length > 0 && (
+                    <>
+                      <div className="my-2 border-t border-slate-200/70 dark:border-slate-800" />
+                      <div className="p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-0.5">
+                          Filter Agent / கள முகவர்
+                        </p>
+                        <select
+                          value={selectedAgent}
+                          onChange={(e) => {
+                            setSelectedAgent(e.target.value);
+                            window.dispatchEvent(new CustomEvent('fintrack:filter-agent', { detail: e.target.value }));
+                          }}
+                          className="w-full h-8 px-2 rounded-lg bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 outline-none cursor-pointer"
+                        >
+                          <option value="all">All Agents / அனைத்து முகவர்கள்</option>
+                          {agentList.map((a) => (
+                            <option key={a._id || a.id} value={a._id || a.id}>
+                              {a.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
             )}
           </div>
 
