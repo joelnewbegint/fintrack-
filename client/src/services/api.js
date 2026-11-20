@@ -2186,6 +2186,17 @@ export const api = {
     throw new Error(res.error || res.data?.message || 'Failed to reset password');
   },
 
+  deleteAgent: async (id) => {
+    const res = await safeFetchJson(`/api/auth/agents/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (res.ok && res.data?.success) {
+      return { success: true, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to delete agent');
+  },
+
   getSyncStatus,
   flushOfflineQueue: (forceClear = false) => flushOfflineQueue(safeFetchJson, getHeaders, forceClear),
   clearSyncQueue: clearStuckSyncQueue,

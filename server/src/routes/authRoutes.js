@@ -9,6 +9,7 @@ import {
   updateAgent,
   toggleAgentStatus,
   resetAgentPassword,
+  deleteAgent,
   updateProfile,
   refreshToken,
 } from '../controllers/authController.js';
@@ -82,5 +83,6 @@ router.post('/agents', protect, restrictTo('owner'), validate(agentCreateSchema)
 router.put('/agents/:id', protect, restrictTo('owner'), updateAgent);
 router.patch('/agents/:id/status', protect, restrictTo('owner'), toggleAgentStatus);
 router.post('/agents/:id/reset-password', protect, restrictTo('owner'), resetAgentPassword);
+router.delete('/agents/:id', protect, restrictTo('owner'), deleteAgent);
 
 export default router;

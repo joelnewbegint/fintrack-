@@ -511,6 +511,49 @@ export const resetAgentPassword = async (req, res, next) => {
   }
 };
 
+export const deleteAgent = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const agent = await User.findById(id);
+    if (!agent) {
+      return res.status(404).json({ success: false, message: 'Agent not found' });
+    }
+
+    if (agent.role === 'owner' || agent.role === 'admin') {
+      return res.status(403).json({ success: false, message: 'Cannot delete an owner or admin account' });
+    }
+
+    if (req.user && req.user._id.toString() === agent._id.toString()) {
+      return res.status(400).json({ success: false, message: 'Cannot delete your own account' });
+    }
+
+    const agentName = agent.name;
+    const agentUsername = agent.username;
+
+    await User.findByIdAndDelete(id);
+
+    try {
+      await AuditLog.create({
+        userId: req.user._id,
+        userName: req.user.name,
+        action: 'DELETE_AGENT',
+        entity: 'User',
+        entityId: id,
+        after: { username: agentUsername, name: agentName, role: agent.role },
+      });
+    } catch (e) {
+      console.warn('[AuthController] AuditLog error:', e.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Agent ${agentName} (@${agentUsername}) deleted successfully`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const refreshToken = async (req, res, next) => {
   try {
     let token;

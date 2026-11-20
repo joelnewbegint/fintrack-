@@ -15,6 +15,7 @@ import {
   Edit2,
   X,
   Lock,
+  Trash2,
 } from 'lucide-react';
 
 export const Agents = () => {
@@ -40,6 +41,11 @@ export const Agents = () => {
   const [selectedAgentForReset, setSelectedAgentForReset] = useState(null);
   const [resetNewPass, setResetNewPass] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
+
+  // Delete Agent Modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedAgentForDelete, setSelectedAgentForDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchAgents = async () => {
     try {
@@ -116,6 +122,28 @@ export const Agents = () => {
       alert(err.message || 'Password reset failed');
     } finally {
       setResetLoading(false);
+    }
+  };
+
+  const handleInitiateDelete = (agent) => {
+    setSelectedAgentForDelete(agent);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedAgentForDelete) return;
+    try {
+      setDeleteLoading(true);
+      const res = await api.deleteAgent(selectedAgentForDelete._id);
+      if (res.success) {
+        setShowDeleteModal(false);
+        setSelectedAgentForDelete(null);
+        fetchAgents();
+      }
+    } catch (err) {
+      alert(err.message || 'Error deleting agent');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -250,17 +278,29 @@ export const Agents = () => {
                 </div>
 
                 {/* Card Actions */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <button
-                    onClick={() => {
-                      setSelectedAgentForReset(agent);
-                      setShowResetModal(true);
-                    }}
-                    className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-1"
-                  >
-                    <Key className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Reset Pass</span>
-                  </button>
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-1 flex-wrap">
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => {
+                        setSelectedAgentForReset(agent);
+                        setShowResetModal(true);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-1"
+                      title="Reset Password"
+                    >
+                      <Key className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Reset Pass</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleInitiateDelete(agent)}
+                      className="px-2 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 hover:border-rose-200 border border-transparent transition flex items-center space-x-1"
+                      title={lang === 'ta' ? 'முகவரை நீக்கு' : 'Delete Agent'}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                      <span>{lang === 'ta' ? 'நீக்கு' : 'Delete'}</span>
+                    </button>
+                  </div>
 
                   <button
                     onClick={() => handleToggleStatus(agent._id)}
@@ -425,6 +465,53 @@ export const Agents = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Agent Confirmation Modal */}
+      {showDeleteModal && selectedAgentForDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="max-w-sm w-full bg-white rounded-3xl p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-500 mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="font-black text-slate-800 text-base">
+                {lang === 'ta' ? 'முகவரை நீக்கவா?' : 'Delete Agent Account?'}
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                {lang === 'ta'
+                  ? `${selectedAgentForDelete.name} (@${selectedAgentForDelete.username}) முகவர் கணக்கை நிரந்தரமாக நீக்க விரும்புகிறீர்களா? இந்த செயலை மாற்ற முடியாது.`
+                  : `Are you sure you want to permanently delete agent ${selectedAgentForDelete.name} (@${selectedAgentForDelete.username})? This action cannot be undone.`}
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <button
+                type="button"
+                disabled={deleteLoading}
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setSelectedAgentForDelete(null);
+                }}
+                className="flex-1 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition"
+              >
+                {lang === 'ta' ? 'ரத்து செய்க' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                disabled={deleteLoading}
+                onClick={handleConfirmDelete}
+                className="flex-1 h-10 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-bold text-white shadow-md shadow-rose-600/25 transition flex items-center justify-center space-x-1"
+              >
+                {deleteLoading ? (
+                  <span>{lang === 'ta' ? 'நீக்குகிறது...' : 'Deleting...'}</span>
+                ) : (
+                  <span>{lang === 'ta' ? 'ஆம், நீக்குக' : 'Yes, Delete'}</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
