@@ -511,52 +511,6 @@ export function App() {
         onToggleSidebar={toggleSidebar}
       />
 
-      {/* OWNER 2-WAY MODE SWITCHER (Loans / EMI) */}
-      {isOwner && (
-        <div className="w-full flex justify-center py-2 px-3 relative z-30">
-          <div
-            className="inline-flex p-1 rounded-2xl border shadow-sm items-center space-x-1"
-            style={{
-              background: 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(16px)',
-              borderColor: 'rgba(255, 255, 255, 0.95)',
-              boxShadow: '0 4px 20px -2px rgba(249, 115, 22, 0.12)',
-            }}
-          >
-            <button
-              onClick={() => {
-                setOwnerMode('loans');
-                handleTabChange('dashboard');
-              }}
-              className={`px-4 py-1.5 rounded-xl text-xs font-black transition flex items-center space-x-1.5 ${
-                ownerMode === 'loans'
-                  ? 'bg-sky-500 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-sky-50/50'
-              }`}
-            >
-              <span>💼 Loans / கடன் பிரிவு</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setOwnerMode('emi');
-                setActiveEmiTab('dashboard');
-                try {
-                  window.history.pushState({}, '', '/emi');
-                } catch (e) {}
-              }}
-              className={`px-4 py-1.5 rounded-xl text-xs font-black transition flex items-center space-x-1.5 ${
-                ownerMode === 'emi'
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-orange-50/50'
-              }`}
-            >
-              <span>📊 EMI / மாத தவணை</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       <div
         className={`flex-1 flex w-full relative z-10 ${
           isMobile && !isRealPhone

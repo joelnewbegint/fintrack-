@@ -256,7 +256,7 @@ export const Navbar = ({
 
         {/* Center (Owner Only): Loans / EMI Switcher */}
         {isOwner && (
-          <div className="hidden xl:flex items-center p-1 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-xs shrink-0">
+          <div className="hidden md:flex items-center p-1 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-xs shrink-0">
             <button
               className="px-3 py-1 rounded-xl text-xs font-bold bg-sky-500 text-white shadow-xs flex items-center space-x-1.5 cursor-default"
             >
