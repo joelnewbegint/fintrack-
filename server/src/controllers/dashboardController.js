@@ -264,15 +264,35 @@ export const getDashboardStats = async (req, res, next) => {
 
     const todayCollectedAmount = todayPayments.reduce((acc, p) => acc + p.amount, 0);
 
-    // 3b. Fully Completed / Settled Loans (100% Repaid)
+    // 3b. Fully Completed / Settled Loans (100% Repaid) with accurate realized profit
     const completedLoanQuery = {
       status: 'completed',
       ...(Object.keys(clientFilter).length > 0 ? clientFilter : {}),
     };
-    const completedLoansList = await Loan.find(completedLoanQuery)
+    const completedLoansRaw = await Loan.find(completedLoanQuery)
       .populate('customerId', 'name phone area photoUrl')
       .sort({ updatedAt: -1 })
-      .limit(30);
+      .limit(30)
+      .lean();
+
+    const completedLoansList = completedLoansRaw.map((l) => {
+      let profit = 0;
+      if (Number(l.chargeAmount) > 0) {
+        profit = Number(l.chargeAmount);
+      } else if (l.interestType === 'deduction' && Number(l.disbursedAmount) > 0 && Number(l.principal) > Number(l.disbursedAmount)) {
+        profit = Number(l.principal) - Number(l.disbursedAmount);
+      } else if (Number(l.totalPayable) > Number(l.principal)) {
+        profit = Number(l.totalPayable) - Number(l.principal);
+      } else if (Number(l.totalCollected) > Number(l.principal)) {
+        profit = Number(l.totalCollected) - Number(l.principal);
+      } else if (Number(l.interestPercent) > 0 && Number(l.principal) > 0) {
+        profit = Math.round((Number(l.principal) * Number(l.interestPercent)) / 100);
+      }
+      return {
+        ...l,
+        profit,
+      };
+    });
 
     // 4. Today's Due Installments
     // Active/Overdue loans with schedule items due on or before today and not fully paid

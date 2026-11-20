@@ -197,6 +197,42 @@ export const Dashboard = ({
   const settledProfitVal = Number(cards.profitFromSettled ?? cards.profitEarned ?? 0);
   const sumInterestAndProfit = activeInterestVal + settledProfitVal;
 
+  // Calculate accurate realized profit for a settled/completed loan
+  // Supports upfront deduction loans (chargeAmount / disbursedAmount difference), addon loans, and percentage
+  const getSettledLoanProfit = (loan) => {
+    if (!loan) return 0;
+    if (Number(loan.profit) > 0) return Number(loan.profit);
+    if (Number(loan.chargeAmount) > 0) return Number(loan.chargeAmount);
+
+    const pr = Number(loan.principal || loan.principalAmount || 0);
+    const collected = Number(loan.totalCollected || loan.totalPayable || loan.totalPaid || 0);
+    const disbursed = Number(loan.disbursedAmount || 0);
+
+    // If upfront deduction loan or disbursed is less than principal
+    if (loan.interestType === 'deduction' || (disbursed > 0 && disbursed < pr)) {
+      const baseDisbursed = disbursed > 0 ? disbursed : (pr - (Number(loan.chargeAmount) || 0));
+      if (baseDisbursed > 0 && collected >= baseDisbursed) {
+        return collected - baseDisbursed;
+      }
+    }
+
+    // Addon loan where collected or payable exceeds principal
+    if (collected > pr) {
+      return collected - pr;
+    }
+    const payable = Number(loan.totalPayable || loan.totalRepayable || 0);
+    if (payable > pr) {
+      return payable - pr;
+    }
+
+    // Percentage fallback
+    if (Number(loan.interestPercent) > 0 && pr > 0) {
+      return Math.round((pr * Number(loan.interestPercent)) / 100);
+    }
+
+    return 0;
+  };
+
   // Filter completed collections list
   const filteredCompletedList = completedTodayList.filter((item) => {
     const q = (filterQuery || completedSearch).toLowerCase();
@@ -995,7 +1031,7 @@ export const Dashboard = ({
                   </div>
                 </div>
                 <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-2 tabular-nums whitespace-nowrap">
-                  +{formatCurrency(cards.profitFromSettled ?? cards.profitEarned ?? completedLoansList.reduce((acc, l) => acc + (l.profit || l.chargeAmount || Math.max(0, (l.totalCollected || l.totalPayable || 0) - (l.principal || 0))), 0))}
+                  +{formatCurrency(cards.profitFromSettled ?? cards.profitEarned ?? completedLoansList.reduce((acc, l) => acc + getSettledLoanProfit(l), 0))}
                 </p>
               </div>
               <p className="text-[11px] text-slate-400 mt-2">
@@ -1074,7 +1110,8 @@ export const Dashboard = ({
                 {completedLoansList.map((loan) => {
                   const pr = Number(loan.principal || loan.principalAmount || 0);
                   const collected = Number(loan.totalCollected || loan.totalPayable || loan.totalPaid || 0);
-                  const profit = Math.max(0, collected - pr);
+                  const disbursed = Number(loan.disbursedAmount || 0);
+                  const profit = getSettledLoanProfit(loan);
                   const parsed = parseCustomerName(loan.customerId?.name || loan.customerName);
 
                   return (
@@ -1105,7 +1142,21 @@ export const Dashboard = ({
 
                       <div className="text-left sm:text-right shrink-0">
                         <p className="font-black tabular-nums text-sm text-slate-900 dark:text-white whitespace-nowrap">
-                          Principal: {formatCurrency(pr)} • Settled: {formatCurrency(collected)}
+                          {disbursed > 0 && disbursed < pr ? (
+                            <>
+                              <span className="text-slate-500 font-medium text-xs">
+                                {lang === 'ta' ? 'அசல்' : 'Principal'}: {formatCurrency(pr)} ({lang === 'ta' ? 'வழங்கியது' : 'In Hand'}: {formatCurrency(disbursed)})
+                              </span>
+                              {' • '}
+                              <span>{lang === 'ta' ? 'வசூல்' : 'Settled'}: {formatCurrency(collected)}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>{lang === 'ta' ? 'அசல்' : 'Principal'}: {formatCurrency(pr)}</span>
+                              {' • '}
+                              <span>{lang === 'ta' ? 'முடிந்தது' : 'Settled'}: {formatCurrency(collected)}</span>
+                            </>
+                          )}
                         </p>
                         <p className="text-[11px] text-emerald-600 font-bold flex items-center sm:justify-end space-x-1 mt-0.5">
                           <CheckCircle2 className="w-3.5 h-3.5 inline text-emerald-500" />
