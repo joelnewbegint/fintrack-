@@ -43,8 +43,8 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
           window.history.replaceState({}, '', '/emi');
         }
       } else if (isLoanAgent) {
-        if (typeof window !== 'undefined' && window.location.pathname !== '/loans') {
-          window.history.replaceState({}, '', '/loans');
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/emi')) {
+          window.history.replaceState({}, '', '/');
         }
       }
       return null;

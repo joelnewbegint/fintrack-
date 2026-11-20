@@ -6,12 +6,9 @@ import {
   Lock,
   User,
   ArrowRight,
-  ShieldCheck,
   Globe,
   Eye,
   EyeOff,
-  Briefcase,
-  Layers,
   Check,
 } from 'lucide-react';
 
@@ -37,34 +34,19 @@ export const Login = () => {
       if (role === 'emi_agent') {
         try {
           window.history.pushState({}, '', '/emi');
+          window.dispatchEvent(new PopStateEvent('popstate'));
         } catch (e) {}
-      } else if (role === 'loan_agent' || role === 'agent') {
+      } else {
+        // Owner, Admin, Loan Agent go directly to main dashboard page (/)
         try {
-          window.history.pushState({}, '', '/loans');
-        } catch (e) {}
-      } else if (role === 'owner' || role === 'admin') {
-        try {
-          window.history.pushState({}, '', '/loans');
+          window.history.pushState({}, '', '/');
+          window.dispatchEvent(new PopStateEvent('popstate'));
         } catch (e) {}
       }
     } catch (err) {
       setError(err.message || 'Login failed. Please check credentials.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleQuickRole = (roleType) => {
-    setError('');
-    if (roleType === 'owner') {
-      setIdentifier('owner');
-      setPassword('admin123');
-    } else if (roleType === 'loan_agent') {
-      setIdentifier('loanagent');
-      setPassword('loan123');
-    } else if (roleType === 'emi_agent') {
-      setIdentifier('emiagent');
-      setPassword('emi123');
     }
   };
 
@@ -161,7 +143,7 @@ export const Login = () => {
                 type="text"
                 required
                 autoComplete="username"
-                placeholder="owner / loanagent / emiagent"
+                placeholder={lang === 'ta' ? 'பயனர்பெயர் அல்லது மின்னஞ்சல்' : 'Username or Email'}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full pl-10 pr-4 h-12 rounded-xl bg-white/90 border border-orange-200/80 text-slate-900 text-xs font-medium outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-300/40 transition placeholder:text-slate-400"
@@ -195,9 +177,9 @@ export const Login = () => {
             </div>
           </div>
 
-          {/* Remember me checkbox */}
-          <div className="flex items-center justify-between pt-1">
-            <label className="flex items-center space-x-2 cursor-pointer select-none">
+          {/* Keep me signed in option */}
+          <div className="flex items-center justify-between pt-1 pb-1">
+            <label className="flex items-center space-x-2.5 cursor-pointer select-none group">
               <input
                 type="checkbox"
                 checked={rememberMe}
@@ -205,21 +187,26 @@ export const Login = () => {
                 className="sr-only"
               />
               <div
-                className={`w-4 h-4 rounded border flex items-center justify-center transition ${
+                className={`w-5 h-5 rounded-lg border flex items-center justify-center transition shadow-xs ${
                   rememberMe
-                    ? 'bg-orange-500 border-orange-500 text-white'
-                    : 'bg-white border-slate-300 text-transparent'
+                    ? 'bg-gradient-to-tr from-orange-500 to-amber-500 border-orange-500 text-white'
+                    : 'bg-white/90 border-slate-300 group-hover:border-orange-400 text-transparent'
                 }`}
               >
-                <Check className="w-3 h-3 stroke-[3]" />
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
               </div>
-              <span className="text-xs text-slate-600 font-medium">
-                {lang === 'ta' ? 'நினைவில் கொள்க (30 நாட்கள்)' : 'Remember me (30-day session)'}
-              </span>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-700 group-hover:text-slate-900 transition">
+                  {lang === 'ta' ? 'உள்நுழைந்தே இருக்கவும்' : 'Keep me signed in'}
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {lang === 'ta' ? 'அடுத்த முறை தானாக திறக்கும்' : 'Stay signed in on this device'}
+                </span>
+              </div>
             </label>
 
-            <span className="text-[11px] text-sky-600 font-semibold bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">
-              Session Protected
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 shadow-xs">
+              Secure
             </span>
           </div>
 
@@ -243,59 +230,6 @@ export const Login = () => {
             )}
           </button>
         </form>
-
-        {/* 1-Tap Quick Credentials for Testing the 3 Roles */}
-        <div className="pt-4 border-t border-orange-100/80 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">
-              {lang === 'ta' ? 'பயனர் பிரிவுகள் (3 Roles)' : 'Switch Login Role (3 Roles)'}
-            </p>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
-              1-Tap Test
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickRole('owner')}
-              className="p-2 rounded-xl border border-orange-200/70 bg-white/70 hover:bg-orange-50 hover:border-orange-400 transition text-left group"
-            >
-              <div className="flex items-center space-x-1 mb-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-orange-500" />
-                <span className="text-[11px] font-bold text-slate-800">Owner</span>
-              </div>
-              <p className="text-[10px] text-slate-500 truncate">Loans + EMI</p>
-              <span className="text-[9px] text-orange-600 font-mono">owner</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickRole('loan_agent')}
-              className="p-2 rounded-xl border border-sky-200/70 bg-white/70 hover:bg-sky-50 hover:border-sky-400 transition text-left group"
-            >
-              <div className="flex items-center space-x-1 mb-1">
-                <Briefcase className="w-3.5 h-3.5 text-sky-500" />
-                <span className="text-[11px] font-bold text-slate-800">Loan Agent</span>
-              </div>
-              <p className="text-[10px] text-slate-500 truncate">Daily/Wk/Mo</p>
-              <span className="text-[9px] text-sky-600 font-mono">loanagent</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickRole('emi_agent')}
-              className="p-2 rounded-xl border border-emerald-200/70 bg-white/70 hover:bg-emerald-50 hover:border-emerald-400 transition text-left group"
-            >
-              <div className="flex items-center space-x-1 mb-1">
-                <Layers className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="text-[11px] font-bold text-slate-800">EMI Agent</span>
-              </div>
-              <p className="text-[10px] text-slate-500 truncate">EMI Only</p>
-              <span className="text-[9px] text-emerald-700 font-mono">emiagent</span>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

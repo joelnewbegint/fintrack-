@@ -154,15 +154,17 @@ export function App() {
           }
           setActiveTab('loans');
           setOwnerMode('loans');
-        } else if (path === '/overview') {
+        } else if (path === '/overview' || path === '/' || path === '/dashboard' || path === '') {
           if (isEmiAgent) {
             window.history.replaceState({}, '', '/emi');
             setOwnerMode('emi');
             setActiveEmiTab('dashboard');
             return;
           }
-          window.history.replaceState({}, '', '/loans');
-          setActiveTab('loans');
+          if (path === '/overview') {
+            window.history.replaceState({}, '', '/');
+          }
+          setActiveTab('dashboard');
           setOwnerMode('loans');
         }
       } catch (e) {}
