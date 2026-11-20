@@ -219,3 +219,4 @@ export const EMICustomers = ({ onOpenNewLoan, onViewCustomerLoans }) => {
 };
 
 export default EMICustomers;
+

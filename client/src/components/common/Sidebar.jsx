@@ -68,15 +68,12 @@ export const Sidebar = ({
       { id: 'settings', en: 'Settings', ta: 'அமைப்புகள்', icon: SettingsIcon },
     ];
   } else {
-    // Owner: Complete combined interface
+    // Owner: Loans module interface (EMI has its own dedicated /emi panel)
     navItems = [
-      { id: 'overview', en: 'Master Overview', ta: 'ஒருங்கிணைந்த மேலோட்டம்', icon: LayoutDashboard },
-      { id: 'dashboard', en: 'Loans Dashboard', ta: 'கடன் முகப்பு', icon: Coins },
+      { id: 'dashboard', en: 'Dashboard', ta: 'கடன் முகப்பு', icon: LayoutDashboard },
       { id: 'customers', en: 'Customers', ta: 'வாடிக்கையாளர்கள்', icon: Users },
       { id: 'loans', en: 'Loans', ta: 'கடன் கணக்குகள்', icon: Coins },
       { id: 'payments', en: 'Payments', ta: 'தவணை வசூல்', icon: Receipt },
-      { id: 'emiDashboard', en: 'EMI Dashboard', ta: 'தவணை முகப்பு', icon: Layers },
-      { id: 'emiList', en: 'EMI Accounts', ta: 'மாத தவணை', icon: Layers },
       { id: 'agents', en: 'Staff & Agents', ta: 'பணியாளர்கள்', icon: UserCheck },
       { id: 'expenses', en: 'Expenses', ta: 'செலவுகள்', icon: ArrowLeftRight },
       { id: 'investments', en: 'Investments', ta: 'முதலீடுகள்', icon: TrendingUp },
@@ -96,7 +93,7 @@ export const Sidebar = ({
       <div className="flex items-center justify-between pb-2 px-1">
         {!isCollapsed && (
           <span className="text-[10px] uppercase font-black tracking-widest text-sky-600/70 dark:text-sky-400/70">
-            {isEmiAgent ? 'EMI NAVIGATION' : isLoanAgent ? 'LOAN NAVIGATION' : 'MASTER NAVIGATION'}
+            {isEmiAgent ? 'EMI NAVIGATION' : isLoanAgent ? 'LOAN NAVIGATION' : 'LOANS NAVIGATION'}
           </span>
         )}
         {onToggleCollapsed && (

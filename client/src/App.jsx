@@ -54,20 +54,20 @@ export function App() {
       if (stored) {
         const u = JSON.parse(stored);
         if (u.role === 'emi_agent') return 'emiDashboard';
-        if (u.role === 'owner' || u.role === 'admin') return 'overview';
+        if (u.role === 'owner' || u.role === 'admin') return 'dashboard';
       }
     } catch (e) {}
     return 'dashboard';
   });
 
-  // Owner 3-way mode switch: 'overview' | 'loans' | 'emi'
+  // Owner 2-way mode switch: 'loans' | 'emi'
   const [ownerMode, setOwnerMode] = useState(() => {
     try {
       const stored = localStorage.getItem('fintrack_user');
       if (stored) {
         const u = JSON.parse(stored);
         if (u.role === 'emi_agent') return 'emi';
-        if (u.role === 'owner' || u.role === 'admin') return 'overview';
+        if (u.role === 'owner' || u.role === 'admin') return 'loans';
       }
     } catch (e) {}
     return 'loans';
@@ -161,14 +161,9 @@ export function App() {
             setActiveEmiTab('dashboard');
             return;
           }
-          if (isLoanAgent) {
-            window.history.replaceState({}, '', '/loans');
-            setActiveTab('loans');
-            setOwnerMode('loans');
-            return;
-          }
-          setActiveTab('overview');
-          setOwnerMode('overview');
+          window.history.replaceState({}, '', '/loans');
+          setActiveTab('loans');
+          setOwnerMode('loans');
         }
       } catch (e) {}
     };
@@ -333,17 +328,13 @@ export function App() {
     setSelectedCustomerId(null);
     setSelectedEMILoanId(null);
 
-    if (tab === 'overview') {
-      setOwnerMode('overview');
-      setActiveTab('overview');
-      try { window.history.pushState({}, '', '/overview'); } catch (e) {}
-    } else if (tab === 'emiDashboard' || tab === 'emiList') {
+    if (tab === 'emiDashboard' || tab === 'emiList') {
       setOwnerMode('emi');
       setActiveEmiTab(tab === 'emiList' ? 'list' : 'dashboard');
       try { window.history.pushState({}, '', tab === 'emiList' ? '/emi/list' : '/emi'); } catch (e) {}
     } else {
       setOwnerMode('loans');
-      setActiveTab(tab);
+      setActiveTab(tab === 'overview' ? 'dashboard' : tab);
       try { window.history.pushState({}, '', tab === 'loans' ? '/loans' : `/${tab}`); } catch (e) {}
     }
   };
@@ -520,7 +511,7 @@ export function App() {
         onToggleSidebar={toggleSidebar}
       />
 
-      {/* OWNER COMBINED 3-WAY MODE SWITCHER (Peach & Sky Glass Aesthetic) */}
+      {/* OWNER 2-WAY MODE SWITCHER (Loans / EMI) */}
       {isOwner && (
         <div className="w-full flex justify-center py-2 px-3 relative z-30">
           <div
@@ -532,20 +523,6 @@ export function App() {
               boxShadow: '0 4px 20px -2px rgba(249, 115, 22, 0.12)',
             }}
           >
-            <button
-              onClick={() => {
-                setOwnerMode('overview');
-                handleTabChange('overview');
-              }}
-              className={`px-4 py-1.5 rounded-xl text-xs font-black transition flex items-center space-x-1.5 ${
-                ownerMode === 'overview'
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-orange-50/50'
-              }`}
-            >
-              <span>👑 Overview / மேலோட்டம்</span>
-            </button>
-
             <button
               onClick={() => {
                 setOwnerMode('loans');

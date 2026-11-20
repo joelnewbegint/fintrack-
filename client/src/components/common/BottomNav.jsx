@@ -67,11 +67,11 @@ export const BottomNav = ({ activeTab, setActiveTab, onOpenMoreSheet }) => {
       { id: 'more', label: lang === 'ta' ? 'கூடுதல்' : 'More', icon: MoreHorizontal, isMore: true },
     ];
   } else {
-    // Owner
+    // Owner (Loans navigation; EMI has its own EmiLayout bottom nav)
     tabs = [
-      { id: 'overview', label: lang === 'ta' ? 'மேலோட்டம்' : 'Overview', icon: LayoutDashboard },
-      { id: 'dashboard', label: lang === 'ta' ? 'கடன்' : 'Loans', icon: Coins },
-      { id: 'emiDashboard', label: lang === 'ta' ? 'EMI' : 'EMI', icon: Layers },
+      { id: 'dashboard', label: lang === 'ta' ? 'முகப்பு' : 'Home', icon: LayoutDashboard },
+      { id: 'customers', label: lang === 'ta' ? 'வாடிக்கையாளர்' : 'Customers', icon: Users },
+      { id: 'loans', label: lang === 'ta' ? 'கடன்' : 'Loans', icon: Banknote },
       { id: 'payments', label: lang === 'ta' ? 'வசூல்' : 'Collect', icon: Receipt },
       { id: 'more', label: lang === 'ta' ? 'கூடுதல்' : 'More', icon: MoreHorizontal, isMore: true },
     ];

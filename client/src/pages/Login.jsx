@@ -44,7 +44,7 @@ export const Login = () => {
         } catch (e) {}
       } else if (role === 'owner' || role === 'admin') {
         try {
-          window.history.pushState({}, '', '/overview');
+          window.history.pushState({}, '', '/loans');
         } catch (e) {}
       }
     } catch (err) {

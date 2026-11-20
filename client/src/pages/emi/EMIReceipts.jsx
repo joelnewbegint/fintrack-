@@ -301,3 +301,4 @@ export const EMIReceipts = () => {
 };
 
 export default EMIReceipts;
+
