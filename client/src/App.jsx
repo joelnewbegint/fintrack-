@@ -491,6 +491,14 @@ export function App() {
 
       {/* Top App Bar */}
       <Navbar
+        onSwitchToEMI={() => {
+          setSelectedLoanId(null);
+          setOwnerMode('emi');
+          setActiveEmiTab('dashboard');
+          try {
+            window.history.pushState({}, '', '/emi');
+          } catch (e) {}
+        }}
         onOpenSearch={() => {
           const input = document.querySelector('input[type="text"]');
           if (input) input.focus();

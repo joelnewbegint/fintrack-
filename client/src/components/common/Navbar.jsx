@@ -34,6 +34,7 @@ import {
   RotateCcw,
   X,
 } from 'lucide-react';
+import SingleSwapChip from './SingleSwapChip';
 
 export const Navbar = ({
   onToggleMobileMenu,
@@ -46,6 +47,7 @@ export const Navbar = ({
   unreadNotificationsCount = 0,
   isSidebarCollapsed = false,
   onToggleSidebar,
+  onSwitchToEMI,
 }) => {
   const { user, logout, isOwner, isClient } = useAuth();
   const { lang, toggleLanguage, t } = useLanguage();
@@ -61,6 +63,17 @@ export const Navbar = ({
   const [selectedAgent, setSelectedAgent] = useState('all');
   const moreMenuRef = useRef(null);
   const userMenuRef = useRef(null);
+
+  const handleSwitchToEmi = () => {
+    if (onSwitchToEMI) {
+      onSwitchToEMI();
+    } else {
+      try {
+        window.history.pushState({}, '', '/emi');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      } catch (e) {}
+    }
+  };
 
   useEffect(() => {
     if (isOwner) {
@@ -190,6 +203,16 @@ export const Navbar = ({
             </button>
           </div>
         </div>
+
+        {/* Mobile (Owner Only): Single Swap Chip Toggle */}
+        {isOwner && (
+          <div className="flex items-center justify-center pb-2 px-3 pt-1 border-t border-slate-100 dark:border-slate-800">
+            <SingleSwapChip
+              activeMode="loans"
+              onToggle={handleSwitchToEmi}
+            />
+          </div>
+        )}
       </header>
     );
   }
@@ -254,25 +277,13 @@ export const Navbar = ({
           </button>
         </div>
 
-        {/* Center (Owner Only): Loans / EMI Switcher */}
+        {/* Center (Owner Only): Single Swap Chip Toggle */}
         {isOwner && (
-          <div className="hidden md:flex items-center p-1 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-xs shrink-0">
-            <button
-              className="px-3 py-1 rounded-xl text-xs font-bold bg-sky-500 text-white shadow-xs flex items-center space-x-1.5 cursor-default"
-            >
-              <span>💼 Loans</span>
-            </button>
-            <button
-              onClick={() => {
-                try {
-                  window.history.pushState({}, '', '/emi');
-                  window.dispatchEvent(new PopStateEvent('popstate'));
-                } catch (e) {}
-              }}
-              className="px-3 py-1 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-slate-700 transition flex items-center space-x-1.5"
-            >
-              <span>📊 EMI</span>
-            </button>
+          <div className="hidden md:flex items-center shrink-0">
+            <SingleSwapChip
+              activeMode="loans"
+              onToggle={handleSwitchToEmi}
+            />
           </div>
         )}
 

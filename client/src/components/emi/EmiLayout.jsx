@@ -22,6 +22,7 @@ import {
   CreditCard,
   Building,
 } from 'lucide-react';
+import SingleSwapChip from '../common/SingleSwapChip';
 
 export const EmiLayout = ({
   activeEmiTab,
@@ -94,20 +95,13 @@ export const EmiLayout = ({
             </div>
           </div>
 
-          {/* Center (Owner Only): Loans / EMI Switcher */}
+          {/* Center (Owner Only): Single Swap Chip Toggle */}
           {isOwner && (
-            <div className="hidden md:flex items-center p-1 rounded-2xl bg-white/90 border border-orange-200 shadow-xs">
-              <button
-                onClick={onSwitchToLoans}
-                className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-1.5"
-              >
-                <span>💼 Loans / கடன்</span>
-              </button>
-              <button
-                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xs flex items-center space-x-1.5 cursor-default"
-              >
-                <span>📊 EMI / மாத தவணை</span>
-              </button>
+            <div className="hidden md:flex items-center">
+              <SingleSwapChip
+                activeMode="emi"
+                onToggle={onSwitchToLoans}
+              />
             </div>
           )}
 
@@ -159,22 +153,13 @@ export const EmiLayout = ({
           </div>
         </div>
 
-        {/* Mobile Sub-strip: Loans / EMI switch for Owner on small screens */}
+        {/* Mobile Sub-strip: Loans / EMI Single Swap Chip for Owner on small screens */}
         {isOwner && (
           <div className="flex md:hidden items-center justify-center pb-2 px-3 pt-1 border-t border-orange-100/60">
-            <div className="inline-flex p-0.5 rounded-xl bg-orange-100/60 border border-orange-200 text-xs font-bold">
-              <button
-                onClick={onSwitchToLoans}
-                className="px-3 py-1 rounded-lg text-slate-600 hover:text-slate-900"
-              >
-                💼 Loans
-              </button>
-              <button
-                className="px-3 py-1 rounded-lg bg-orange-500 text-white shadow-xs"
-              >
-                📊 EMI
-              </button>
-            </div>
+            <SingleSwapChip
+              activeMode="emi"
+              onToggle={onSwitchToLoans}
+            />
           </div>
         )}
       </header>
