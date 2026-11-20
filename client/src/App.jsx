@@ -31,9 +31,14 @@ import Calendar from './pages/Calendar';
 import Settings from './pages/Settings';
 import Agents from './pages/Agents';
 import OverviewDashboard from './pages/OverviewDashboard';
+import ProtectedRoute from './components/common/ProtectedRoute';
+import EmiLayout from './components/emi/EmiLayout';
 import EMIDashboard from './pages/emi/EMIDashboard';
 import EMIList from './pages/emi/EMIList';
 import EMIDetail from './pages/emi/EMIDetail';
+import EMIReceipts from './pages/emi/EMIReceipts';
+import EMICustomers from './pages/emi/EMICustomers';
+import EMIReports from './pages/emi/EMIReports';
 import NewEMILoanModal from './pages/emi/NewEMILoanModal';
 import CollectEMIModal from './pages/emi/CollectEMIModal';
 import api from './services/api';
@@ -74,27 +79,96 @@ export function App() {
   const [loanFilterType, setLoanFilterType] = useState('all');
   const [emiListFilter, setEmiListFilter] = useState('active');
   const [selectedScheme, setSelectedScheme] = useState('daily');
+  const [activeEmiTab, setActiveEmiTab] = useState(() => {
+    try {
+      const path = window.location.pathname.toLowerCase();
+      if (path === '/emi/list' || path === '/emi/accounts') return 'list';
+      if (path === '/emi/receipts') return 'receipts';
+      if (path === '/emi/customers') return 'customers';
+      if (path === '/emi/reports') return 'reports';
+    } catch (e) {}
+    return 'dashboard';
+  });
 
-  // Synchronize URL route with scheme loans pages (/loans/daily, /loans/weekly, /loans/monthly)
+  // Synchronize URL route with scheme loans pages and dedicated EMI routes
   useEffect(() => {
     const handleUrlRouting = () => {
       try {
         const path = window.location.pathname.toLowerCase();
-        if (path === '/loans/daily') {
+
+        if (path === '/emi' || path.startsWith('/emi/')) {
+          if (isLoanAgent) {
+            window.history.replaceState({}, '', '/loans');
+            setActiveTab('loans');
+            setOwnerMode('loans');
+            return;
+          }
+          setOwnerMode('emi');
+          if (path === '/emi/list' || path === '/emi/accounts') {
+            setActiveEmiTab('list');
+          } else if (path === '/emi/receipts') {
+            setActiveEmiTab('receipts');
+          } else if (path === '/emi/customers') {
+            setActiveEmiTab('customers');
+          } else if (path === '/emi/reports') {
+            setActiveEmiTab('reports');
+          } else {
+            setActiveEmiTab('dashboard');
+          }
+        } else if (path === '/loans/daily') {
+          if (isEmiAgent) {
+            window.history.replaceState({}, '', '/emi');
+            setOwnerMode('emi');
+            setActiveEmiTab('dashboard');
+            return;
+          }
           setSelectedScheme('daily');
           setActiveTab('scheme-loans');
           setOwnerMode('loans');
         } else if (path === '/loans/weekly') {
+          if (isEmiAgent) {
+            window.history.replaceState({}, '', '/emi');
+            setOwnerMode('emi');
+            setActiveEmiTab('dashboard');
+            return;
+          }
           setSelectedScheme('weekly');
           setActiveTab('scheme-loans');
           setOwnerMode('loans');
         } else if (path === '/loans/monthly') {
+          if (isEmiAgent) {
+            window.history.replaceState({}, '', '/emi');
+            setOwnerMode('emi');
+            setActiveEmiTab('dashboard');
+            return;
+          }
           setSelectedScheme('monthly');
           setActiveTab('scheme-loans');
           setOwnerMode('loans');
         } else if (path === '/loans') {
+          if (isEmiAgent) {
+            window.history.replaceState({}, '', '/emi');
+            setOwnerMode('emi');
+            setActiveEmiTab('dashboard');
+            return;
+          }
           setActiveTab('loans');
           setOwnerMode('loans');
+        } else if (path === '/overview') {
+          if (isEmiAgent) {
+            window.history.replaceState({}, '', '/emi');
+            setOwnerMode('emi');
+            setActiveEmiTab('dashboard');
+            return;
+          }
+          if (isLoanAgent) {
+            window.history.replaceState({}, '', '/loans');
+            setActiveTab('loans');
+            setOwnerMode('loans');
+            return;
+          }
+          setActiveTab('overview');
+          setOwnerMode('overview');
         }
       } catch (e) {}
     };
@@ -102,26 +176,31 @@ export function App() {
     handleUrlRouting();
     window.addEventListener('popstate', handleUrlRouting);
     return () => window.removeEventListener('popstate', handleUrlRouting);
-  }, []);
+  }, [isLoanAgent, isEmiAgent]);
 
   // Enforce role isolation & redirect to appropriate default on role mismatch
   useEffect(() => {
     if (!user) return;
 
     if (isEmiAgent) {
-      if (!['emiDashboard', 'emiList', 'settings'].includes(activeTab)) {
-        setActiveTab('emiDashboard');
+      if (ownerMode !== 'emi') setOwnerMode('emi');
+      if (typeof window !== 'undefined' && !window.location.pathname.toLowerCase().startsWith('/emi')) {
+        window.history.replaceState({}, '', '/emi');
       }
     } else if (isLoanAgent) {
+      if (ownerMode === 'emi') setOwnerMode('loans');
       if (['overview', 'emiDashboard', 'emiList', 'agents', 'investments', 'expenses'].includes(activeTab)) {
         setActiveTab('dashboard');
+      }
+      if (typeof window !== 'undefined' && window.location.pathname.toLowerCase().startsWith('/emi')) {
+        window.history.replaceState({}, '', '/loans');
       }
     } else if (isClient) {
       if (!['dashboard', 'loans', 'payments', 'settings'].includes(activeTab)) {
         setActiveTab('dashboard');
       }
     }
-  }, [user, activeTab, isEmiAgent, isLoanAgent, isClient]);
+  }, [user, isEmiAgent, isLoanAgent, isClient, ownerMode, activeTab]);
 
   // Quick Action Modals
   const [showGlobalLoanModal, setShowGlobalLoanModal] = useState(false);
@@ -253,11 +332,20 @@ export function App() {
     setSelectedLoanId(null);
     setSelectedCustomerId(null);
     setSelectedEMILoanId(null);
-    setActiveTab(tab);
 
-    if (tab === 'overview') setOwnerMode('overview');
-    else if (tab === 'emiDashboard' || tab === 'emiList') setOwnerMode('emi');
-    else if (tab === 'dashboard' || tab === 'loans' || tab === 'scheme-loans') setOwnerMode('loans');
+    if (tab === 'overview') {
+      setOwnerMode('overview');
+      setActiveTab('overview');
+      try { window.history.pushState({}, '', '/overview'); } catch (e) {}
+    } else if (tab === 'emiDashboard' || tab === 'emiList') {
+      setOwnerMode('emi');
+      setActiveEmiTab(tab === 'emiList' ? 'list' : 'dashboard');
+      try { window.history.pushState({}, '', tab === 'emiList' ? '/emi/list' : '/emi'); } catch (e) {}
+    } else {
+      setOwnerMode('loans');
+      setActiveTab(tab);
+      try { window.history.pushState({}, '', tab === 'loans' ? '/loans' : `/${tab}`); } catch (e) {}
+    }
   };
 
   const handleNavigateToScheme = (scheme) => {
@@ -281,14 +369,133 @@ export function App() {
     } catch (e) {}
   };
 
+  // DEDICATED EMI PANEL VIEW (/emi) WITH STRICT ROLE BOUNDARY
+  if (user && (isEmiAgent || ownerMode === 'emi')) {
+    return (
+      <ProtectedRoute allowedRoles={['owner', 'admin', 'emi_agent']}>
+        <EmiLayout
+          activeEmiTab={activeEmiTab}
+          setActiveEmiTab={(tab) => {
+            setSelectedEMILoanId(null);
+            setActiveEmiTab(tab);
+            try {
+              window.history.pushState({}, '', tab === 'dashboard' ? '/emi' : `/emi/${tab}`);
+            } catch (e) {}
+          }}
+          onOpenCollectModal={() => {
+            setGlobalEmiPayItem(null);
+            setShowGlobalEmiPayModal(true);
+          }}
+          onOpenNewLoanModal={() => setShowNewEMILoanModal(true)}
+          onSwitchToLoans={() => {
+            setSelectedEMILoanId(null);
+            setOwnerMode('loans');
+            setActiveTab('loans');
+            try {
+              window.history.pushState({}, '', '/loans');
+            } catch (e) {}
+          }}
+        >
+          {selectedEMILoanId ? (
+            <EMIDetail
+              loanId={selectedEMILoanId}
+              onBack={() => setSelectedEMILoanId(null)}
+              onOpenCollectModal={(item) => {
+                setGlobalEmiPayItem(item);
+                setShowGlobalEmiPayModal(true);
+              }}
+            />
+          ) : activeEmiTab === 'dashboard' ? (
+            <EMIDashboard
+              onOpenNewEMILoan={() => setShowNewEMILoanModal(true)}
+              onOpenCollectModal={(item) => {
+                setGlobalEmiPayItem(item || {});
+                setShowGlobalEmiPayModal(true);
+              }}
+              onViewLoan={(id) => setSelectedEMILoanId(id)}
+              onNavigateToList={(tab) => {
+                setEmiListFilter(tab || 'active');
+                setActiveEmiTab('list');
+                try {
+                  window.history.pushState({}, '', '/emi/list');
+                } catch (e) {}
+              }}
+              onNavigateToCustomers={() => {
+                setActiveEmiTab('customers');
+                try {
+                  window.history.pushState({}, '', '/emi/customers');
+                } catch (e) {}
+              }}
+            />
+          ) : activeEmiTab === 'list' ? (
+            <EMIList
+              initialTab={emiListFilter}
+              onViewLoan={(id) => setSelectedEMILoanId(id)}
+              onOpenNewLoan={() => setShowNewEMILoanModal(true)}
+              onOpenCollectModal={(item) => {
+                setGlobalEmiPayItem(item || {});
+                setShowGlobalEmiPayModal(true);
+              }}
+            />
+          ) : activeEmiTab === 'receipts' ? (
+            <EMIReceipts />
+          ) : activeEmiTab === 'customers' ? (
+            <EMICustomers
+              onOpenNewLoan={() => setShowNewEMILoanModal(true)}
+              onViewCustomerLoans={(id) => setSelectedEMILoanId(id)}
+            />
+          ) : activeEmiTab === 'reports' ? (
+            <EMIReports />
+          ) : (
+            <EMIDashboard
+              onOpenNewEMILoan={() => setShowNewEMILoanModal(true)}
+              onOpenCollectModal={(item) => {
+                setGlobalEmiPayItem(item || {});
+                setShowGlobalEmiPayModal(true);
+              }}
+              onViewLoan={(id) => setSelectedEMILoanId(id)}
+              onNavigateToList={(tab) => {
+                setEmiListFilter(tab || 'active');
+                setActiveEmiTab('list');
+              }}
+            />
+          )}
+
+          {/* EMI Modals */}
+          <NewEMILoanModal
+            isOpen={showNewEMILoanModal}
+            onClose={() => setShowNewEMILoanModal(false)}
+            onSuccess={() => {
+              setShowNewEMILoanModal(false);
+              setActiveEmiTab('list');
+            }}
+          />
+
+          <CollectEMIModal
+            isOpen={showGlobalEmiPayModal}
+            loanItem={globalEmiPayItem}
+            onClose={() => {
+              setShowGlobalEmiPayModal(false);
+              setGlobalEmiPayItem(null);
+            }}
+            onSuccess={() => {
+              fetchNotificationsCount();
+            }}
+          />
+        </EmiLayout>
+      </ProtectedRoute>
+    );
+  }
+
   return (
-    <div
-      className={`min-h-screen flex flex-col font-sans relative overflow-x-hidden ${
-        isMobile && !isRealPhone
-          ? 'max-w-[440px] mx-auto border-x border-orange-200/40 shadow-2xl'
-          : 'w-full'
-      }`}
-    >
+    <ProtectedRoute allowedRoles={['owner', 'admin', 'loan_agent', 'agent', 'client']}>
+      <div
+        className={`min-h-screen flex flex-col font-sans relative overflow-x-hidden ${
+          isMobile && !isRealPhone
+            ? 'max-w-[440px] mx-auto border-x border-orange-200/40 shadow-2xl'
+            : 'w-full'
+        }`}
+      >
       <BackgroundOrbs />
 
       {/* Top App Bar */}
@@ -356,7 +563,10 @@ export function App() {
             <button
               onClick={() => {
                 setOwnerMode('emi');
-                handleTabChange('emiDashboard');
+                setActiveEmiTab('dashboard');
+                try {
+                  window.history.pushState({}, '', '/emi');
+                } catch (e) {}
               }}
               className={`px-4 py-1.5 rounded-xl text-xs font-black transition flex items-center space-x-1.5 ${
                 ownerMode === 'emi'
@@ -675,6 +885,7 @@ export function App() {
         />
       )}
     </div>
+  </ProtectedRoute>
   );
 }
 

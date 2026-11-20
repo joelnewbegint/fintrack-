@@ -18,6 +18,9 @@ import {
   ChevronRight,
   Shield,
   CreditCard,
+  Receipt,
+  Share2,
+  X,
 } from 'lucide-react';
 import { openWhatsApp, generateEMIWhatsAppMessage } from '../../utils/emiWhatsapp';
 import { generateEMIAgreementPdf } from '../../utils/emiAgreementPdf';
@@ -47,6 +50,71 @@ export const EMIDetail = ({
   const [selectedInstNo, setSelectedInstNo] = useState(null);
   const [newDueDate, setNewDueDate] = useState('');
   const [rescheduleReason, setRescheduleReason] = useState('');
+
+  // Receipt popup modal state
+  const [selectedReceiptForPopup, setSelectedReceiptForPopup] = useState(null);
+
+  const handlePrintSlip = (p) => {
+    const printWindow = window.open('', '_blank', 'width=350,height=550');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>EMI Receipt - ${p.receiptNo || 'VK'}</title>
+          <style>
+            body { font-family: monospace; padding: 15px; font-size: 12px; color: #111; }
+            .center { text-align: center; }
+            .bold { font-weight: bold; }
+            .divider { border-top: 1px dashed #444; margin: 8px 0; }
+            .row { display: flex; justify-content: space-between; margin: 3px 0; }
+            .total { font-size: 15px; font-weight: bold; margin: 8px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="center bold" style="font-size: 16px;">VK BANKER'S & FINANCE</div>
+          <div class="center">Coimbatore, Tamil Nadu</div>
+          <div class="center bold" style="font-size: 11px; margin-top: 3px;">MONTHLY EMI PAYMENT RECEIPT</div>
+          <div class="divider"></div>
+          <div class="row"><span>Receipt No:</span><span class="bold">${p.receiptNo || 'N/A'}</span></div>
+          <div class="row"><span>Date:</span><span>${new Date(p.paymentDate || Date.now()).toLocaleString()}</span></div>
+          <div class="row"><span>EMI No:</span><span class="bold">${loan?.emiNo || 'N/A'}</span></div>
+          <div class="row"><span>Customer:</span><span class="bold">${loan?.customerName || 'N/A'}</span></div>
+          <div class="row"><span>Phone:</span><span>${loan?.customerPhone || 'N/A'}</span></div>
+          <div class="divider"></div>
+          <div class="row"><span>Installment:</span><span>#${p.installmentNo || 1}</span></div>
+          <div class="row"><span>Payment Mode:</span><span class="bold" style="text-transform:uppercase;">${p.mode || 'cash'}</span></div>
+          <div class="row total"><span>Amount Paid:</span><span>₹${Number(p.amount || 0).toLocaleString('en-IN')}</span></div>
+          <div class="divider"></div>
+          <div class="row"><span>Collected By:</span><span>${p.collectedByName || user?.name || 'Authorized Staff'}</span></div>
+          <div class="divider"></div>
+          <div class="center" style="font-size: 10px; margin-top: 10px;">Thank you for your prompt payment!</div>
+          <div class="center" style="font-size: 9px; color: #666;">VK Banker's Computer Generated Slip</div>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handleShareReceiptWhatsApp = (p) => {
+    if (!loan?.customerPhone) return alert('Customer phone number not available');
+    const msg = `🧾 *VK BANKER'S & FINANCE - EMI RECEIPT*
+──────────────────────
+• *Receipt No:* ${p.receiptNo || 'N/A'}
+• *Loan No:* ${loan.emiNo}
+• *Customer:* ${loan.customerName}
+• *Installment:* #${p.installmentNo || 1}
+• *Paid Amount:* ₹${Number(p.amount).toLocaleString('en-IN')}
+• *Mode:* ${(p.mode || 'cash').toUpperCase()}
+• *Date:* ${new Date(p.paymentDate).toLocaleDateString()}
+• *Remaining Balance:* ₹${Number(loan.remainingBalance || 0).toLocaleString('en-IN')}
+──────────────────────
+நன்றி! Thank you for your payment.
+VK Banker's & Finance, Coimbatore`;
+    openWhatsApp(loan.customerPhone, msg);
+  };
 
   const fetchLoanData = async () => {
     try {
@@ -472,10 +540,37 @@ export const EMIDetail = ({
                       </p>
                     </div>
 
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2">
                       <span className="text-xs font-black text-slate-900">
                         ₹{Number(p.amount).toLocaleString('en-IN')}
                       </span>
+
+                      {/* View Receipt Popup */}
+                      <button
+                        onClick={() => setSelectedReceiptForPopup(p)}
+                        className="p-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 transition"
+                        title="View Receipt Popup"
+                      >
+                        <Receipt className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* WhatsApp Share Receipt */}
+                      <button
+                        onClick={() => handleShareReceiptWhatsApp(p)}
+                        className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 transition"
+                        title="Share Receipt on WhatsApp"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Print Thermal Slip */}
+                      <button
+                        onClick={() => handlePrintSlip(p)}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 transition"
+                        title="Print Thermal Slip"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                      </button>
 
                       {/* Owner-only Payment Reversal */}
                       {isOwner && p.status !== 'reversed' && (
@@ -643,6 +738,92 @@ export const EMIDetail = ({
                 className="flex-1 h-10 rounded-xl bg-orange-500 text-xs font-bold text-white shadow"
               >
                 Save Date
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Receipt Details Popup Modal */}
+      {selectedReceiptForPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div
+            className="w-full max-w-sm rounded-3xl p-6 border shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150"
+            style={{
+              background: 'rgba(255, 255, 255, 0.96)',
+              backdropFilter: 'blur(20px)',
+              borderColor: 'rgba(255, 255, 255, 0.98)',
+              boxShadow: '0 20px 40px -10px rgba(249, 115, 22, 0.25)',
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-orange-100">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+                  <Receipt className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900 leading-tight">Payment Receipt</h4>
+                  <p className="text-[10px] text-slate-500 font-mono">{selectedReceiptForPopup.receiptNo || 'RCP-EMI'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedReceiptForPopup(null)}
+                className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Receipt Summary */}
+            <div className="p-4 rounded-2xl bg-orange-50/50 border border-orange-100/80 space-y-2 text-xs">
+              <div className="flex justify-between text-slate-600">
+                <span>Customer:</span>
+                <span className="font-bold text-slate-900">{loan.customerName}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Loan Account:</span>
+                <span className="font-mono font-bold text-orange-600">{loan.emiNo}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Installment:</span>
+                <span className="font-semibold text-slate-800">#{selectedReceiptForPopup.installmentNo || 1}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Payment Mode:</span>
+                <span className="font-bold uppercase text-slate-800">{selectedReceiptForPopup.mode || 'cash'}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Collected On:</span>
+                <span className="font-medium text-slate-700">{new Date(selectedReceiptForPopup.paymentDate).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Collector:</span>
+                <span className="font-semibold text-slate-800">{selectedReceiptForPopup.collectedByName || 'Authorized Staff'}</span>
+              </div>
+              <div className="pt-2 border-t border-orange-200/60 flex justify-between items-baseline">
+                <span className="font-bold text-slate-800">Paid Amount:</span>
+                <span className="text-lg font-black text-emerald-600">
+                  ₹{Number(selectedReceiptForPopup.amount).toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons: WhatsApp Share & Thermal Print */}
+            <div className="space-y-2 pt-1">
+              <button
+                onClick={() => handleShareReceiptWhatsApp(selectedReceiptForPopup)}
+                className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center space-x-2 shadow-xs active:scale-95"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Share Receipt on WhatsApp</span>
+              </button>
+
+              <button
+                onClick={() => handlePrintSlip(selectedReceiptForPopup)}
+                className="w-full h-10 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition flex items-center justify-center space-x-2 shadow-xs active:scale-95"
+              >
+                <Printer className="w-4 h-4 text-slate-500" />
+                <span>Print Thermal Receipt Slip</span>
               </button>
             </div>
           </div>

@@ -228,6 +228,12 @@ export const getEMIDashboardStats = async (req, res, next) => {
 
     const totalIssuedCount = await EMILoan.countDocuments(agentFilter);
     const activeCount = loans.length;
+    let customersCount = 0;
+    try {
+      customersCount = await EMICustomer.countDocuments(agentFilter);
+    } catch (e) {
+      customersCount = activeCount;
+    }
 
     res.status(200).json({
       success: true,
@@ -242,6 +248,7 @@ export const getEMIDashboardStats = async (req, res, next) => {
         overdueCount: overdueList.length,
         overdueList: overdueList.slice(0, 10), // Top 10 overdue
         activeLoansCount: activeCount,
+        customersCount: customersCount || activeCount,
         loansIssuedCount: totalIssuedCount,
         totalPrincipalLent,
         totalPayable: totalPayableSum,
@@ -279,7 +286,25 @@ export const getEMILoans = async (req, res, next) => {
     }
 
     if (status && status !== 'all') {
-      andConditions.push({ status });
+      if (status === 'due_today') {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+        andConditions.push({
+          status: { $in: ['active', 'overdue'] },
+          schedule: {
+            $elemMatch: {
+              dueDate: { $gte: startOfDay, $lte: endOfDay },
+              status: { $ne: 'paid' },
+            },
+          },
+        });
+      } else if (status === 'completed' || status === 'paid') {
+        andConditions.push({ status: { $in: ['completed', 'foreclosed', 'paid'] } });
+      } else {
+        andConditions.push({ status });
+      }
     }
 
     if (area && area !== 'all') {

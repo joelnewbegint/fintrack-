@@ -32,7 +32,21 @@ export const Login = () => {
 
     try {
       setLoading(true);
-      await login(identifier, password, rememberMe);
+      const loggedInUser = await login(identifier, password, rememberMe);
+      const role = loggedInUser?.role;
+      if (role === 'emi_agent') {
+        try {
+          window.history.pushState({}, '', '/emi');
+        } catch (e) {}
+      } else if (role === 'loan_agent' || role === 'agent') {
+        try {
+          window.history.pushState({}, '', '/loans');
+        } catch (e) {}
+      } else if (role === 'owner' || role === 'admin') {
+        try {
+          window.history.pushState({}, '', '/overview');
+        } catch (e) {}
+      }
     } catch (err) {
       setError(err.message || 'Login failed. Please check credentials.');
     } finally {

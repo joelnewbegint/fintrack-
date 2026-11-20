@@ -35,6 +35,7 @@ export const EMIDashboard = ({
   onOpenCollectModal,
   onViewLoan,
   onNavigateToList,
+  onNavigateToCustomers,
 }) => {
   const { user, isOwner } = useAuth();
   const { lang } = useLanguage();
@@ -152,158 +153,176 @@ export const EMIDashboard = ({
         </div>
       </div>
 
-      {/* Primary KPI Grid (Peach & Sky Glass Cards) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Card 1: Collected Today (Big Hero Card) */}
+      {/* Primary KPI Grid (Today collection, Pending, Overdue, Customers) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Card 1: Today Collection */}
         <div
-          className="col-span-2 sm:col-span-1 rounded-2xl p-4 sm:p-5 border relative overflow-hidden"
+          className="rounded-2xl p-4 sm:p-5 border relative overflow-hidden flex flex-col justify-between"
           style={{
-            background: 'rgba(255, 255, 255, 0.85)',
+            background: 'rgba(255, 255, 255, 0.88)',
             backdropFilter: 'blur(16px)',
             borderColor: 'rgba(255, 255, 255, 0.95)',
-            boxShadow: '0 10px 25px -5px rgba(249, 115, 22, 0.12)',
+            boxShadow: '0 10px 25px -5px rgba(249, 115, 22, 0.14)',
           }}
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold text-orange-700 uppercase tracking-wider">
-              {lang === 'ta' ? 'இன்றைய வசூல்' : 'Collected Today'}
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-              <Wallet className="w-4 h-4" />
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-orange-700 uppercase tracking-wider">
+                {lang === 'ta' ? 'இன்றைய வசூல்' : 'Today Collection'}
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+                <Wallet className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              ₹{(stats?.collectedToday || 0).toLocaleString('en-IN')}
+            </div>
+            <div className="flex items-center space-x-2 mt-1 text-[11px] text-slate-500">
+              <span>Cash: ₹{(stats?.collectedCashToday || 0).toLocaleString('en-IN')}</span>
+              <span>•</span>
+              <span>UPI: ₹{(stats?.collectedUpiToday || 0).toLocaleString('en-IN')}</span>
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            ₹{(stats?.collectedToday || 0).toLocaleString('en-IN')}
-          </div>
-          <div className="flex items-center space-x-2 mt-2 text-[11px] text-slate-500">
-            <span>Cash: ₹{(stats?.collectedCashToday || 0).toLocaleString('en-IN')}</span>
-            <span>•</span>
-            <span>UPI: ₹{(stats?.collectedUpiToday || 0).toLocaleString('en-IN')}</span>
-          </div>
 
-          <button
-            onClick={() => onOpenCollectModal && onOpenCollectModal()}
-            className="w-full mt-3 py-2 rounded-xl text-xs font-bold text-white shadow transition flex items-center justify-center space-x-1.5 active:scale-95"
-            style={{
-              background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-            }}
-          >
-            <span>+ Collect EMI / தவணை வசூல்</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+          <div className="mt-3 pt-2 border-t border-orange-100/70">
+            <div className="flex justify-between text-[10px] font-bold text-slate-600 mb-1">
+              <span>Target: ₹{(stats?.todayTarget || 0).toLocaleString('en-IN')}</span>
+              <span>{progressPercent}%</span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden mb-2.5">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${progressPercent}%`,
+                  background: 'linear-gradient(90deg, #F97316 0%, #EA580C 100%)',
+                }}
+              />
+            </div>
+            <button
+              onClick={() => onOpenCollectModal && onOpenCollectModal()}
+              className="w-full py-1.5 rounded-xl text-xs font-bold text-white shadow-xs transition flex items-center justify-center space-x-1.5 active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+              }}
+            >
+              <span>+ Collect EMI / வசூல்</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        {/* Card 2: Today Due vs Target Progress Ring */}
+        {/* Card 2: Pending (Pending Balance) */}
         <div
           className="rounded-2xl p-4 sm:p-5 border flex flex-col justify-between"
           style={{
-            background: 'rgba(255, 255, 255, 0.85)',
+            background: 'rgba(255, 255, 255, 0.88)',
             backdropFilter: 'blur(16px)',
             borderColor: 'rgba(255, 255, 255, 0.95)',
             boxShadow: '0 8px 20px -4px rgba(56, 189, 248, 0.12)',
           }}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-sky-800 uppercase tracking-wider">
-              {lang === 'ta' ? 'இன்றைய இலக்கு' : 'Due Today'}
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600">
-              <Clock className="w-4 h-4" />
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-sky-800 uppercase tracking-wider">
+                {lang === 'ta' ? 'மீதமுள்ள இருப்பு' : 'Pending'}
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600">
+                <TrendingUp className="w-4 h-4" />
+              </div>
             </div>
-          </div>
-          <div className="my-1">
-            <div className="text-2xl font-black text-slate-900">
-              ₹{(stats?.todayTarget || 0).toLocaleString('en-IN')}
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              ₹{(stats?.pendingBalance || 0).toLocaleString('en-IN')}
             </div>
-            <p className="text-[11px] text-slate-500">
-              {stats?.todayDueCount || 0} borrower(s) due today
+            <p className="text-[11px] text-slate-500 mt-1">
+              Outstanding balance across {stats?.activeLoansCount || 0} active loans
             </p>
           </div>
-          {/* Progress Bar */}
-          <div>
-            <div className="flex justify-between text-[10px] font-bold text-slate-600 mb-1">
-              <span>Collection Target</span>
-              <span>{progressPercent}%</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${progressPercent}%`,
-                  background: 'linear-gradient(90deg, #38BDF8 0%, #0EA5E9 100%)',
-                }}
-              />
-            </div>
+
+          <div className="mt-4 pt-2 border-t border-sky-100/70 text-[11px] font-medium text-slate-600 flex items-center justify-between">
+            <span>Total Lent:</span>
+            <span className="font-bold text-slate-800">₹{(stats?.totalPrincipalLent || 0).toLocaleString('en-IN')}</span>
           </div>
         </div>
 
-        {/* Card 3: Overdue Count & Amount */}
+        {/* Card 3: Overdue */}
         <div
           className="rounded-2xl p-4 sm:p-5 border flex flex-col justify-between"
           style={{
-            background: 'rgba(255, 255, 255, 0.85)',
+            background: 'rgba(255, 255, 255, 0.88)',
             backdropFilter: 'blur(16px)',
             borderColor: 'rgba(255, 255, 255, 0.95)',
             boxShadow: '0 8px 20px -4px rgba(244, 63, 94, 0.12)',
           }}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider">
-              {lang === 'ta' ? 'நிலுவை தவணைகள்' : 'Overdue Count'}
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
-              <AlertTriangle className="w-4 h-4" />
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider">
+                {lang === 'ta' ? 'தாமத தவணைகள்' : 'Overdue'}
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
             </div>
-          </div>
-          <div className="my-1">
-            <div className="text-2xl font-black text-rose-600">
+            <div className="text-2xl sm:text-3xl font-black text-rose-600 tracking-tight">
               {stats?.overdueCount || 0}
             </div>
-            <p className="text-[11px] text-slate-500">
-              Critical overdue customer installments
+            <p className="text-[11px] text-slate-500 mt-1">
+              Unpaid past due customer installments
             </p>
           </div>
-          <button
-            onClick={() => {
-              setFilterChip('overdue');
-              onNavigateToList && onNavigateToList('overdue');
-            }}
-            className="text-[11px] font-bold text-rose-600 hover:text-rose-700 flex items-center space-x-1"
-          >
-            <span>View overdue list</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+
+          <div className="mt-4 pt-2 border-t border-rose-100/70">
+            <button
+              onClick={() => {
+                setFilterChip('overdue');
+                onNavigateToList && onNavigateToList('overdue');
+              }}
+              className="w-full py-1.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition flex items-center justify-center space-x-1"
+            >
+              <span>View Overdue Loans</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        {/* Card 4: Active Loans & Pending Balance */}
+        {/* Card 4: Customers */}
         <div
           className="rounded-2xl p-4 sm:p-5 border flex flex-col justify-between"
           style={{
-            background: 'rgba(255, 255, 255, 0.85)',
+            background: 'rgba(255, 255, 255, 0.88)',
             backdropFilter: 'blur(16px)',
             borderColor: 'rgba(255, 255, 255, 0.95)',
             boxShadow: '0 8px 20px -4px rgba(16, 185, 129, 0.12)',
           }}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
-              {lang === 'ta' ? 'மீதமுள்ள இருப்பு' : 'Pending Balance'}
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
-              <TrendingUp className="w-4 h-4" />
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
+                {lang === 'ta' ? 'வாடிக்கையாளர்கள்' : 'Customers'}
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                <Users className="w-4 h-4" />
+              </div>
             </div>
-          </div>
-          <div className="my-1">
-            <div className="text-2xl font-black text-slate-900">
-              ₹{(stats?.pendingBalance || 0).toLocaleString('en-IN')}
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              {stats?.customersCount || stats?.activeLoansCount || 0}
             </div>
-            <p className="text-[11px] text-slate-500">
-              {stats?.activeLoansCount || 0} active loans ({stats?.loansIssuedCount || 0} total sanctioned)
+            <p className="text-[11px] text-slate-500 mt-1">
+              Active borrowers & borrower records
             </p>
           </div>
-          <div className="text-[11px] font-medium text-slate-600 flex items-center justify-between">
-            <span>Total Lent:</span>
-            <span className="font-bold">₹{(stats?.totalPrincipalLent || 0).toLocaleString('en-IN')}</span>
+
+          <div className="mt-4 pt-2 border-t border-emerald-100/70">
+            <button
+              onClick={() => {
+                if (onNavigateToCustomers) onNavigateToCustomers();
+                else if (onNavigateToList) onNavigateToList('all');
+              }}
+              className="w-full py-1.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold transition flex items-center justify-center space-x-1"
+            >
+              <span>View Customer Directory</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>

@@ -27,12 +27,12 @@ export const EMIList = ({
   const { user, isOwner } = useAuth();
   const { lang } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState(initialTab); // 'active' | 'overdue' | 'completed' | 'all'
+  const [activeTab, setActiveTab] = useState(initialTab); // 'due_today' | 'active' | 'overdue' | 'completed' | 'all'
   const [search, setSearch] = useState('');
   const [areaFilter, setAreaFilter] = useState('all');
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [counts, setCounts] = useState({ active: 0, overdue: 0, completed: 0, all: 0 });
+  const [counts, setCounts] = useState({ due_today: 0, active: 0, overdue: 0, completed: 0, all: 0 });
 
   const fetchLoans = async () => {
     try {
@@ -58,8 +58,19 @@ export const EMIList = ({
       const allRes = await api.getEMILoans({});
       if (allRes.success) {
         const all = allRes.loans || [];
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        const dueTodayCount = all.filter(l => (l.schedule || []).some(s => {
+          const d = new Date(s.dueDate);
+          return d >= todayStart && d <= todayEnd && s.status !== 'paid';
+        })).length;
+
         setCounts({
           all: all.length,
+          due_today: dueTodayCount,
           active: all.filter(l => l.status === 'active').length,
           overdue: all.filter(l => l.status === 'overdue').length,
           completed: all.filter(l => l.status === 'completed' || l.status === 'foreclosed').length,
@@ -128,11 +139,26 @@ export const EMIList = ({
         </div>
       </div>
 
-      {/* Tabs Row (Active / Overdue / Done / All) with Count Badges */}
+      {/* Tabs Row (Due Today / Paid / Overdue / Active / All) with Count Badges */}
       <div className="flex items-center space-x-2 border-b border-orange-100 pb-2 overflow-x-auto">
         <button
+          onClick={() => setActiveTab('due_today')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 shrink-0 ${
+            activeTab === 'due_today'
+              ? 'bg-sky-500 text-white shadow-sm'
+              : 'bg-white/70 text-slate-600 hover:bg-white border border-slate-200/70'
+          }`}
+        >
+          <Clock className="w-3.5 h-3.5" />
+          <span>Due Today / இன்று</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] ${activeTab === 'due_today' ? 'bg-sky-600 text-white' : 'bg-sky-100 text-sky-800'}`}>
+            {counts.due_today}
+          </span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('active')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 shrink-0 ${
             activeTab === 'active'
               ? 'bg-orange-500 text-white shadow-sm'
               : 'bg-white/70 text-slate-600 hover:bg-white border border-slate-200/70'
@@ -146,12 +172,13 @@ export const EMIList = ({
 
         <button
           onClick={() => setActiveTab('overdue')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 shrink-0 ${
             activeTab === 'overdue'
               ? 'bg-rose-500 text-white shadow-sm'
               : 'bg-white/70 text-slate-600 hover:bg-white border border-slate-200/70'
           }`}
         >
+          <AlertTriangle className="w-3.5 h-3.5" />
           <span>Overdue / நிலுவை</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] ${activeTab === 'overdue' ? 'bg-rose-600 text-white' : 'bg-rose-100 text-rose-700'}`}>
             {counts.overdue}
@@ -160,13 +187,14 @@ export const EMIList = ({
 
         <button
           onClick={() => setActiveTab('completed')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 shrink-0 ${
             activeTab === 'completed'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'bg-white/70 text-slate-600 hover:bg-white border border-slate-200/70'
           }`}
         >
-          <span>Completed / முடிந்தது</span>
+          <CheckCircle className="w-3.5 h-3.5" />
+          <span>Paid / முடிந்தது</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] ${activeTab === 'completed' ? 'bg-emerald-700 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
             {counts.completed}
           </span>
