@@ -62,7 +62,13 @@ const setStored = (key, data) => {
 const getHeaders = () => {
   let token = null;
   try {
-    token = localStorage.getItem('fintrack_token') || sessionStorage.getItem('fintrack_token');
+    const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+    if (isRemembered) {
+      token = localStorage.getItem('fintrack_token');
+    }
+    if (!token) {
+      token = sessionStorage.getItem('fintrack_token');
+    }
   } catch (e) {}
 
   const headers = {
@@ -146,7 +152,10 @@ const safeFetchJson = async (url, options = {}, isRetry = false) => {
     // Central Auth Interceptor: If 401 Unauthorized, attempt refresh once
     if (res.status === 401 && !isRetry && !url.includes('/api/auth/login') && !url.includes('/api/auth/refresh')) {
       try {
-        const currentToken = localStorage.getItem('fintrack_token');
+        const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+        const currentToken = isRemembered
+          ? localStorage.getItem('fintrack_token')
+          : sessionStorage.getItem('fintrack_token');
         if (currentToken) {
           const refreshRes = await fetch(`${baseUrl}/api/auth/refresh`, {
             method: 'POST',
@@ -158,9 +167,16 @@ const safeFetchJson = async (url, options = {}, isRetry = false) => {
           });
           const refreshData = await refreshRes.json();
           if (refreshRes.ok && refreshData.success && refreshData.token) {
-            localStorage.setItem('fintrack_token', refreshData.token);
-            if (refreshData.user) {
-              localStorage.setItem('fintrack_user', JSON.stringify(refreshData.user));
+            if (isRemembered) {
+              localStorage.setItem('fintrack_token', refreshData.token);
+              if (refreshData.user) {
+                localStorage.setItem('fintrack_user', JSON.stringify(refreshData.user));
+              }
+            } else {
+              sessionStorage.setItem('fintrack_token', refreshData.token);
+              if (refreshData.user) {
+                sessionStorage.setItem('fintrack_user', JSON.stringify(refreshData.user));
+              }
             }
             // Retry the original request once with the new fresh token
             const retryHeaders = {
@@ -1783,7 +1799,10 @@ export const api = {
 
   downloadExcelBackup: async () => {
     const baseUrl = getApiBaseUrl();
-    const token = localStorage.getItem('fintrack_token');
+    const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+    const token = isRemembered
+      ? localStorage.getItem('fintrack_token')
+      : sessionStorage.getItem('fintrack_token');
     const headers = {};
     if (token && token.trim() && token !== 'undefined' && token !== 'null') {
       headers['Authorization'] = `Bearer ${token.trim()}`;
@@ -1810,7 +1829,10 @@ export const api = {
 
   getFullBackupData: async () => {
     const baseUrl = getApiBaseUrl();
-    const token = localStorage.getItem('fintrack_token');
+    const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+    const token = isRemembered
+      ? localStorage.getItem('fintrack_token')
+      : sessionStorage.getItem('fintrack_token');
     const headers = {};
     if (token && token.trim() && token !== 'undefined' && token !== 'null') {
       headers['Authorization'] = `Bearer ${token.trim()}`;
@@ -1928,7 +1950,10 @@ export const api = {
   getUserProfile: async () => {
     const result = await safeFetchJson('/api/auth/me', { headers: getHeaders() });
     if (result.ok && result.data?.user) return result.data.user;
-    const local = localStorage.getItem('fintrack_user');
+    const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+    const local = isRemembered
+      ? localStorage.getItem('fintrack_user')
+      : sessionStorage.getItem('fintrack_user');
     return local ? JSON.parse(local) : null;
   },
 
@@ -1948,16 +1973,27 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(profileData),
     });
+    const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
     if (result.ok && result.data?.user) {
-      localStorage.setItem('fintrack_user', JSON.stringify(result.data.user));
+      if (isRemembered) {
+        localStorage.setItem('fintrack_user', JSON.stringify(result.data.user));
+      } else {
+        sessionStorage.setItem('fintrack_user', JSON.stringify(result.data.user));
+      }
       return result.data.user;
     }
-    const local = localStorage.getItem('fintrack_user');
+    const local = isRemembered
+      ? localStorage.getItem('fintrack_user')
+      : sessionStorage.getItem('fintrack_user');
     if (local) {
       try {
         const u = JSON.parse(local);
         const merged = { ...u, ...profileData };
-        localStorage.setItem('fintrack_user', JSON.stringify(merged));
+        if (isRemembered) {
+          localStorage.setItem('fintrack_user', JSON.stringify(merged));
+        } else {
+          sessionStorage.setItem('fintrack_user', JSON.stringify(merged));
+        }
         return merged;
       } catch (e) {}
     }
@@ -1965,7 +2001,10 @@ export const api = {
   },
 
   refreshToken: async () => {
-    const currentToken = localStorage.getItem('fintrack_token');
+    const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+    const currentToken = isRemembered
+      ? localStorage.getItem('fintrack_token')
+      : sessionStorage.getItem('fintrack_token');
     if (!currentToken) return null;
     const res = await safeFetchJson('/api/auth/refresh', {
       method: 'POST',
@@ -1973,9 +2012,16 @@ export const api = {
       body: JSON.stringify({ token: currentToken }),
     });
     if (res.ok && res.data?.token) {
-      localStorage.setItem('fintrack_token', res.data.token);
-      if (res.data.user) {
-        localStorage.setItem('fintrack_user', JSON.stringify(res.data.user));
+      if (isRemembered) {
+        localStorage.setItem('fintrack_token', res.data.token);
+        if (res.data.user) {
+          localStorage.setItem('fintrack_user', JSON.stringify(res.data.user));
+        }
+      } else {
+        sessionStorage.setItem('fintrack_token', res.data.token);
+        if (res.data.user) {
+          sessionStorage.setItem('fintrack_user', JSON.stringify(res.data.user));
+        }
       }
       return res.data;
     }

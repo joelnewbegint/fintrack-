@@ -20,8 +20,15 @@ const safeParseJson = async (res) => {
 
 const getStoredToken = () => {
   try {
-    const local = localStorage.getItem('fintrack_token');
-    if (local && local !== 'undefined' && local !== 'null') return local;
+    const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+    if (isRemembered) {
+      const local = localStorage.getItem('fintrack_token');
+      if (local && local !== 'undefined' && local !== 'null') return local;
+    } else {
+      // If not explicitly remembered, clear persistent localStorage token
+      localStorage.removeItem('fintrack_token');
+      localStorage.removeItem('fintrack_user');
+    }
     const session = sessionStorage.getItem('fintrack_token');
     if (session && session !== 'undefined' && session !== 'null') return session;
     return null;
@@ -32,8 +39,11 @@ const getStoredToken = () => {
 
 const getStoredUser = () => {
   try {
-    const local = localStorage.getItem('fintrack_user');
-    if (local && local !== 'undefined' && local !== 'null') return JSON.parse(local);
+    const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+    if (isRemembered) {
+      const local = localStorage.getItem('fintrack_user');
+      if (local && local !== 'undefined' && local !== 'null') return JSON.parse(local);
+    }
     const session = sessionStorage.getItem('fintrack_user');
     if (session && session !== 'undefined' && session !== 'null') return JSON.parse(session);
     return null;

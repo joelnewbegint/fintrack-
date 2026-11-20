@@ -50,7 +50,10 @@ export function App() {
   // Role-based activeTab default
   const [activeTab, setActiveTab] = useState(() => {
     try {
-      const stored = localStorage.getItem('fintrack_user');
+      const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+      const stored = isRemembered
+        ? localStorage.getItem('fintrack_user')
+        : sessionStorage.getItem('fintrack_user');
       if (stored) {
         const u = JSON.parse(stored);
         if (u.role === 'emi_agent') return 'emiDashboard';
@@ -63,7 +66,10 @@ export function App() {
   // Owner 2-way mode switch: 'loans' | 'emi'
   const [ownerMode, setOwnerMode] = useState(() => {
     try {
-      const stored = localStorage.getItem('fintrack_user');
+      const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+      const stored = isRemembered
+        ? localStorage.getItem('fintrack_user')
+        : sessionStorage.getItem('fintrack_user');
       if (stored) {
         const u = JSON.parse(stored);
         if (u.role === 'emi_agent') return 'emi';
