@@ -63,7 +63,7 @@ export const EmiLayout = ({
       {/* -------------------------------------------------------------
           TOP BAR (Peach Sky Glass Theme)
       ------------------------------------------------------------- */}
-      <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-orange-200/60 dark:border-slate-800 transition-colors shadow-xs">
+      <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-orange-200/60 dark:border-slate-800 transition-colors shadow-xs">
         <div className="w-full px-3 sm:px-6 h-16 flex items-center justify-between gap-3">
           {/* Left: Mobile Menu + Monogram Logo + Title */}
           <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
@@ -169,7 +169,7 @@ export const EmiLayout = ({
       ------------------------------------------------------------- */}
       <div className="flex-1 flex w-full max-w-[1720px] mx-auto relative">
         {/* DESKTOP SIDEBAR (Peach Sky Glass Theme) */}
-        <aside className="hidden lg:flex flex-col w-60 shrink-0 p-4 border-r border-orange-200/60 min-h-[calc(100vh-4rem)] select-none">
+        <aside className="hidden lg:flex flex-col w-60 shrink-0 p-4 border-r border-orange-200/60 min-h-[calc(100vh-4rem)] sticky top-16 self-start max-h-[calc(100vh-4rem)] select-none">
           <div className="mb-4 px-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-orange-600">
               EMI MENU / தவணை பிரிவு

@@ -481,7 +481,7 @@ export function App() {
   return (
     <ProtectedRoute allowedRoles={['owner', 'admin', 'loan_agent', 'agent', 'client']}>
       <div
-        className={`min-h-screen flex flex-col font-sans relative overflow-x-hidden ${
+        className={`min-h-screen flex flex-col font-sans relative overflow-x-clip ${
           isMobile && !isRealPhone
             ? 'max-w-[440px] mx-auto border-x border-orange-200/40 shadow-2xl'
             : 'w-full'
@@ -545,7 +545,7 @@ export function App() {
 
         {/* Main Content Area */}
         <main
-          className={`flex-1 p-3 sm:p-5 lg:p-6 min-w-0 max-w-full overflow-x-hidden ${
+          className={`flex-1 p-3 sm:p-5 lg:p-6 min-w-0 max-w-full overflow-x-clip ${
             isMobile ? 'pb-28' : 'pb-10'
           }`}
         >

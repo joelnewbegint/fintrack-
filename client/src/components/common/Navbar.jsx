@@ -144,7 +144,7 @@ export const Navbar = ({
   // -------------------------------------------------------------------------
   if (isMobile) {
     return (
-      <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors pt-safe">
+      <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors pt-safe shadow-xs">
         <div className="px-3 h-14 flex items-center justify-between gap-2 max-w-full">
           {/* Left: Menu toggle + Logo + Title */}
           <div className="flex items-center space-x-2 shrink-0 min-w-0">
@@ -221,7 +221,7 @@ export const Navbar = ({
   // DESKTOP & TABLET TOP BAR (Matches Exact Mockup)
   // -------------------------------------------------------------------------
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
+    <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors shadow-xs">
       <div className="w-full px-3 sm:px-5 h-16 flex items-center justify-between gap-2.5">
         {/* Left: Sidebar Toggle + Luxury Wallet Monogram + VK BANKER'S & FINANCE */}
         <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">

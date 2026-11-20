@@ -85,7 +85,7 @@ export const Sidebar = ({
 
   return (
     <aside
-      className={`min-h-[calc(100vh-4rem)] bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-700 dark:text-slate-200 transition-all duration-300 flex flex-col shrink-0 select-none shadow-sm border-r border-sky-100/80 dark:border-sky-900/40 relative z-20 ${
+      className={`min-h-[calc(100vh-4rem)] bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-700 dark:text-slate-200 transition-all duration-300 flex flex-col shrink-0 select-none shadow-sm border-r border-sky-100/80 dark:border-sky-900/40 sticky top-16 self-start max-h-[calc(100vh-4rem)] z-30 ${
         isCollapsed ? 'w-16 sm:w-20 p-2 sm:p-2.5 items-center' : 'w-60 p-3.5 sm:p-4'
       }`}
     >
