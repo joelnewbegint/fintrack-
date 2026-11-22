@@ -868,10 +868,17 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
+                  {/* Progress Bar & Balance */}
                   <div className="space-y-1">
                     <div className="flex justify-between items-center text-[10px] text-slate-500 tabular-nums">
                       <span>{formatCurrency(loan.totalCollected || 0)} of {formatCurrency(loan.totalPayable)} ({recoveryPct}%)</span>
+                      {Number(loan.remainingBalance) > 0 ? (
+                        <span className="font-bold text-rose-500 dark:text-rose-400">
+                          Bal: {formatCurrency(loan.remainingBalance)}
+                        </span>
+                      ) : (
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">Paid</span>
+                      )}
                     </div>
                     <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
                       <div
@@ -1149,6 +1156,15 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
                                 style={{ width: `${Math.min(100, Math.max(0, recoveryPct))}%` }}
                               />
                             </div>
+                            {Number(loan.remainingBalance) > 0 ? (
+                              <div className="text-[10px] font-bold text-rose-500 dark:text-rose-400 tabular-nums">
+                                Bal: {formatCurrency(loan.remainingBalance)}
+                              </div>
+                            ) : (
+                              <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                Fully Repaid
+                              </div>
+                            )}
                           </div>
                         </td>
 
