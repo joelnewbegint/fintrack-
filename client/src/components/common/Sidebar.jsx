@@ -19,11 +19,15 @@ import {
   Send,
   Layers,
   UserCheck,
+  Clock,
+  CalendarRange,
+  CalendarCheck,
 } from 'lucide-react';
 
 export const Sidebar = ({
   activeTab,
   setActiveTab,
+  selectedScheme,
   onOpenNotifications,
   onOpenWhatsAppHub,
   unreadNotificationsCount = 0,
@@ -39,7 +43,7 @@ export const Sidebar = ({
     return null;
   }
 
-  // Role-specific navigation items
+  // Role-specific navigation items with Loans divisions (Daily, Weekly, Monthly)
   let navItems = [];
 
   if (isClient) {
@@ -57,22 +61,28 @@ export const Sidebar = ({
       { id: 'settings', en: 'Settings', ta: 'அமைப்புகள்', icon: SettingsIcon },
     ];
   } else if (isLoanAgent) {
-    // Loan Agent: ONLY Loans module (Daily/Weekly/Monthly) + Settings
+    // Loan Agent: ONLY Loans module (All, Daily, Weekly, Monthly) + Operations + Settings
     navItems = [
       { id: 'dashboard', en: 'Dashboard', ta: 'முகப்பு', icon: LayoutDashboard },
       { id: 'customers', en: 'Customers', ta: 'வாடிக்கையாளர்கள்', icon: Users },
-      { id: 'loans', en: 'Loans', ta: 'கடன் கணக்குகள்', icon: Coins },
+      { id: 'loans', en: 'All Loans', ta: 'அனைத்து கடன்கள்', icon: Coins },
+      { id: 'loans-daily', en: 'Daily Loans', ta: 'தினசரி கடன்', icon: Clock, isScheme: true, scheme: 'daily' },
+      { id: 'loans-weekly', en: 'Weekly Loans', ta: 'வாராந்திர கடன்', icon: CalendarRange, isScheme: true, scheme: 'weekly' },
+      { id: 'loans-monthly', en: 'Monthly Loans', ta: 'மாதாந்திர கடன்', icon: CalendarCheck, isScheme: true, scheme: 'monthly' },
       { id: 'payments', en: 'Payments', ta: 'தவணை வசூல்', icon: Receipt },
       { id: 'dailyClosing', en: 'Daily Closing', ta: 'தினசரி கணக்கு', icon: FileText },
       { id: 'calendar', en: 'Calendar', ta: 'நாட்காட்டி', icon: Calendar },
       { id: 'settings', en: 'Settings', ta: 'அமைப்புகள்', icon: SettingsIcon },
     ];
   } else {
-    // Owner: Loans module interface (EMI has its own dedicated /emi panel)
+    // Owner: Complete interface with dedicated Loans divisions (Daily, Weekly, Monthly)
     navItems = [
       { id: 'dashboard', en: 'Dashboard', ta: 'கடன் முகப்பு', icon: LayoutDashboard },
       { id: 'customers', en: 'Customers', ta: 'வாடிக்கையாளர்கள்', icon: Users },
-      { id: 'loans', en: 'Loans', ta: 'கடன் கணக்குகள்', icon: Coins },
+      { id: 'loans', en: 'All Loans', ta: 'அனைத்து கடன்கள்', icon: Coins },
+      { id: 'loans-daily', en: 'Daily Loans', ta: 'தினசரி கடன்', icon: Clock, isScheme: true, scheme: 'daily' },
+      { id: 'loans-weekly', en: 'Weekly Loans', ta: 'வாராந்திர கடன்', icon: CalendarRange, isScheme: true, scheme: 'weekly' },
+      { id: 'loans-monthly', en: 'Monthly Loans', ta: 'மாதாந்திர கடன்', icon: CalendarCheck, isScheme: true, scheme: 'monthly' },
       { id: 'payments', en: 'Payments', ta: 'தவணை வசூல்', icon: Receipt },
       { id: 'agents', en: 'Staff & Agents', ta: 'பணியாளர்கள்', icon: UserCheck },
       { id: 'expenses', en: 'Expenses', ta: 'செலவுகள்', icon: ArrowLeftRight },
@@ -112,30 +122,72 @@ export const Sidebar = ({
         <nav className="space-y-1 w-full">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id || (item.id === 'loans' && activeTab === 'scheme-loans');
+            const isActive =
+              item.id === 'loans'
+                ? activeTab === 'loans'
+                : item.id === 'loans-daily'
+                ? activeTab === 'scheme-loans' && selectedScheme === 'daily'
+                : item.id === 'loans-weekly'
+                ? activeTab === 'scheme-loans' && selectedScheme === 'weekly'
+                : item.id === 'loans-monthly'
+                ? activeTab === 'scheme-loans' && selectedScheme === 'monthly'
+                : activeTab === item.id;
 
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={`w-full flex items-center rounded-2xl transition-all duration-150 group font-bold ${
-                  isCollapsed ? 'justify-center p-3' : 'px-3.5 py-2.5 space-x-3 text-left'
+                  isCollapsed
+                    ? 'justify-center p-3'
+                    : item.isScheme
+                    ? 'pl-7 pr-3 py-2 space-x-2.5 text-left text-xs'
+                    : 'px-3.5 py-2.5 space-x-3 text-left'
                 } ${
                   isActive
-                    ? 'btn-sky-primary text-white shadow-md shadow-sky-500/20'
+                    ? item.isScheme && item.scheme === 'daily'
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/20'
+                      : item.isScheme && item.scheme === 'weekly'
+                      ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-md shadow-sky-500/20'
+                      : item.isScheme && item.scheme === 'monthly'
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md shadow-emerald-500/20'
+                      : 'btn-sky-primary text-white shadow-md shadow-sky-500/20'
+                    : item.isScheme
+                    ? 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 dark:hover:text-sky-400'
                 }`}
                 title={isCollapsed ? (lang === 'ta' ? item.ta : item.en) : undefined}
               >
                 <Icon
-                  className={`shrink-0 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'} ${
-                    isActive ? 'text-white' : 'text-slate-400 group-hover:text-sky-500'
+                  className={`shrink-0 ${isCollapsed ? 'w-5 h-5' : item.isScheme ? 'w-3.5 h-3.5' : 'w-4 h-4'} ${
+                    isActive
+                      ? 'text-white'
+                      : item.isScheme && item.scheme === 'daily'
+                      ? 'text-amber-500'
+                      : item.isScheme && item.scheme === 'weekly'
+                      ? 'text-sky-500'
+                      : item.isScheme && item.scheme === 'monthly'
+                      ? 'text-emerald-500'
+                      : 'text-slate-400 group-hover:text-sky-500'
                   }`}
                 />
                 {!isCollapsed && (
-                  <span className="text-xs truncate tracking-wide">
-                    {lang === 'ta' ? item.ta : item.en}
-                  </span>
+                  <>
+                    <span className={`truncate tracking-wide ${item.isScheme ? 'text-[11.5px]' : 'text-xs'}`}>
+                      {lang === 'ta' ? item.ta : item.en}
+                    </span>
+                    {item.isScheme && (
+                      <span
+                        className={`ml-auto text-[9px] px-1.5 py-0.2 rounded font-black shrink-0 ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {item.scheme === 'daily' ? 'Daily' : item.scheme === 'weekly' ? 'Weekly' : 'Monthly'}
+                      </span>
+                    )}
+                  </>
                 )}
               </button>
             );

@@ -122,6 +122,7 @@ export const SchemeLoansPage = ({
       const res = await api.getLoans({
         financeType: normalizedScheme,
         status: statusFilter,
+        excludeClosed: statusFilter !== 'completed' ? 'true' : 'false',
         search,
       });
       if (res?.success && Array.isArray(res.loans)) {
@@ -161,20 +162,122 @@ export const SchemeLoansPage = ({
     return () => window.removeEventListener('fintrack:data-updated', handleSync);
   }, [normalizedScheme, statusFilter, search]);
 
-  // Mini summary metrics strictly for this scheme
-  const totalSchemeLoans = loans.length;
-  const totalSchemePrincipal = useMemo(
-    () => loans.reduce((sum, l) => sum + (Number(l.principal) || 0), 0),
+  // Helper to calculate interest for any loan
+  const getLoanInterest = (l) => {
+    if (Number(l.chargeAmount) > 0) return Number(l.chargeAmount);
+    const rep = Number(l.totalRepayable || l.totalPayable || 0);
+    const pr = Number(l.principalAmount || l.principal || 0);
+    const disb = Number(l.disbursedAmount || 0);
+    if (rep > pr) return rep - pr;
+    if (disb > 0 && pr > disb) return pr - disb;
+    const rate = Number(l.interestPercent || l.interestRate || 0);
+    if (rate > 0 && pr > 0) return Math.round((pr * rate) / 100);
+    return 0;
+  };
+
+  // Helper to calculate realized/earned profit for any loan
+  const getLoanProfit = (l) => {
+    const isClosed =
+      l.status === 'completed' ||
+      l.status === 'closed' ||
+      (l.remainingBalance != null && Number(l.remainingBalance) <= 0);
+
+    const interest = getLoanInterest(l);
+    if (isClosed) return interest;
+    if (Number(l.chargeAmount) > 0) return Number(l.chargeAmount);
+    const rep = Number(l.totalRepayable || l.totalPayable || 0);
+    const coll = Number(l.totalCollected || l.totalPaid || 0);
+    if (rep > 0 && coll > 0) {
+      return Math.round((coll / rep) * interest);
+    }
+    return 0;
+  };
+
+  const isClosedLoan = (l) =>
+    l.status === 'completed' ||
+    l.status === 'closed' ||
+    (l.remainingBalance != null && Number(l.remainingBalance) <= 0);
+
+  // Active vs Closed separation
+  const activeSchemeLoans = useMemo(
+    () => loans.filter((l) => !isClosedLoan(l)),
     [loans]
   );
-  const overdueSchemeLoans = useMemo(
-    () => loans.filter((l) => l.status === 'overdue'),
+  const completedSchemeLoans = useMemo(
+    () => loans.filter(isClosedLoan),
     [loans]
+  );
+
+  // 1. SEPARATE LOAN AMOUNT (Principal)
+  const totalSchemePrincipal = useMemo(
+    () => loans.reduce((sum, l) => sum + (Number(l.principalAmount || l.principal) || 0), 0),
+    [loans]
+  );
+  const activeSchemePrincipal = useMemo(
+    () => activeSchemeLoans.reduce((sum, l) => sum + (Number(l.principalAmount || l.principal) || 0), 0),
+    [activeSchemeLoans]
+  );
+
+  // 2. SEPARATE INTEREST AMOUNT
+  const totalSchemeInterest = useMemo(
+    () => loans.reduce((sum, l) => sum + getLoanInterest(l), 0),
+    [loans]
+  );
+  const activeSchemeInterest = useMemo(
+    () => activeSchemeLoans.reduce((sum, l) => sum + getLoanInterest(l), 0),
+    [activeSchemeLoans]
+  );
+
+  // 3. SEPARATE PROFIT EARNED
+  const totalSchemeProfit = useMemo(
+    () => loans.reduce((sum, l) => sum + getLoanProfit(l), 0),
+    [loans]
+  );
+  const settledSchemeProfit = useMemo(
+    () => completedSchemeLoans.reduce((sum, l) => sum + getLoanInterest(l), 0),
+    [completedSchemeLoans]
+  );
+
+  // 4. SEPARATE OVERALL PORTFOLIO
+  const totalSchemeOverall = useMemo(
+    () => loans.reduce((sum, l) => sum + (Number(l.totalRepayable || l.totalPayable || l.principal) || 0), 0),
+    [loans]
+  );
+  const totalSchemeCollected = useMemo(
+    () => loans.reduce((sum, l) => sum + (Number(l.totalCollected || l.totalPaid) || 0), 0),
+    [loans]
+  );
+  const totalSchemeBalance = useMemo(
+    () => activeSchemeLoans.reduce((sum, l) => sum + (Number(l.remainingBalance != null ? l.remainingBalance : l.balanceAmount) || 0), 0),
+    [activeSchemeLoans]
+  );
+
+  // Overdue stats
+  const overdueSchemeLoans = useMemo(
+    () => activeSchemeLoans.filter((l) => l.status === 'overdue'),
+    [activeSchemeLoans]
   );
   const totalOverdueAmount = useMemo(
     () => overdueSchemeLoans.reduce((sum, l) => sum + (Number(l.remainingBalance || 0)), 0),
     [overdueSchemeLoans]
   );
+
+  // Filter out closed loans from active table unless specifically viewing closed archive
+  const displayLoans = useMemo(() => {
+    return loans.filter((l) => {
+      const isClosed = isClosedLoan(l);
+      if (statusFilter === 'completed') return isClosed;
+      return !isClosed;
+    });
+  }, [loans, statusFilter]);
+
+  const chipCounts = useMemo(() => {
+    return {
+      all: activeSchemeLoans.length,
+      overdue: overdueSchemeLoans.length,
+      closed: completedSchemeLoans.length,
+    };
+  }, [activeSchemeLoans, overdueSchemeLoans, completedSchemeLoans]);
 
   // Helper to extract customer object safely
   const getCustomer = (loan) => {
@@ -220,7 +323,7 @@ export const SchemeLoansPage = ({
                   {lang === 'ta' ? scheme.taTitle : scheme.enTitle}
                 </h1>
                 <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${scheme.lightBg} ${scheme.textColor} border ${scheme.borderColor}`}>
-                  {totalSchemeLoans} {totalSchemeLoans === 1 ? 'Loan' : 'Loans'}
+                  {activeSchemeLoans.length} {activeSchemeLoans.length === 1 ? 'Active Loan' : 'Active Loans'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -247,87 +350,125 @@ export const SchemeLoansPage = ({
         )}
       </div>
 
-      {/* 2. 4 MINI SUMMARY CARDS FOR THIS SCHEME */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Card 1: Total Loans */}
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center space-x-3.5">
-          <div className={`w-11 h-11 rounded-2xl ${scheme.lightBg} ${scheme.textColor} flex items-center justify-center shrink-0`}>
-            <Users className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-              Total {scheme.enTitle.split(' ')[0]} Loans
-            </p>
-            <p className="text-[10px] text-slate-400 truncate">
-              {lang === 'ta' ? 'மொத்த கணக்குகள்' : 'Scheme Accounts'}
-            </p>
-            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight mt-0.5">
-              {totalSchemeLoans}
-            </p>
-          </div>
-        </div>
-
-        {/* Card 2: Total Principal */}
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center space-x-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-            <Coins className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-              Total Principal
-            </p>
-            <p className="text-[10px] text-slate-400 truncate">
-              {lang === 'ta' ? 'அசல் தொகை' : 'Capital Lent'}
-            </p>
-            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight mt-0.5 truncate">
-              {formatCurrency(totalSchemePrincipal)}
-            </p>
-          </div>
-        </div>
-
-        {/* Card 3: Collected Today */}
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center space-x-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <Wallet className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-              Collected Today
-            </p>
-            <p className="text-[10px] text-slate-400 truncate">
-              {lang === 'ta' ? 'இன்றைய வசூல்' : 'Today Recovers'}
-            </p>
-            <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight mt-0.5 truncate">
-              {formatCurrency(todayCollected)}
-            </p>
-          </div>
-        </div>
-
-        {/* Card 4: Overdue Amount */}
-        <div className="bg-rose-50/70 dark:bg-rose-950/30 rounded-2xl p-4 border border-rose-200/80 dark:border-rose-900/50 shadow-sm flex items-center justify-between">
-          <div className="flex items-center space-x-3.5 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-rose-100 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-5 h-5" />
+      {/* 2. 4 PROMINENT CARDS: LOAN AMOUNT | INTEREST | PROFIT | OVERALL */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        {/* CARD 1: LOAN AMOUNT (Principal) */}
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                1. {lang === 'ta' ? 'அசல் கடன் தொகை' : 'LOAN AMOUNT'}
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight mt-1">
+                {formatCurrency(totalSchemePrincipal)}
+              </h3>
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center space-x-1.5">
-                <p className="text-xs font-bold text-rose-700 dark:text-rose-300 truncate">
-                  Overdue Amount
-                </p>
-                {overdueSchemeLoans.length > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-200 text-rose-800">
-                    {overdueSchemeLoans.length}
-                  </span>
-                )}
-              </div>
-              <p className="text-[10px] text-rose-600/70 dark:text-rose-400/70 truncate">
-                {lang === 'ta' ? 'நிலுவை தொகை' : 'Overdue Balance'}
-              </p>
-              <p className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tight mt-0.5 truncate">
-                {formatCurrency(totalOverdueAmount)}
-              </p>
+            <div className={`w-11 h-11 rounded-2xl ${scheme.lightBg} ${scheme.textColor} flex items-center justify-center shrink-0 shadow-xs border ${scheme.borderColor}`}>
+              <Coins className="w-5 h-5" />
             </div>
           </div>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+            <span className="text-slate-500 dark:text-slate-400">
+              {lang === 'ta' ? 'நடப்பு அசல்' : 'Active Principal'}:
+            </span>
+            <span className="font-bold text-slate-800 dark:text-slate-200 tabular-nums">
+              {formatCurrency(activeSchemePrincipal)}
+            </span>
+          </div>
+        </div>
+
+        {/* CARD 2: INTEREST AMOUNT */}
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                2. {lang === 'ta' ? 'வட்டித் தொகை' : 'INTEREST AMOUNT'}
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 tabular-nums tracking-tight mt-1">
+                +{formatCurrency(totalSchemeInterest)}
+              </h3>
+            </div>
+            <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-xs border border-amber-200/80 dark:border-amber-900/50">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+            <span className="text-slate-500 dark:text-slate-400">
+              {lang === 'ta' ? 'நடப்பு எதிர்பார்க்கும் வட்டி' : 'Active Expected'}:
+            </span>
+            <span className="font-bold text-amber-700 dark:text-amber-300 tabular-nums">
+              +{formatCurrency(activeSchemeInterest)}
+            </span>
+          </div>
+        </div>
+
+        {/* CARD 3: PROFIT EARNED */}
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                3. {lang === 'ta' ? 'ஈட்டிய நிகர லாபம்' : 'PROFIT EARNED'}
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight mt-1">
+                +{formatCurrency(totalSchemeProfit)}
+              </h3>
+            </div>
+            <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-xs border border-emerald-200/80 dark:border-emerald-900/50">
+              <Wallet className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+            <span className="text-slate-500 dark:text-slate-400">
+              {lang === 'ta' ? 'முடிந்த கடன் லாபம்' : 'Settled Realized'}:
+            </span>
+            <span className="font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">
+              +{formatCurrency(settledSchemeProfit)}
+            </span>
+          </div>
+        </div>
+
+        {/* CARD 4: OVERALL PORTFOLIO */}
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                4. {lang === 'ta' ? 'ஒட்டுமொத்த மதிப்பு' : 'OVERALL TOTAL'}
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-sky-600 dark:text-sky-400 tabular-nums tracking-tight mt-1">
+                {formatCurrency(totalSchemeOverall)}
+              </h3>
+            </div>
+            <div className="w-11 h-11 rounded-2xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 shadow-xs border border-sky-200/80 dark:border-sky-900/50">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+            <span className="text-slate-500 dark:text-slate-400">
+              {lang === 'ta' ? 'வசூல்' : 'Recovered'}: {formatCurrency(totalSchemeCollected)}
+            </span>
+            <span className="font-bold text-rose-600 dark:text-rose-400 tabular-nums">
+              {lang === 'ta' ? 'இருப்பு' : 'Bal'}: {formatCurrency(totalSchemeBalance)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Secondary Quick Metrics Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white/70 dark:bg-slate-900/70 rounded-2xl border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
+        <div className="flex items-center space-x-2">
+          <Users className="w-4 h-4 text-slate-400" />
+          <span>Active Accounts:</span>
+          <strong className="text-slate-900 dark:text-white font-black">{activeSchemeLoans.length}</strong>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Wallet className="w-4 h-4 text-emerald-500" />
+          <span>{lang === 'ta' ? 'இன்றைய வசூல்' : 'Collected Today'}:</span>
+          <strong className="text-emerald-600 dark:text-emerald-400 font-black">{formatCurrency(todayCollected)}</strong>
+        </div>
+        <div className="flex items-center space-x-2">
+          <AlertTriangle className="w-4 h-4 text-rose-500" />
+          <span>{lang === 'ta' ? 'நிலுவை' : 'Overdue'}:</span>
+          <strong className="text-rose-600 dark:text-rose-400 font-black">{overdueSchemeLoans.length} ({formatCurrency(totalOverdueAmount)})</strong>
         </div>
       </div>
 
@@ -361,21 +502,24 @@ export const SchemeLoansPage = ({
           {/* Status Filter Buttons */}
           <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 md:pb-0">
             {[
-              { id: 'all', en: 'All', ta: 'அனைத்தும்' },
-              { id: 'active', en: 'Active', ta: 'செயலில்' },
-              { id: 'overdue', en: 'Overdue', ta: 'காலாவதி' },
-              { id: 'completed', en: 'Closed', ta: 'முடிந்தது' },
+              { id: 'all', label: `${lang === 'ta' ? 'செயலில்' : 'Active'} (${chipCounts.all})` },
+              { id: 'overdue', label: `${lang === 'ta' ? 'காலாவதி' : 'Overdue'} (${chipCounts.overdue})`, isOverduePill: true },
+              { id: 'completed', label: `${lang === 'ta' ? 'முடிந்தது' : 'Closed Archive'} (${chipCounts.closed})`, isClosedPill: true },
             ].map((st) => (
               <button
                 key={st.id}
                 onClick={() => setStatusFilter(st.id)}
                 className={`h-9 px-3.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
                   statusFilter === st.id
-                    ? `${scheme.accentBg} text-white shadow-xs`
+                    ? st.isOverduePill
+                      ? 'bg-rose-500 text-white shadow-xs'
+                      : st.isClosedPill
+                      ? 'bg-slate-700 text-white shadow-xs'
+                      : `${scheme.accentBg} text-white shadow-xs`
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
-                {lang === 'ta' ? st.ta : st.en}
+                {st.label}
               </button>
             ))}
 
@@ -402,7 +546,7 @@ export const SchemeLoansPage = ({
             <div key={i} className="h-20 bg-slate-100 dark:bg-slate-800/60 rounded-2xl" />
           ))}
         </div>
-      ) : loans.length === 0 ? (
+      ) : displayLoans.length === 0 ? (
         /* Empty State */
         <div className="glass rounded-3xl p-8 sm:p-12 border border-dashed border-slate-200 dark:border-slate-800 text-center space-y-4">
           <div className={`w-16 h-16 rounded-3xl ${scheme.lightBg} ${scheme.textColor} mx-auto flex items-center justify-center shadow-sm`}>
@@ -410,14 +554,14 @@ export const SchemeLoansPage = ({
           </div>
           <div>
             <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">
-              {lang === 'ta'
-                ? `இத்திட்டத்தில் கடன்கள் எதுவும் இல்லை`
-                : `No ${scheme.enTitle} Yet`}
+              {statusFilter === 'completed'
+                ? lang === 'ta' ? 'முடிவடைந்த கணக்குகள் எதுவும் இல்லை' : 'No Closed Loans'
+                : lang === 'ta' ? `இத்திட்டத்தில் நடப்பு கடன்கள் எதுவும் இல்லை` : `No Active ${scheme.enTitle} Loans`}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1">
               {lang === 'ta'
                 ? `${scheme.taTitle} பிரிவின் கீழ் பதிவு செய்யப்பட்ட கடன்கள் எதுவும் கிடைக்கவில்லை.`
-                : `No active or historical loans were found under the ${scheme.enTitle} scheme.`}
+                : `No running loans match your filter under ${scheme.enTitle}. Closed loans are automatically excluded.`}
             </p>
           </div>
 
@@ -452,14 +596,16 @@ export const SchemeLoansPage = ({
       ) : isMobile ? (
         /* Mobile Stacked Glass Cards */
         <div className="space-y-3">
-          {loans.map((loan) => {
+          {displayLoans.map((loan) => {
             const cust = getCustomer(loan);
             const avatar = getAvatarStyle(cust.name);
             const totalPay = Number(loan.totalPayable || loan.principal || 0);
             const collected = Number(loan.totalCollected || 0);
             const pct = totalPay > 0 ? Math.min(100, Math.round((collected / totalPay) * 100)) : 0;
             const isOverdue = loan.status === 'overdue';
-            const isCompleted = loan.status === 'completed';
+            const isCompleted = isClosedLoan(loan);
+            const interest = getLoanInterest(loan);
+            const profit = getLoanProfit(loan);
 
             return (
               <div
@@ -495,29 +641,33 @@ export const SchemeLoansPage = ({
                   </span>
                 </div>
 
+                {/* 4 Separate Data Metrics: Principal | Interest | Profit | Overall */}
                 <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y border-slate-100 dark:border-slate-800/80">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">Loan No.</span>
-                    <span className="font-black text-slate-800 dark:text-slate-200 uppercase">
-                      {loan.loanNo}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">Principal</span>
+                  <div className="bg-slate-50/70 dark:bg-slate-800/40 p-2 rounded-xl">
+                    <span className="text-[10px] text-slate-400 block">1. Loan Amount / அசல்</span>
                     <span className="font-black text-slate-900 dark:text-white">
                       {formatCurrency(loan.principal)}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">Installment</span>
-                    <span className="font-bold text-sky-600 dark:text-sky-400">
-                      {formatCurrency(loan.installmentAmount)}{scheme.unitLabel}
+                  <div className="bg-amber-50/70 dark:bg-amber-950/30 p-2 rounded-xl">
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 block">2. Interest / வட்டி</span>
+                    <span className="font-bold text-amber-700 dark:text-amber-300">
+                      +{formatCurrency(interest)}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">Balance</span>
-                    <span className="font-bold text-slate-700 dark:text-slate-300">
-                      {formatCurrency(loan.remainingBalance)}
+                  <div className="bg-emerald-50/70 dark:bg-emerald-950/30 p-2 rounded-xl">
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block">3. Profit / லாபம்</span>
+                    <span className="font-bold text-emerald-700 dark:text-emerald-300">
+                      +{formatCurrency(profit)}
+                    </span>
+                  </div>
+                  <div className="bg-sky-50/70 dark:bg-sky-950/30 p-2 rounded-xl">
+                    <span className="text-[10px] text-sky-600 dark:text-sky-400 block">4. Overall / மொத்தம்</span>
+                    <span className="font-bold text-sky-700 dark:text-sky-300">
+                      {formatCurrency(totalPay)}
+                    </span>
+                    <span className="text-[10px] text-rose-500 block">
+                      Bal: {formatCurrency(loan.remainingBalance)}
                     </span>
                   </div>
                 </div>
@@ -525,7 +675,7 @@ export const SchemeLoansPage = ({
                 {/* Progress bar */}
                 <div>
                   <div className="flex justify-between text-[10px] text-slate-500 mb-1">
-                    <span>Repaid: {formatCurrency(collected)}</span>
+                    <span>Repaid: {formatCurrency(collected)} ({formatCurrency(loan.installmentAmount)}{scheme.unitLabel})</span>
                     <span className="font-bold text-slate-700 dark:text-slate-300">{pct}%</span>
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
@@ -539,8 +689,11 @@ export const SchemeLoansPage = ({
                 </div>
 
                 <div className="pt-1 flex items-center justify-between text-xs font-bold text-sky-600 dark:text-sky-400">
-                  <span>View Details</span>
-                  <ChevronRight className="w-4 h-4" />
+                  <span className="text-[11px] font-mono text-slate-400">#{loan.loanNo}</span>
+                  <div className="flex items-center space-x-1">
+                    <span>View Details</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
                 </div>
               </div>
             );
@@ -555,23 +708,26 @@ export const SchemeLoansPage = ({
                 <tr className="border-b border-slate-100 dark:border-slate-800 text-[11px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/50 dark:bg-slate-800/30">
                   <th className="py-3.5 px-4">Customer / வாடிக்கையாளர்</th>
                   <th className="py-3.5 px-4">Loan No. / எண்</th>
-                  <th className="py-3.5 px-4">Dates / தேதிகள்</th>
-                  <th className="py-3.5 px-4 text-right">Principal / அசல்</th>
-                  <th className="py-3.5 px-4 text-right">Installment / தவணை</th>
-                  <th className="py-3.5 px-4 min-w-[160px]">Repayment / முன்னேற்றம்</th>
+                  <th className="py-3.5 px-4 text-right">Loan Amount / அசல்</th>
+                  <th className="py-3.5 px-4 text-right">Interest / வட்டி</th>
+                  <th className="py-3.5 px-4 text-right">Profit / லாபம்</th>
+                  <th className="py-3.5 px-4 text-right">Overall Total / மொத்தம்</th>
+                  <th className="py-3.5 px-4 min-w-[150px]">Repayment / முன்னேற்றம்</th>
                   <th className="py-3.5 px-4 text-center">Status / நிலை</th>
                   <th className="py-3.5 px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                {loans.map((loan) => {
+                {displayLoans.map((loan) => {
                   const cust = getCustomer(loan);
                   const avatar = getAvatarStyle(cust.name);
                   const totalPay = Number(loan.totalPayable || loan.principal || 0);
                   const collected = Number(loan.totalCollected || 0);
                   const pct = totalPay > 0 ? Math.min(100, Math.round((collected / totalPay) * 100)) : 0;
                   const isOverdue = loan.status === 'overdue';
-                  const isCompleted = loan.status === 'completed';
+                  const isCompleted = isClosedLoan(loan);
+                  const interest = getLoanInterest(loan);
+                  const profit = getLoanProfit(loan);
 
                   return (
                     <tr
@@ -601,19 +757,12 @@ export const SchemeLoansPage = ({
                         <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px]">
                           {loan.loanNo}
                         </span>
-                      </td>
-
-                      {/* Dates */}
-                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                        <div className="font-semibold text-slate-800 dark:text-slate-200">
+                        <div className="text-[10px] text-slate-400 font-normal mt-0.5">
                           {formatDate(loan.startDate)}
                         </div>
-                        <div className="text-[10px] text-slate-400">
-                          → {formatDate(loan.endDate)}
-                        </div>
                       </td>
 
-                      {/* Principal with Disbursed & Charge */}
+                      {/* 1. SEPARATE LOAN AMOUNT (Principal) */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="font-black text-slate-900 dark:text-white tabular-nums">
                           {formatCurrency(loan.principal)}
@@ -623,16 +772,33 @@ export const SchemeLoansPage = ({
                         </div>
                       </td>
 
-                      {/* Installment Amount */}
+                      {/* 2. SEPARATE INTEREST AMOUNT */}
                       <td className="py-3.5 px-4 text-right">
-                        <div className="font-extrabold text-sky-600 dark:text-sky-400 tabular-nums">
-                          {formatCurrency(loan.installmentAmount)}
-                          <span className="text-[10px] text-slate-400 font-normal">
-                            {scheme.unitLabel}
-                          </span>
+                        <div className="font-extrabold text-amber-600 dark:text-amber-400 tabular-nums">
+                          +{formatCurrency(interest)}
                         </div>
                         <div className="text-[10px] text-slate-400">
                           {loan.duration || 100} cycles
+                        </div>
+                      </td>
+
+                      {/* 3. SEPARATE PROFIT EARNED */}
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                          +{formatCurrency(profit)}
+                        </div>
+                        <div className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70">
+                          {isCompleted ? 'Realized' : 'Accumulating'}
+                        </div>
+                      </td>
+
+                      {/* 4. SEPARATE OVERALL TOTAL & BALANCE */}
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="font-black text-slate-900 dark:text-white tabular-nums">
+                          {formatCurrency(totalPay)}
+                        </div>
+                        <div className="text-[10px] font-bold text-rose-500 tabular-nums">
+                          Bal: {formatCurrency(loan.remainingBalance)}
                         </div>
                       </td>
 

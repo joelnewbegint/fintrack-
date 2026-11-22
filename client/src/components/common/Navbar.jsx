@@ -33,10 +33,18 @@ import {
   MessageSquare,
   RotateCcw,
   X,
+  Clock,
+  CalendarRange,
+  CalendarCheck,
+  Coins,
 } from 'lucide-react';
 import SingleSwapChip from './SingleSwapChip';
 
 export const Navbar = ({
+  activeTab,
+  selectedScheme,
+  onSelectTab,
+  onNavigateToScheme,
   onToggleMobileMenu,
   onOpenSearch,
   onAddPayment,
@@ -276,6 +284,60 @@ export const Navbar = ({
             </span>
           </button>
         </div>
+
+        {/* Center: Loans Division Quick Navigation in Top Bar (Daily / Weekly / Monthly) */}
+        {!isClient && (
+          <div className="hidden xl:flex items-center space-x-1 p-0.5 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 shadow-xs shrink-0">
+            <button
+              onClick={() => onSelectTab ? onSelectTab('loans') : (window.history.pushState({}, '', '/loans'), window.dispatchEvent(new PopStateEvent('popstate')))}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+                activeTab === 'loans'
+                  ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-sky-600 hover:bg-white/60 dark:hover:bg-slate-700'
+              }`}
+              title="All Loans / அனைத்து கடன்கள்"
+            >
+              <Coins className="w-3.5 h-3.5 text-sky-500" />
+              <span>{lang === 'ta' ? 'அனைத்தும்' : 'All Loans'}</span>
+            </button>
+            <button
+              onClick={() => onNavigateToScheme ? onNavigateToScheme('daily') : (window.history.pushState({}, '', '/loans/daily'), window.dispatchEvent(new PopStateEvent('popstate')))}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+                activeTab === 'scheme-loans' && selectedScheme === 'daily'
+                  ? 'bg-amber-500 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-amber-600 hover:bg-white/60 dark:hover:bg-slate-700'
+              }`}
+              title="Daily Thandal Loans / தினசரி கடன்"
+            >
+              <Clock className={`w-3.5 h-3.5 ${activeTab === 'scheme-loans' && selectedScheme === 'daily' ? 'text-white' : 'text-amber-500'}`} />
+              <span>{lang === 'ta' ? 'தினசரி' : 'Daily'}</span>
+            </button>
+            <button
+              onClick={() => onNavigateToScheme ? onNavigateToScheme('weekly') : (window.history.pushState({}, '', '/loans/weekly'), window.dispatchEvent(new PopStateEvent('popstate')))}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+                activeTab === 'scheme-loans' && selectedScheme === 'weekly'
+                  ? 'bg-sky-500 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-sky-600 hover:bg-white/60 dark:hover:bg-slate-700'
+              }`}
+              title="Weekly Finance Loans / வாராந்திர கடன்"
+            >
+              <CalendarRange className={`w-3.5 h-3.5 ${activeTab === 'scheme-loans' && selectedScheme === 'weekly' ? 'text-white' : 'text-sky-500'}`} />
+              <span>{lang === 'ta' ? 'வாரம்' : 'Weekly'}</span>
+            </button>
+            <button
+              onClick={() => onNavigateToScheme ? onNavigateToScheme('monthly') : (window.history.pushState({}, '', '/loans/monthly'), window.dispatchEvent(new PopStateEvent('popstate')))}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+                activeTab === 'scheme-loans' && selectedScheme === 'monthly'
+                  ? 'bg-emerald-500 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 hover:bg-white/60 dark:hover:bg-slate-700'
+              }`}
+              title="Monthly Return Loans / மாதாந்திர கடன்"
+            >
+              <CalendarCheck className={`w-3.5 h-3.5 ${activeTab === 'scheme-loans' && selectedScheme === 'monthly' ? 'text-white' : 'text-emerald-500'}`} />
+              <span>{lang === 'ta' ? 'மாதம்' : 'Monthly'}</span>
+            </button>
+          </div>
+        )}
 
         {/* Center (Owner Only): Single Swap Chip Toggle */}
         {isOwner && (
