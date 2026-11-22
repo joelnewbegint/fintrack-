@@ -490,7 +490,11 @@ export const api = {
     const query = new URLSearchParams(params).toString();
     const result = await safeFetchJson(`/api/customers?${query}`, { headers: getHeaders() });
     if (result.ok && result.data && Array.isArray(result.data.customers)) {
-      setStored(STORAGE_KEYS.CUSTOMERS, result.data.customers);
+      // Only cache full customer list to prevent filtered queries from truncating master local storage
+      const hasFilter = Boolean(params.search || (params.area && params.area !== 'all') || (params.status && params.status !== 'all'));
+      if (!hasFilter) {
+        setStored(STORAGE_KEYS.CUSTOMERS, result.data.customers);
+      }
       return result.data;
     }
 
@@ -703,7 +707,11 @@ export const api = {
     const query = new URLSearchParams(params).toString();
     const result = await safeFetchJson(`/api/loans?${query}`, { headers: getHeaders() });
     if (result.ok && result.data && Array.isArray(result.data.loans)) {
-      setStored(STORAGE_KEYS.LOANS, result.data.loans);
+      // Only cache full loans list to prevent filtered queries from truncating master local storage
+      const hasFilter = Boolean(params.search || (params.financeType && params.financeType !== 'all') || (params.status && params.status !== 'all') || params.customerId);
+      if (!hasFilter) {
+        setStored(STORAGE_KEYS.LOANS, result.data.loans);
+      }
       return result.data;
     }
 

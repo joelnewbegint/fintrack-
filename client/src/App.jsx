@@ -340,12 +340,6 @@ export function App() {
       setOwnerMode('emi');
       setActiveEmiTab(tab === 'emiList' ? 'list' : 'dashboard');
       try { window.history.pushState({}, '', tab === 'emiList' ? '/emi/list' : '/emi'); } catch (e) {}
-    } else if (tab === 'loans-daily' || tab === 'daily-loans') {
-      handleNavigateToScheme('daily');
-    } else if (tab === 'loans-weekly' || tab === 'weekly-loans') {
-      handleNavigateToScheme('weekly');
-    } else if (tab === 'loans-monthly' || tab === 'monthly-loans') {
-      handleNavigateToScheme('monthly');
     } else {
       setOwnerMode('loans');
       setActiveTab(tab === 'overview' ? 'dashboard' : tab);
@@ -505,10 +499,6 @@ export function App() {
 
       {/* Top App Bar */}
       <Navbar
-        activeTab={activeTab}
-        selectedScheme={selectedScheme}
-        onSelectTab={handleTabChange}
-        onNavigateToScheme={handleNavigateToScheme}
         onSwitchToEMI={() => {
           setSelectedLoanId(null);
           setOwnerMode('emi');
@@ -550,7 +540,6 @@ export function App() {
         <Sidebar
           activeTab={activeTab}
           setActiveTab={handleTabChange}
-          selectedScheme={selectedScheme}
           onOpenNotifications={() => setShowNotifications(true)}
           onOpenWhatsAppHub={(props) => {
             setWhatsappHubProps(props || {});
@@ -724,7 +713,6 @@ export function App() {
         isOpen={showMoreSheet}
         onClose={() => setShowMoreSheet(false)}
         onSelectTab={handleTabChange}
-        onNavigateToScheme={handleNavigateToScheme}
         onOpenNotifications={() => setShowNotifications(true)}
         onOpenLoanForm={() => setShowLoanFormModal(true)}
         onOpenWhatsAppHub={(props) => {

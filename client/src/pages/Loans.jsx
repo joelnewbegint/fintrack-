@@ -127,7 +127,6 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
       const res = await api.getLoans({
         financeType: typeFilter,
         status: statusFilter,
-        excludeClosed: statusFilter !== 'completed' ? 'true' : 'false',
         search,
       });
       if (res?.success) {
@@ -298,47 +297,26 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
     };
   }, [summarySource]);
 
-  // Live Counts for Quick Chips (Excluding closed loans from active categories)
+  // Live Counts for Quick Chips
   const chipCounts = useMemo(() => {
     const s = summarySource;
-    const isClosedLoan = (l) =>
-      l.status === 'completed' ||
-      l.status === 'closed' ||
-      (l.remainingBalance != null && Number(l.remainingBalance) <= 0);
-
-    const activeRunning = s.filter((l) => !isClosedLoan(l));
     return {
-      all: activeRunning.length,
-      daily: activeRunning.filter((l) => (l.financeType || 'daily').toLowerCase() === 'daily').length,
-      weekly: activeRunning.filter((l) => (l.financeType || 'daily').toLowerCase() === 'weekly').length,
-      monthly: activeRunning.filter((l) => (l.financeType || 'daily').toLowerCase() === 'monthly').length,
-      overdue: activeRunning.filter((l) => l.status === 'overdue').length,
-      closed: s.filter(isClosedLoan).length,
+      all: s.length,
+      daily: s.filter((l) => l.financeType === 'daily').length,
+      weekly: s.filter((l) => l.financeType === 'weekly').length,
+      monthly: s.filter((l) => l.financeType === 'monthly').length,
+      overdue: s.filter((l) => l.status === 'overdue').length,
+      closed: s.filter((l) => l.status === 'completed').length,
     };
   }, [summarySource]);
 
-  // Filter out closed loans unless the user explicitly selected the 'completed' / 'closed' tab
-  const displayLoans = useMemo(() => {
-    return loans.filter((l) => {
-      const isClosed =
-        l.status === 'completed' ||
-        l.status === 'closed' ||
-        (l.remainingBalance != null && Number(l.remainingBalance) <= 0);
-
-      if (statusFilter === 'completed') {
-        return isClosed;
-      }
-      return !isClosed;
-    });
-  }, [loans, statusFilter]);
-
   // Pagination calculation
-  const totalPages = Math.max(1, Math.ceil(displayLoans.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(loans.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, displayLoans.length);
+  const endIndex = Math.min(startIndex + pageSize, loans.length);
   const paginatedLoans = useMemo(
-    () => displayLoans.slice(startIndex, endIndex),
-    [displayLoans, startIndex, endIndex]
+    () => loans.slice(startIndex, endIndex),
+    [loans, startIndex, endIndex]
   );
 
   // Page Numbers List Generator
@@ -757,12 +735,12 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
           <div className="flex flex-wrap items-center gap-2">
             {[
-              { id: 'all', label: `Active Loans (${chipCounts.all})`, onClick: () => { setTypeFilter('all'); setStatusFilter('all'); } },
-              { id: 'daily', label: `Daily (${chipCounts.daily})`, onClick: () => { setTypeFilter('daily'); if (statusFilter === 'completed') setStatusFilter('all'); } },
-              { id: 'weekly', label: `Weekly (${chipCounts.weekly})`, onClick: () => { setTypeFilter('weekly'); if (statusFilter === 'completed') setStatusFilter('all'); } },
-              { id: 'monthly', label: `Monthly (${chipCounts.monthly})`, onClick: () => { setTypeFilter('monthly'); if (statusFilter === 'completed') setStatusFilter('all'); } },
+              { id: 'all', label: `All (${chipCounts.all})`, onClick: () => { setTypeFilter('all'); setStatusFilter('all'); } },
+              { id: 'daily', label: `Daily (${chipCounts.daily})`, onClick: () => setTypeFilter('daily') },
+              { id: 'weekly', label: `Weekly (${chipCounts.weekly})`, onClick: () => setTypeFilter('weekly') },
+              { id: 'monthly', label: `Monthly (${chipCounts.monthly})`, onClick: () => setTypeFilter('monthly') },
               { id: 'overdue', label: `Overdue (${chipCounts.overdue})`, isOverduePill: true, onClick: () => setStatusFilter('overdue') },
-              { id: 'completed', label: `Closed Archive (${chipCounts.closed})`, onClick: () => setStatusFilter('completed') },
+              { id: 'completed', label: `Closed (${chipCounts.closed})`, onClick: () => setStatusFilter('completed') },
             ].map((chip) => {
               const isActive =
                 chip.id === 'all'
@@ -798,7 +776,7 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
 
           <div className="text-xs text-slate-500 dark:text-slate-400">
             Showing <strong className="text-slate-800 dark:text-slate-200">{paginatedLoans.length}</strong> of{' '}
-            <strong className="text-slate-800 dark:text-slate-200">{displayLoans.length}</strong> loans
+            <strong className="text-slate-800 dark:text-slate-200">{loans.length}</strong> loans
           </div>
         </div>
       </div>
@@ -811,7 +789,7 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
             <div className="p-8 text-center text-xs text-slate-400 bg-white/60 dark:bg-slate-900/60 rounded-2xl">
               Loading loans...
             </div>
-          ) : displayLoans.length === 0 ? (
+          ) : loans.length === 0 ? (
             /* Empty State matching Mockup */
             <div className="py-12 px-4 text-center space-y-3 bg-white/90 dark:bg-slate-900/90 rounded-2xl border border-slate-100 dark:border-slate-800">
               <div className="w-12 h-12 mx-auto rounded-2xl bg-sky-50 text-sky-500 flex items-center justify-center">
@@ -1031,7 +1009,7 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
                       </td>
                     </tr>
                   ))
-                ) : displayLoans.length === 0 ? (
+                ) : loans.length === 0 ? (
                   /* Empty State matching Mockup */
                   <tr>
                     <td colSpan={8} className="py-16 text-center">
@@ -1347,7 +1325,7 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
           </div>
 
           {/* 5. PAGINATION (Bottom of Table matching Mockup) */}
-          {displayLoans.length > 0 && (
+          {loans.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-white/95 dark:bg-slate-900/95 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
               {/* Left: Rows per page: [ 25 ▾ ] */}
               <div className="flex items-center space-x-2">

@@ -182,7 +182,7 @@ export const createLoan = async (req, res, next) => {
 
 export const getLoans = async (req, res, next) => {
   try {
-    const { status, financeType, customerId, search, excludeClosed } = req.query;
+    const { status, financeType, customerId, search } = req.query;
     let query = {};
 
     // Role-based Client Isolation
@@ -196,17 +196,7 @@ export const getLoans = async (req, res, next) => {
     }
 
     if (status && status !== 'all') {
-      if (status === 'completed' || status === 'closed') {
-        query.$or = [{ status: 'completed' }, { status: 'closed' }, { remainingBalance: { $lte: 0 } }];
-      } else if (status === 'active') {
-        query.status = 'active';
-        query.remainingBalance = { $gt: 0 };
-      } else {
-        query.status = status;
-      }
-    } else if (excludeClosed === 'true') {
-      query.status = { $nin: ['completed', 'closed'] };
-      query.remainingBalance = { $gt: 0 };
+      query.status = status;
     }
 
     if (financeType && financeType !== 'all') {

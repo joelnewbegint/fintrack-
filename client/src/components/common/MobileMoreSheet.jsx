@@ -26,17 +26,12 @@ import {
   Download,
   FileText,
   Smartphone,
-  Clock,
-  CalendarRange,
-  CalendarCheck,
-  Coins,
 } from 'lucide-react';
 
 export const MobileMoreSheet = ({
   isOpen,
   onClose,
   onSelectTab,
-  onNavigateToScheme,
   onOpenNotifications,
   onOpenLoanForm,
   onOpenWhatsAppHub,
@@ -152,67 +147,6 @@ export const MobileMoreSheet = ({
               Preview Mode (Desktop Testing)
             </p>
             <DisplayModeSwitcher showLabel={true} />
-          </div>
-        )}
-
-        {/* Loans Division Quick Access (Daily, Weekly, Monthly) */}
-        {!isClient && (
-          <div className="space-y-1.5 pt-1">
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
-              {lang === 'ta' ? 'கடன் பிரிவுகள்' : 'Loans Division'}
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => {
-                  onClose();
-                  if (onNavigateToScheme) onNavigateToScheme('daily');
-                  else handleNav('loans-daily');
-                }}
-                className="p-2.5 rounded-2xl glass hover:bg-amber-50 dark:hover:bg-amber-950/40 border border-amber-200/60 dark:border-amber-900/40 flex flex-col items-center text-center space-y-1 active:scale-95 transition"
-              >
-                <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950 flex items-center justify-center text-amber-600">
-                  <Clock className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  {lang === 'ta' ? 'தினசரி' : 'Daily'}
-                </span>
-                <span className="text-[9px] text-amber-600 font-bold">Thandal</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  onClose();
-                  if (onNavigateToScheme) onNavigateToScheme('weekly');
-                  else handleNav('loans-weekly');
-                }}
-                className="p-2.5 rounded-2xl glass hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-200/60 dark:border-sky-900/40 flex flex-col items-center text-center space-y-1 active:scale-95 transition"
-              >
-                <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center text-sky-600">
-                  <CalendarRange className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  {lang === 'ta' ? 'வாரம்' : 'Weekly'}
-                </span>
-                <span className="text-[9px] text-sky-600 font-bold">7-Day</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  onClose();
-                  if (onNavigateToScheme) onNavigateToScheme('monthly');
-                  else handleNav('loans-monthly');
-                }}
-                className="p-2.5 rounded-2xl glass hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-900/40 flex flex-col items-center text-center space-y-1 active:scale-95 transition"
-              >
-                <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600">
-                  <CalendarCheck className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  {lang === 'ta' ? 'மாதம்' : 'Monthly'}
-                </span>
-                <span className="text-[9px] text-emerald-600 font-bold">Interest</span>
-              </button>
-            </div>
           </div>
         )}
 
