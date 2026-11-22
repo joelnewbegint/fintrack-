@@ -180,22 +180,73 @@ export const createLoan = async (req, res, next) => {
   }
 };
 
+// Helper calculation utilities ensuring identical formulas across views
+export const calculateLoanProfit = (loan) => {
+  if (!loan) return 0;
+
+  const isClosed = loan.status === 'completed' || loan.status === 'closed' || (loan.remainingBalance != null && Number(loan.remainingBalance) <= 0);
+  const interest = calculateLoanInterest(loan);
+  const collected = Number(loan.totalCollected || 0);
+  const payable = Number(loan.totalPayable || loan.principal || 0);
+
+  // If loan is settled and completed, full interest/charge is realized profit
+  if (isClosed) {
+    if (Number(loan.profit) > 0) return Number(loan.profit);
+    if (Number(loan.chargeAmount) > 0) return Number(loan.chargeAmount);
+    return interest;
+  }
+
+  // For active loans: profit/charge earned and collected so far
+  if (collected <= 0) return 0;
+  if (payable > 0 && interest > 0) {
+    return Math.min(interest, Math.round((collected / payable) * interest));
+  }
+
+  return 0;
+};
+
+export const calculateLoanInterest = (loan) => {
+  if (!loan) return 0;
+  if (Number(loan.chargeAmount) > 0) return Number(loan.chargeAmount);
+  const pr = Number(loan.principal || 0);
+  const payable = Number(loan.totalPayable || 0);
+  if (payable > pr) return payable - pr;
+  const disbursed = Number(loan.disbursedAmount || 0);
+  if (disbursed > 0 && pr > disbursed) return pr - disbursed;
+  if (Number(loan.interestPercent) > 0 && pr > 0) {
+    return Math.round((pr * Number(loan.interestPercent)) / 100);
+  }
+  return 0;
+};
+
 export const getLoans = async (req, res, next) => {
   try {
-    const { status, financeType, customerId, search } = req.query;
+    const { status, financeType, customerId, search, excludeClosed, view } = req.query;
     let query = {};
 
-    // Role-based Client Isolation
+    // Role-based Client / Loan Agent Isolation
     if (req.user?.role === 'client') {
       const clientCustIds = [req.user.customerId, req.user._id].filter(Boolean);
       const orList = [{ customerId: { $in: clientCustIds } }];
       if (req.user.phone) orList.push({ customerPhone: req.user.phone });
       query.$or = orList;
-    } else if (req.user?.role === 'agent' && req.user.assignedAreas && req.user.assignedAreas.length > 0) {
+    } else if (
+      (req.user?.role === 'loan_agent' || req.user?.role === 'agent') &&
+      req.user.assignedAreas &&
+      req.user.assignedAreas.length > 0
+    ) {
       query.customerArea = { $in: req.user.assignedAreas };
     }
 
-    if (status && status !== 'all') {
+    if (view === 'closed' || status === 'closed' || status === 'completed') {
+      query.$or = [
+        { status: { $in: ['completed', 'closed'] } },
+        { remainingBalance: { $lte: 0 } },
+      ];
+    } else if (excludeClosed === 'true' || excludeClosed === true || view === 'active' || status === 'active') {
+      query.status = { $nin: ['completed', 'closed'] };
+      query.remainingBalance = { $gt: 0 };
+    } else if (status && status !== 'all') {
       query.status = status;
     }
 
@@ -236,6 +287,14 @@ export const getLoans = async (req, res, next) => {
           doc.customerId.photoUrl = doc.borrowerPhoto;
         }
       }
+
+      // Add computed financial properties
+      const isClosed = doc.status === 'completed' || doc.status === 'closed' || (doc.remainingBalance != null && doc.remainingBalance <= 0);
+      doc.isClosed = isClosed;
+      doc.isActive = !isClosed;
+      doc.computedProfit = calculateLoanProfit(doc);
+      doc.computedInterest = calculateLoanInterest(doc);
+
       return doc;
     });
 
@@ -257,6 +316,229 @@ export const getLoans = async (req, res, next) => {
       success: true,
       count: loans.length,
       loans,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getLoanSummary = async (req, res, next) => {
+  try {
+    const { type } = req.query; // 'daily' | 'weekly' | 'monthly'
+    let query = {};
+
+    if (type && type !== 'all') {
+      query.financeType = type;
+    }
+
+    // Role-based Client / Loan Agent Isolation
+    if (req.user?.role === 'client') {
+      const clientCustIds = [req.user.customerId, req.user._id].filter(Boolean);
+      const orList = [{ customerId: { $in: clientCustIds } }];
+      if (req.user.phone) orList.push({ customerPhone: req.user.phone });
+      query.$or = orList;
+    } else if (
+      (req.user?.role === 'loan_agent' || req.user?.role === 'agent') &&
+      req.user.assignedAreas &&
+      req.user.assignedAreas.length > 0
+    ) {
+      query.customerArea = { $in: req.user.assignedAreas };
+    }
+
+    const rawLoans = await Loan.find(query)
+      .populate('customerId', 'name phone area photoUrl')
+      .sort({ createdAt: -1 });
+
+    const loans = rawLoans.map((l) => {
+      const doc = l.toObject ? l.toObject() : l;
+      if (!doc.customerId || typeof doc.customerId !== 'object') {
+        doc.customerId = {
+          _id: doc.customerId,
+          name: doc.customerName || 'Borrower',
+          phone: doc.customerPhone || '',
+          area: doc.customerArea || '',
+          photoUrl: doc.borrowerPhoto || '',
+        };
+      }
+      doc.computedInterest = calculateLoanInterest(doc);
+      doc.computedProfit = calculateLoanProfit(doc);
+      const isClosed = doc.status === 'completed' || doc.status === 'closed' || (doc.remainingBalance != null && doc.remainingBalance <= 0);
+      doc.isClosed = isClosed;
+      doc.isActive = !isClosed;
+      return doc;
+    });
+
+    const activeLoans = loans.filter((l) => l.isActive);
+    const closedLoans = loans.filter((l) => l.isClosed);
+
+    const totalLoanAmount = loans.reduce((acc, l) => acc + (Number(l.principal) || 0), 0);
+    const totalInterest = loans.reduce((acc, l) => acc + (Number(l.computedInterest) || 0), 0);
+    const totalProfit = loans.reduce((acc, l) => acc + (Number(l.computedProfit) || 0), 0);
+    const totalCollected = loans.reduce((acc, l) => acc + (Number(l.totalCollected) || 0), 0);
+    const outstandingBalance = activeLoans.reduce((acc, l) => acc + Math.max(0, Number(l.remainingBalance) || 0), 0);
+
+    const summary = {
+      financeType: type || 'all',
+      totalLoanAmount,
+      totalInterest,
+      totalProfit,
+      totalCollected,
+      outstandingBalance,
+      activeLoansCount: activeLoans.length,
+      closedLoansCount: closedLoans.length,
+      totalLoansCount: loans.length,
+    };
+
+    // Detailed breakdown lists for modal popups
+    const breakdowns = {
+      loanAmount: loans.map((l) => ({
+        loanNo: l.loanNo,
+        customerName: l.customerId?.name || l.customerName,
+        phone: l.customerId?.phone || l.customerPhone,
+        area: l.customerId?.area || l.customerArea,
+        principal: Number(l.principal) || 0,
+        status: l.status,
+        isActive: l.isActive,
+      })),
+      interest: loans.map((l) => ({
+        loanNo: l.loanNo,
+        customerName: l.customerId?.name || l.customerName,
+        phone: l.customerId?.phone || l.customerPhone,
+        area: l.customerId?.area || l.customerArea,
+        principal: Number(l.principal) || 0,
+        interest: Number(l.computedInterest) || 0,
+        status: l.status,
+        isActive: l.isActive,
+      })),
+      profit: loans.map((l) => ({
+        loanNo: l.loanNo,
+        customerName: l.customerId?.name || l.customerName,
+        phone: l.customerId?.phone || l.customerPhone,
+        area: l.customerId?.area || l.customerArea,
+        profit: Number(l.computedProfit) || 0,
+        totalCollected: Number(l.totalCollected) || 0,
+        status: l.status,
+        isActive: l.isActive,
+      })),
+      collected: loans
+        .filter((l) => Number(l.totalCollected) > 0)
+        .map((l) => ({
+          loanNo: l.loanNo,
+          customerName: l.customerId?.name || l.customerName,
+          phone: l.customerId?.phone || l.customerPhone,
+          area: l.customerId?.area || l.customerArea,
+          totalCollected: Number(l.totalCollected) || 0,
+          totalPayable: Number(l.totalPayable) || 0,
+          status: l.status,
+          isActive: l.isActive,
+        })),
+      outstanding: activeLoans.map((l) => ({
+        loanNo: l.loanNo,
+        customerName: l.customerId?.name || l.customerName,
+        phone: l.customerId?.phone || l.customerPhone,
+        area: l.customerId?.area || l.customerArea,
+        remainingBalance: Number(l.remainingBalance) || 0,
+        totalPayable: Number(l.totalPayable) || 0,
+        status: l.status,
+      })),
+      active: activeLoans,
+    };
+
+    res.status(200).json({
+      success: true,
+      summary,
+      breakdowns,
+      activeLoans,
+      closedLoans,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getLoanOverallSummary = async (req, res, next) => {
+  try {
+    let query = {};
+
+    // Role-based Client / Loan Agent Isolation
+    if (req.user?.role === 'client') {
+      const clientCustIds = [req.user.customerId, req.user._id].filter(Boolean);
+      const orList = [{ customerId: { $in: clientCustIds } }];
+      if (req.user.phone) orList.push({ customerPhone: req.user.phone });
+      query.$or = orList;
+    } else if (
+      (req.user?.role === 'loan_agent' || req.user?.role === 'agent') &&
+      req.user.assignedAreas &&
+      req.user.assignedAreas.length > 0
+    ) {
+      query.customerArea = { $in: req.user.assignedAreas };
+    }
+
+    const rawLoans = await Loan.find(query)
+      .populate('customerId', 'name phone area photoUrl')
+      .sort({ createdAt: -1 });
+
+    const loans = rawLoans.map((l) => {
+      const doc = l.toObject ? l.toObject() : l;
+      if (!doc.customerId || typeof doc.customerId !== 'object') {
+        doc.customerId = {
+          _id: doc.customerId,
+          name: doc.customerName || 'Borrower',
+          phone: doc.customerPhone || '',
+          area: doc.customerArea || '',
+          photoUrl: doc.borrowerPhoto || '',
+        };
+      }
+      doc.computedInterest = calculateLoanInterest(doc);
+      doc.computedProfit = calculateLoanProfit(doc);
+      const isClosed = doc.status === 'completed' || doc.status === 'closed' || (doc.remainingBalance != null && doc.remainingBalance <= 0);
+      doc.isClosed = isClosed;
+      doc.isActive = !isClosed;
+      return doc;
+    });
+
+    const computeMetricsForType = (typeList) => {
+      const active = typeList.filter((l) => l.isActive);
+      const closed = typeList.filter((l) => l.isClosed);
+      return {
+        totalLoanAmount: typeList.reduce((acc, l) => acc + (Number(l.principal) || 0), 0),
+        totalInterest: typeList.reduce((acc, l) => acc + (Number(l.computedInterest) || 0), 0),
+        totalProfit: typeList.reduce((acc, l) => acc + (Number(l.computedProfit) || 0), 0),
+        totalCollected: typeList.reduce((acc, l) => acc + (Number(l.totalCollected) || 0), 0),
+        outstandingBalance: active.reduce((acc, l) => acc + Math.max(0, Number(l.remainingBalance) || 0), 0),
+        activeLoansCount: active.length,
+        closedLoansCount: closed.length,
+        totalLoansCount: typeList.length,
+      };
+    };
+
+    const dailyLoans = loans.filter((l) => l.financeType === 'daily');
+    const weeklyLoans = loans.filter((l) => l.financeType === 'weekly');
+    const monthlyLoans = loans.filter((l) => l.financeType === 'monthly');
+
+    const byType = {
+      daily: computeMetricsForType(dailyLoans),
+      weekly: computeMetricsForType(weeklyLoans),
+      monthly: computeMetricsForType(monthlyLoans),
+    };
+
+    const overall = {
+      totalLoanAmount: byType.daily.totalLoanAmount + byType.weekly.totalLoanAmount + byType.monthly.totalLoanAmount,
+      totalInterest: byType.daily.totalInterest + byType.weekly.totalInterest + byType.monthly.totalInterest,
+      totalProfit: byType.daily.totalProfit + byType.weekly.totalProfit + byType.monthly.totalProfit,
+      totalCollected: byType.daily.totalCollected + byType.weekly.totalCollected + byType.monthly.totalCollected,
+      outstandingBalance: byType.daily.outstandingBalance + byType.weekly.outstandingBalance + byType.monthly.outstandingBalance,
+      activeLoansCount: byType.daily.activeLoansCount + byType.weekly.activeLoansCount + byType.monthly.activeLoansCount,
+      closedLoansCount: byType.daily.closedLoansCount + byType.weekly.closedLoansCount + byType.monthly.closedLoansCount,
+      totalLoansCount: loans.length,
+    };
+
+    res.status(200).json({
+      success: true,
+      overall,
+      byType,
+      activeLoans: loans.filter((l) => l.isActive),
+      closedLoans: loans.filter((l) => l.isClosed),
     });
   } catch (error) {
     next(error);

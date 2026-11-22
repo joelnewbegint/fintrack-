@@ -20,6 +20,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Loans from './pages/Loans';
 import SchemeLoansPage from './pages/SchemeLoansPage';
+import ClosedLoansPage from './pages/ClosedLoansPage';
 import LoanDetail from './pages/LoanDetail';
 import Customers from './pages/Customers';
 import CustomerDetail from './pages/CustomerDetail';
@@ -150,6 +151,15 @@ export function App() {
           }
           setSelectedScheme('monthly');
           setActiveTab('scheme-loans');
+          setOwnerMode('loans');
+        } else if (path === '/loans/closed') {
+          if (isEmiAgent) {
+            window.history.replaceState({}, '', '/emi');
+            setOwnerMode('emi');
+            setActiveEmiTab('dashboard');
+            return;
+          }
+          setActiveTab('closed-loans');
           setOwnerMode('loans');
         } else if (path === '/loans') {
           if (isEmiAgent) {
@@ -340,6 +350,10 @@ export function App() {
       setOwnerMode('emi');
       setActiveEmiTab(tab === 'emiList' ? 'list' : 'dashboard');
       try { window.history.pushState({}, '', tab === 'emiList' ? '/emi/list' : '/emi'); } catch (e) {}
+    } else if (tab === 'closed-loans') {
+      setOwnerMode('loans');
+      setActiveTab('closed-loans');
+      try { window.history.pushState({}, '', '/loans/closed'); } catch (e) {}
     } else {
       setOwnerMode('loans');
       setActiveTab(tab === 'overview' ? 'dashboard' : tab);
@@ -540,6 +554,8 @@ export function App() {
         <Sidebar
           activeTab={activeTab}
           setActiveTab={handleTabChange}
+          selectedScheme={selectedScheme}
+          onSelectScheme={handleNavigateToScheme}
           onOpenNotifications={() => setShowNotifications(true)}
           onOpenWhatsAppHub={(props) => {
             setWhatsappHubProps(props || {});
@@ -634,6 +650,16 @@ export function App() {
                 />
               )}
 
+              {activeTab === 'closed-loans' && (
+                <ClosedLoansPage
+                  onBack={() => {
+                    try { window.history.pushState({}, '', '/loans'); } catch (e) {}
+                    setActiveTab('loans');
+                  }}
+                  onViewLoan={(id) => setSelectedLoanId(id)}
+                />
+              )}
+
               {activeTab === 'payments' && <Payments />}
 
               {activeTab === 'investments' && isOwner && (
@@ -713,6 +739,7 @@ export function App() {
         isOpen={showMoreSheet}
         onClose={() => setShowMoreSheet(false)}
         onSelectTab={handleTabChange}
+        onSelectScheme={handleNavigateToScheme}
         onOpenNotifications={() => setShowNotifications(true)}
         onOpenLoanForm={() => setShowLoanFormModal(true)}
         onOpenWhatsAppHub={(props) => {

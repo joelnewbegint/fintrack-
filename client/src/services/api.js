@@ -708,7 +708,7 @@ export const api = {
     const result = await safeFetchJson(`/api/loans?${query}`, { headers: getHeaders() });
     if (result.ok && result.data && Array.isArray(result.data.loans)) {
       // Only cache full loans list to prevent filtered queries from truncating master local storage
-      const hasFilter = Boolean(params.search || (params.financeType && params.financeType !== 'all') || (params.status && params.status !== 'all') || params.customerId);
+      const hasFilter = Boolean(params.search || (params.financeType && params.financeType !== 'all') || (params.status && params.status !== 'all') || params.customerId || params.excludeClosed || params.view);
       if (!hasFilter) {
         setStored(STORAGE_KEYS.LOANS, result.data.loans);
       }
@@ -763,9 +763,14 @@ export const api = {
       };
     });
 
-    if (params.status && params.status !== 'all') {
+    if (params.view === 'closed' || params.status === 'closed' || params.status === 'completed') {
+      loans = loans.filter((l) => l.status === 'completed' || l.status === 'closed' || (l.remainingBalance != null && l.remainingBalance <= 0));
+    } else if (params.excludeClosed === 'true' || params.excludeClosed === true || params.view === 'active' || params.status === 'active') {
+      loans = loans.filter((l) => l.status !== 'completed' && l.status !== 'closed' && (l.remainingBalance != null ? l.remainingBalance > 0 : true));
+    } else if (params.status && params.status !== 'all') {
       loans = loans.filter((l) => l.status === params.status);
     }
+
     if (params.financeType && params.financeType !== 'all') {
       loans = loans.filter((l) => l.financeType === params.financeType);
     }
@@ -780,6 +785,143 @@ export const api = {
       );
     }
     return { success: true, count: loans.length, loans };
+  },
+
+  getLoanSummary: async (type = 'daily') => {
+    const result = await safeFetchJson(`/api/loans/summary?type=${type}`, { headers: getHeaders() });
+    if (result.ok && result.data && result.data.summary) {
+      try {
+        localStorage.setItem(`fintrack_summary_${type}`, JSON.stringify(result.data));
+      } catch (e) {}
+      return result.data;
+    }
+
+    // Offline computation fallback
+    const rawCache = localStorage.getItem(`fintrack_summary_${type}`);
+    if (rawCache) {
+      try { return JSON.parse(rawCache); } catch (e) {}
+    }
+
+    const loansRes = await api.getLoans({});
+    const allLoans = Array.isArray(loansRes?.loans) ? loansRes.loans : [];
+    const typeLoans = allLoans.filter((l) => !type || type === 'all' || l.financeType === type);
+
+    const computeLoanInterest = (l) => {
+      if (Number(l.chargeAmount) > 0) return Number(l.chargeAmount);
+      const pr = Number(l.principal || 0);
+      const pay = Number(l.totalPayable || 0);
+      if (pay > pr) return pay - pr;
+      const disb = Number(l.disbursedAmount || 0);
+      if (disb > 0 && pr > disb) return pr - disb;
+      if (Number(l.interestPercent) > 0 && pr > 0) return Math.round((pr * Number(l.interestPercent)) / 100);
+      return 0;
+    };
+
+    const computeLoanProfit = (l) => {
+      const isClosed = l.status === 'completed' || l.status === 'closed' || (l.remainingBalance != null && Number(l.remainingBalance) <= 0);
+      const interest = computeLoanInterest(l);
+      const col = Number(l.totalCollected || 0);
+      const pay = Number(l.totalPayable || l.principal || 0);
+
+      if (isClosed) {
+        if (Number(l.profit) > 0) return Number(l.profit);
+        if (Number(l.chargeAmount) > 0) return Number(l.chargeAmount);
+        return interest;
+      }
+
+      if (col <= 0) return 0;
+      if (pay > 0 && interest > 0) {
+        return Math.min(interest, Math.round((col / pay) * interest));
+      }
+      return 0;
+    };
+
+    const loansWithCalc = typeLoans.map((l) => {
+      const isClosed = l.status === 'completed' || l.status === 'closed' || (l.remainingBalance != null && l.remainingBalance <= 0);
+      return {
+        ...l,
+        computedInterest: computeLoanInterest(l),
+        computedProfit: computeLoanProfit(l),
+        isClosed,
+        isActive: !isClosed,
+      };
+    });
+
+    const activeLoans = loansWithCalc.filter((l) => l.isActive);
+    const closedLoans = loansWithCalc.filter((l) => l.isClosed);
+
+    const totalLoanAmount = loansWithCalc.reduce((a, b) => a + (Number(b.principal) || 0), 0);
+    const totalInterest = loansWithCalc.reduce((a, b) => a + (Number(b.computedInterest) || 0), 0);
+    const totalProfit = loansWithCalc.reduce((a, b) => a + (Number(b.computedProfit) || 0), 0);
+    const totalCollected = loansWithCalc.reduce((a, b) => a + (Number(b.totalCollected) || 0), 0);
+    const outstandingBalance = activeLoans.reduce((a, b) => a + Math.max(0, Number(b.remainingBalance) || 0), 0);
+
+    const summary = {
+      financeType: type,
+      totalLoanAmount,
+      totalInterest,
+      totalProfit,
+      totalCollected,
+      outstandingBalance,
+      activeLoansCount: activeLoans.length,
+      closedLoansCount: closedLoans.length,
+      totalLoansCount: loansWithCalc.length,
+    };
+
+    const breakdowns = {
+      loanAmount: loansWithCalc.map(l => ({ loanNo: l.loanNo, customerName: l.customerId?.name || l.customerName, phone: l.customerId?.phone, area: l.customerId?.area, principal: Number(l.principal) || 0, status: l.status, isActive: l.isActive })),
+      interest: loansWithCalc.map(l => ({ loanNo: l.loanNo, customerName: l.customerId?.name || l.customerName, phone: l.customerId?.phone, area: l.customerId?.area, principal: Number(l.principal) || 0, interest: Number(l.computedInterest) || 0, status: l.status, isActive: l.isActive })),
+      profit: loansWithCalc.map(l => ({ loanNo: l.loanNo, customerName: l.customerId?.name || l.customerName, phone: l.customerId?.phone, area: l.customerId?.area, profit: Number(l.computedProfit) || 0, totalCollected: Number(l.totalCollected) || 0, status: l.status, isActive: l.isActive })),
+      collected: loansWithCalc.filter(l => Number(l.totalCollected) > 0).map(l => ({ loanNo: l.loanNo, customerName: l.customerId?.name || l.customerName, phone: l.customerId?.phone, area: l.customerId?.area, totalCollected: Number(l.totalCollected) || 0, totalPayable: Number(l.totalPayable) || 0, status: l.status, isActive: l.isActive })),
+      outstanding: activeLoans.map(l => ({ loanNo: l.loanNo, customerName: l.customerId?.name || l.customerName, phone: l.customerId?.phone, area: l.customerId?.area, remainingBalance: Number(l.remainingBalance) || 0, totalPayable: Number(l.totalPayable) || 0, status: l.status })),
+      active: activeLoans,
+    };
+
+    return { success: true, summary, breakdowns, activeLoans, closedLoans };
+  },
+
+  getLoanOverallSummary: async () => {
+    const result = await safeFetchJson('/api/loans/summary/overall', { headers: getHeaders() });
+    if (result.ok && result.data && result.data.overall) {
+      try {
+        localStorage.setItem('fintrack_summary_overall', JSON.stringify(result.data));
+      } catch (e) {}
+      return result.data;
+    }
+
+    const rawCache = localStorage.getItem('fintrack_summary_overall');
+    if (rawCache) {
+      try { return JSON.parse(rawCache); } catch (e) {}
+    }
+
+    const daily = await api.getLoanSummary('daily');
+    const weekly = await api.getLoanSummary('weekly');
+    const monthly = await api.getLoanSummary('monthly');
+
+    const byType = {
+      daily: daily.summary,
+      weekly: weekly.summary,
+      monthly: monthly.summary,
+    };
+
+    const overall = {
+      totalLoanAmount: byType.daily.totalLoanAmount + byType.weekly.totalLoanAmount + byType.monthly.totalLoanAmount,
+      totalInterest: byType.daily.totalInterest + byType.weekly.totalInterest + byType.monthly.totalInterest,
+      totalProfit: byType.daily.totalProfit + byType.weekly.totalProfit + byType.monthly.totalProfit,
+      totalCollected: byType.daily.totalCollected + byType.weekly.totalCollected + byType.monthly.totalCollected,
+      outstandingBalance: byType.daily.outstandingBalance + byType.weekly.outstandingBalance + byType.monthly.outstandingBalance,
+      activeLoansCount: byType.daily.activeLoansCount + byType.weekly.activeLoansCount + byType.monthly.activeLoansCount,
+      closedLoansCount: byType.daily.closedLoansCount + byType.weekly.closedLoansCount + byType.monthly.closedLoansCount,
+      totalLoansCount: byType.daily.totalLoansCount + byType.weekly.totalLoansCount + byType.monthly.totalLoansCount,
+    };
+
+    return {
+      success: true,
+      overall,
+      byType,
+      activeLoans: [...(daily.activeLoans || []), ...(weekly.activeLoans || []), ...(monthly.activeLoans || [])],
+      closedLoans: [...(daily.closedLoans || []), ...(weekly.closedLoans || []), ...(monthly.closedLoans || [])],
+    };
   },
 
   getLoanById: async (id) => {

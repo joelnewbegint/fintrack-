@@ -174,6 +174,10 @@ const loanSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    closedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

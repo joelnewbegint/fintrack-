@@ -3,6 +3,8 @@ import { z } from 'zod';
 import {
   createLoan,
   getLoans,
+  getLoanSummary,
+  getLoanOverallSummary,
   getLoanById,
   updateLoanStatus,
   updateLoan,
@@ -55,6 +57,8 @@ const updateLoanSchema = z.object({
 router.use(protect);
 router.use(restrictTo('owner', 'loan_agent'));
 
+router.get('/summary/overall', getLoanOverallSummary);
+router.get('/summary', getLoanSummary);
 router.get('/', getLoans);
 router.get('/:id', getLoanById);
 router.post('/', restrictTo('owner'), validate(loanSchema), createLoan);

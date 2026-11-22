@@ -39,6 +39,9 @@ import {
   Clock,
   CalendarRange,
   CalendarCheck,
+  Archive,
+  TrendingUp,
+  BarChart2,
 } from 'lucide-react';
 
 // Colorful avatar helper matching the mockup (letter M in blue, R in purple, S in emerald, K in rose, A in sky blue)
@@ -71,6 +74,10 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
   const [customers, setCustomers] = useState([]);
   const [todayCollected, setTodayCollected] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Overall financial summary data (Owner view)
+  const [overallSummary, setOverallSummary] = useState(null);
+  const [overallViewToggle, setOverallViewToggle] = useState('active'); // 'active' | 'closed' | 'all'
 
   // Filters
   const [typeFilter, setTypeFilter] = useState(initialType);
@@ -106,19 +113,34 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
     }
   };
 
-  // Fetch all loans without filter to keep summary cards consistent
+  // Fetch overall summary across daily, weekly, monthly
+  const fetchOverallSummary = async () => {
+    try {
+      const res = await api.getLoanOverallSummary();
+      if (res?.success) {
+        setOverallSummary(res);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch overall loan summary:', err);
+    }
+  };
+
+  // Fetch active loans without filter to keep summary cards consistent (excluding closed loans)
   const fetchSummaryLoans = async () => {
     try {
-      const res = await api.getLoans({});
+      const res = await api.getLoans({ excludeClosed: true });
       if (res?.success && Array.isArray(res.loans)) {
-        setAllLoansSummary(res.loans);
+        const activeOnly = res.loans.filter(
+          (l) => l.status !== 'completed' && l.status !== 'closed' && (l.remainingBalance == null || Number(l.remainingBalance) > 0)
+        );
+        setAllLoansSummary(activeOnly);
       }
     } catch (err) {
       console.warn('Summary loans fetch failed:', err);
     }
   };
 
-  // Fetch filtered loans for table
+  // Fetch filtered active loans for table (strictly hiding closed loans)
   const fetchLoans = async (isBackground = false) => {
     try {
       if (!isBackground && loans.length === 0) {
@@ -128,9 +150,13 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
         financeType: typeFilter,
         status: statusFilter,
         search,
+        excludeClosed: true,
       });
       if (res?.success) {
-        setLoans(res.loans || []);
+        const activeOnly = (res.loans || []).filter(
+          (l) => l.status !== 'completed' && l.status !== 'closed' && (l.remainingBalance == null || Number(l.remainingBalance) > 0)
+        );
+        setLoans(activeOnly);
       }
     } catch (err) {
       console.error('Failed to fetch loans:', err);
@@ -153,6 +179,7 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
   useEffect(() => {
     fetchCustomers();
     fetchSummaryLoans();
+    fetchOverallSummary();
     fetchDashboardStats();
   }, []);
 
@@ -164,6 +191,7 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
       if (!showAddModal && !payLoanItem && !editingLoan && !showFormModal) {
         fetchLoans(true);
         fetchSummaryLoans();
+        fetchOverallSummary();
         fetchDashboardStats();
         fetchCustomers();
       }
@@ -297,7 +325,7 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
     };
   }, [summarySource]);
 
-  // Live Counts for Quick Chips
+  // Live Counts for Quick Chips (strictly active loans only)
   const chipCounts = useMemo(() => {
     const s = summarySource;
     return {
@@ -306,9 +334,74 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
       weekly: s.filter((l) => l.financeType === 'weekly').length,
       monthly: s.filter((l) => l.financeType === 'monthly').length,
       overdue: s.filter((l) => l.status === 'overdue').length,
-      closed: s.filter((l) => l.status === 'completed').length,
+      closed: overallSummary?.overall?.closedLoansCount ?? 0,
     };
-  }, [summarySource]);
+  }, [summarySource, overallSummary]);
+
+  // Overall financial calculations based on Active / Closed / All toggle
+  const displayedOverall = useMemo(() => {
+    if (!overallSummary) return null;
+    const { overall, byType, activeLoans, closedLoans } = overallSummary;
+
+    if (overallViewToggle === 'closed') {
+      const list = closedLoans || [];
+      const pr = list.reduce((acc, l) => acc + (Number(l.principal) || 0), 0);
+      const interest = list.reduce((acc, l) => acc + (Number(l.computedInterest || l.chargeAmount) || 0), 0);
+      const profit = list.reduce((acc, l) => acc + (Number(l.computedProfit || l.chargeAmount) || 0), 0);
+      const collected = list.reduce((acc, l) => acc + (Number(l.totalCollected || l.totalPayable || l.principal) || 0), 0);
+      const dPr = list.filter((l) => l.financeType === 'daily').reduce((a, b) => a + (Number(b.principal) || 0), 0);
+      const wPr = list.filter((l) => l.financeType === 'weekly').reduce((a, b) => a + (Number(b.principal) || 0), 0);
+      const mPr = list.filter((l) => l.financeType === 'monthly').reduce((a, b) => a + (Number(b.principal) || 0), 0);
+      return {
+        title: lang === 'ta' ? 'முடிந்த கடன்கள் நிதி' : 'Closed Loans Portfolio',
+        totalLoanAmount: pr,
+        totalInterest: interest,
+        totalProfit: profit,
+        totalCollected: collected,
+        outstandingBalance: 0,
+        count: list.length,
+        dailyPr: dPr,
+        weeklyPr: wPr,
+        monthlyPr: mPr,
+      };
+    } else if (overallViewToggle === 'active') {
+      const list = activeLoans || [];
+      const pr = list.reduce((acc, l) => acc + (Number(l.principal) || 0), 0);
+      const interest = list.reduce((acc, l) => acc + (Number(l.computedInterest || l.chargeAmount) || 0), 0);
+      const profit = list.reduce((acc, l) => acc + (Number(l.computedProfit) || 0), 0);
+      const collected = list.reduce((acc, l) => acc + (Number(l.totalCollected) || 0), 0);
+      const outstanding = list.reduce((acc, l) => acc + Math.max(0, Number(l.remainingBalance) || 0), 0);
+      const dPr = list.filter((l) => l.financeType === 'daily').reduce((a, b) => a + (Number(b.principal) || 0), 0);
+      const wPr = list.filter((l) => l.financeType === 'weekly').reduce((a, b) => a + (Number(b.principal) || 0), 0);
+      const mPr = list.filter((l) => l.financeType === 'monthly').reduce((a, b) => a + (Number(b.principal) || 0), 0);
+      return {
+        title: lang === 'ta' ? 'நடப்பு கடன்கள் நிதி' : 'Active Loans Portfolio',
+        totalLoanAmount: pr,
+        totalInterest: interest,
+        totalProfit: profit,
+        totalCollected: collected,
+        outstandingBalance: outstanding,
+        count: list.length,
+        dailyPr: dPr,
+        weeklyPr: wPr,
+        monthlyPr: mPr,
+      };
+    } else {
+      // 'all'
+      return {
+        title: lang === 'ta' ? 'முழுமையான நிதி (நடப்பு + முடிந்தவை)' : 'Combined Portfolio (Active + Closed)',
+        totalLoanAmount: overall?.totalLoanAmount || 0,
+        totalInterest: overall?.totalInterest || 0,
+        totalProfit: overall?.totalProfit || 0,
+        totalCollected: overall?.totalCollected || 0,
+        outstandingBalance: overall?.outstandingBalance || 0,
+        count: overall?.totalLoansCount || 0,
+        dailyPr: byType?.daily?.totalLoanAmount || 0,
+        weeklyPr: byType?.weekly?.totalLoanAmount || 0,
+        monthlyPr: byType?.monthly?.totalLoanAmount || 0,
+      };
+    }
+  }, [overallSummary, overallViewToggle, lang]);
 
   // Pagination calculation
   const totalPages = Math.max(1, Math.ceil(loans.length / pageSize));
@@ -509,6 +602,204 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
           />
         </button>
       </div>
+
+      {/* 2.2 OVERALL PORTFOLIO SUMMARY (Owner View & Loans Home) with Active / Closed / All Toggle */}
+      {isOwner && displayedOverall && (
+        <div
+          className="rounded-3xl p-5 border transition-all duration-300 space-y-4"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(240, 249, 255, 0.85) 100%)',
+            backdropFilter: 'blur(20px)',
+            borderColor: 'rgba(186, 230, 253, 0.9)',
+            boxShadow: '0 8px 30px -6px rgba(14, 165, 233, 0.12), 0 2px 10px -2px rgba(249, 115, 22, 0.08)',
+          }}
+        >
+          {/* Header row: Title + Toggle */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-sky-100 dark:border-sky-900/50">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 text-sky-600 flex items-center justify-center shadow-xs">
+                <BarChart2 className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-slate-800 dark:text-white tracking-tight">
+                  {lang === 'ta' ? 'ஒட்டுமொத்த நிதி தொகுப்பு (Overall Portfolio)' : 'Overall Portfolio Financials'}
+                </h2>
+                <p className="text-[10px] text-slate-500 font-medium">
+                  Daily + Weekly + Monthly • {displayedOverall.count} {lang === 'ta' ? 'கணக்குகள்' : 'accounts'}
+                </p>
+              </div>
+            </div>
+
+            {/* Toggle: Active / Closed / All */}
+            <div className="flex items-center space-x-1 p-1 rounded-xl bg-white/90 dark:bg-slate-800/90 border border-sky-200/80 dark:border-sky-900/60 shadow-xs self-start sm:self-auto">
+              {[
+                { id: 'active', en: 'Active', ta: 'நடப்பு' },
+                { id: 'closed', en: 'Closed', ta: 'முடிந்தவை' },
+                { id: 'all', en: 'All Combined', ta: 'அனைத்தும்' },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setOverallViewToggle(opt.id)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition active:scale-95 ${
+                    overallViewToggle === opt.id
+                      ? 'btn-sky-primary text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {lang === 'ta' ? opt.ta : opt.en}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Combined Metrics 5-Card Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {/* 1. Loan Amount */}
+            <div className="p-3 rounded-2xl bg-white/80 dark:bg-slate-800/70 border border-orange-100 dark:border-orange-950 shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-orange-600">
+                {lang === 'ta' ? 'மொத்த அசல்' : 'Total Loan Amount'}
+              </span>
+              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                {formatCurrency(displayedOverall.totalLoanAmount)}
+              </p>
+              <p className="text-[9px] text-slate-400 font-medium">
+                {lang === 'ta' ? 'அனைத்து திட்டங்கள்' : 'Combined principal'}
+              </p>
+            </div>
+
+            {/* 2. Total Interest */}
+            <div className="p-3 rounded-2xl bg-white/80 dark:bg-slate-800/70 border border-amber-100 dark:border-amber-950 shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">
+                {lang === 'ta' ? 'மொத்த வட்டி' : 'Total Interest'}
+              </span>
+              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                +{formatCurrency(displayedOverall.totalInterest)}
+              </p>
+              <p className="text-[9px] text-slate-400 font-medium">
+                {lang === 'ta' ? 'வட்டி பகுதி' : 'Interest portion'}
+              </p>
+            </div>
+
+            {/* 3. Total Profit */}
+            <div className="p-3 rounded-2xl bg-white/80 dark:bg-slate-800/70 border border-emerald-100 dark:border-emerald-950 shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
+                {lang === 'ta' ? 'ஈட்டிய நிகர லாபம்' : 'Total Profit'}
+              </span>
+              <p className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                +{formatCurrency(displayedOverall.totalProfit)}
+              </p>
+              <p className="text-[9px] text-emerald-600/80 font-medium">
+                {lang === 'ta' ? 'வசூலான லாபம்' : 'Earned to date'}
+              </p>
+            </div>
+
+            {/* 4. Amount Collected */}
+            <div className="p-3 rounded-2xl bg-white/80 dark:bg-slate-800/70 border border-sky-100 dark:border-sky-950 shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-sky-600">
+                {lang === 'ta' ? 'மொத்த வசூல்' : 'Amount Collected'}
+              </span>
+              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                {formatCurrency(displayedOverall.totalCollected)}
+              </p>
+              <p className="text-[9px] text-slate-400 font-medium">
+                {lang === 'ta' ? 'செலுத்தப்பட்ட தொகை' : 'Repaid principal+int'}
+              </p>
+            </div>
+
+            {/* 5. Outstanding Balance */}
+            <div className="p-3 rounded-2xl bg-white/80 dark:bg-slate-800/70 border border-rose-100 dark:border-rose-950 shadow-xs col-span-2 sm:col-span-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600">
+                {lang === 'ta' ? 'நிலுவைத் தொகை' : 'Outstanding Balance'}
+              </span>
+              <p className="text-base sm:text-lg font-black text-rose-600 dark:text-rose-400 mt-0.5">
+                {formatCurrency(displayedOverall.outstandingBalance)}
+              </p>
+              <p className="text-[9px] text-rose-500 font-medium">
+                {lang === 'ta' ? 'வர வேண்டிய பாக்கி' : 'Remaining dues'}
+              </p>
+            </div>
+          </div>
+
+          {/* Per-Type Comparison Stacked Bar & Division Summary */}
+          {displayedOverall.totalLoanAmount > 0 && (
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                <span>{lang === 'ta' ? 'திட்ட வாரியாக ஒப்பீடு (Per-Type Comparison)' : 'Per-Type Distribution & Share'}:</span>
+                <button
+                  onClick={() => {
+                    try {
+                      window.history.pushState({}, '', '/loans/closed');
+                      window.dispatchEvent(new PopStateEvent('popstate'));
+                    } catch (e) {}
+                  }}
+                  className="text-sky-600 hover:text-sky-700 hover:underline flex items-center space-x-1 font-bold"
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  <span>{lang === 'ta' ? 'முடிந்த கடன்கள் காப்பகம்' : 'Closed Loans Archive'} ({overallSummary?.overall?.closedLoansCount ?? 0}) →</span>
+                </button>
+              </div>
+
+              {/* Stacked Bar */}
+              <div className="h-3 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex shadow-inner">
+                {displayedOverall.dailyPr > 0 && (
+                  <div
+                    style={{ width: `${Math.round((displayedOverall.dailyPr / displayedOverall.totalLoanAmount) * 100)}%` }}
+                    className="h-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-500"
+                    title={`Daily: ${formatCurrency(displayedOverall.dailyPr)}`}
+                  />
+                )}
+                {displayedOverall.weeklyPr > 0 && (
+                  <div
+                    style={{ width: `${Math.round((displayedOverall.weeklyPr / displayedOverall.totalLoanAmount) * 100)}%` }}
+                    className="h-full bg-gradient-to-r from-sky-400 to-sky-500 transition-all duration-500"
+                    title={`Weekly: ${formatCurrency(displayedOverall.weeklyPr)}`}
+                  />
+                )}
+                {displayedOverall.monthlyPr > 0 && (
+                  <div
+                    style={{ width: `${Math.round((displayedOverall.monthlyPr / displayedOverall.totalLoanAmount) * 100)}%` }}
+                    className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
+                    title={`Monthly: ${formatCurrency(displayedOverall.monthlyPr)}`}
+                  />
+                )}
+              </div>
+
+              {/* Legend with direct jump links */}
+              <div className="flex items-center justify-between flex-wrap gap-2 text-[10px] pt-0.5">
+                <button
+                  onClick={() => (onSelectScheme ? onSelectScheme('daily') : setTypeFilter('daily'))}
+                  className="flex items-center space-x-1.5 hover:underline text-left"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Daily:</span>
+                  <span className="font-semibold text-slate-500">{formatCurrency(displayedOverall.dailyPr)}</span>
+                  <span className="text-amber-600 font-bold">({Math.round((displayedOverall.dailyPr / displayedOverall.totalLoanAmount) * 100) || 0}%)</span>
+                </button>
+
+                <button
+                  onClick={() => (onSelectScheme ? onSelectScheme('weekly') : setTypeFilter('weekly'))}
+                  className="flex items-center space-x-1.5 hover:underline text-left"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0" />
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Weekly:</span>
+                  <span className="font-semibold text-slate-500">{formatCurrency(displayedOverall.weeklyPr)}</span>
+                  <span className="text-sky-600 font-bold">({Math.round((displayedOverall.weeklyPr / displayedOverall.totalLoanAmount) * 100) || 0}%)</span>
+                </button>
+
+                <button
+                  onClick={() => (onSelectScheme ? onSelectScheme('monthly') : setTypeFilter('monthly'))}
+                  className="flex items-center space-x-1.5 hover:underline text-left"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Monthly:</span>
+                  <span className="font-semibold text-slate-500">{formatCurrency(displayedOverall.monthlyPr)}</span>
+                  <span className="text-emerald-600 font-bold">({Math.round((displayedOverall.monthlyPr / displayedOverall.totalLoanAmount) * 100) || 0}%)</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 2.5 SCHEME SUMMARY CARDS (Clickable: Daily / Weekly / Monthly -> Opens Scheme Loan Page) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
@@ -712,10 +1003,9 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
               }}
               className="h-10 px-3 min-w-[150px] rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer"
             >
-              <option value="all">All Status</option>
+              <option value="all">All Active Status</option>
               <option value="active">Active (நடப்பில் உள்ளது)</option>
               <option value="overdue">Overdue (தவணை தவறியது)</option>
-              <option value="completed">Closed (முடிவுற்றது)</option>
             </select>
           </div>
 
@@ -735,20 +1025,17 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
           <div className="flex flex-wrap items-center gap-2">
             {[
-              { id: 'all', label: `All (${chipCounts.all})`, onClick: () => { setTypeFilter('all'); setStatusFilter('all'); } },
+              { id: 'all', label: `All Active (${chipCounts.all})`, onClick: () => { setTypeFilter('all'); setStatusFilter('all'); } },
               { id: 'daily', label: `Daily (${chipCounts.daily})`, onClick: () => setTypeFilter('daily') },
               { id: 'weekly', label: `Weekly (${chipCounts.weekly})`, onClick: () => setTypeFilter('weekly') },
               { id: 'monthly', label: `Monthly (${chipCounts.monthly})`, onClick: () => setTypeFilter('monthly') },
               { id: 'overdue', label: `Overdue (${chipCounts.overdue})`, isOverduePill: true, onClick: () => setStatusFilter('overdue') },
-              { id: 'completed', label: `Closed (${chipCounts.closed})`, onClick: () => setStatusFilter('completed') },
             ].map((chip) => {
               const isActive =
                 chip.id === 'all'
                   ? typeFilter === 'all' && statusFilter === 'all'
                   : chip.id === 'overdue'
                   ? statusFilter === 'overdue'
-                  : chip.id === 'completed'
-                  ? statusFilter === 'completed'
                   : typeFilter === chip.id;
 
               return (
@@ -774,7 +1061,21 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
             })}
           </div>
 
-          <div className="text-xs text-slate-500 dark:text-slate-400">
+          <button
+            onClick={() => {
+              try {
+                window.history.pushState({}, '', '/loans/closed');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              } catch (e) {}
+            }}
+            className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-sky-600 bg-slate-100/90 dark:bg-slate-800/90 hover:bg-sky-50 dark:hover:bg-slate-700 transition flex items-center space-x-1.5 border border-slate-200/80 dark:border-slate-700 shadow-xs active:scale-95"
+            title="View Closed Loans Archive"
+          >
+            <Archive className="w-3.5 h-3.5 text-slate-500" />
+            <span>{lang === 'ta' ? 'முடிந்த கடன்கள்' : 'Closed Loans'} ({overallSummary?.overall?.closedLoansCount ?? chipCounts.closed}) →</span>
+          </button>
+
+          <div className="text-xs text-slate-500 dark:text-slate-400 ml-auto">
             Showing <strong className="text-slate-800 dark:text-slate-200">{paginatedLoans.length}</strong> of{' '}
             <strong className="text-slate-800 dark:text-slate-200">{loans.length}</strong> loans
           </div>

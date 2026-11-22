@@ -26,12 +26,14 @@ import {
   Download,
   FileText,
   Smartphone,
+  Coins,
 } from 'lucide-react';
 
 export const MobileMoreSheet = ({
   isOpen,
   onClose,
   onSelectTab,
+  onSelectScheme,
   onOpenNotifications,
   onOpenLoanForm,
   onOpenWhatsAppHub,
@@ -147,6 +149,121 @@ export const MobileMoreSheet = ({
               Preview Mode (Desktop Testing)
             </p>
             <DisplayModeSwitcher showLabel={true} />
+          </div>
+        )}
+
+        {/* Loan Schemes & Divisions */}
+        {(isOwner || user?.role === 'loan_agent' || user?.role === 'agent') && (
+          <div className="space-y-1.5 pt-1">
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
+              {lang === 'ta' ? 'கடன் பிரிவுகள்' : 'Loan Divisions & Schemes'}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  try { window.history.pushState({}, '', '/loans'); } catch (e) {}
+                  handleNav('loans');
+                }}
+                className="p-3 rounded-2xl glass hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100 dark:border-sky-900/40 flex items-center space-x-2 text-left active:scale-95 transition"
+              >
+                <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center text-sky-600 shrink-0">
+                  <Coins className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {lang === 'ta' ? 'அனைத்து நடப்பு கடன்கள்' : 'All Active Loans'}
+                  </p>
+                  <p className="text-[10px] text-slate-400">/loans</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (onSelectScheme) onSelectScheme('daily');
+                  else {
+                    try { window.history.pushState({ scheme: 'daily' }, '', '/loans/daily'); } catch (e) {}
+                    handleNav('scheme-loans');
+                  }
+                  onClose();
+                }}
+                className="p-3 rounded-2xl glass hover:bg-amber-50 dark:hover:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40 flex items-center space-x-2 text-left active:scale-95 transition"
+              >
+                <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950 flex items-center justify-center text-amber-600 shrink-0">
+                  <Sun className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {lang === 'ta' ? 'தினசரி கடன்கள்' : 'Daily Loans'}
+                  </p>
+                  <p className="text-[10px] text-slate-400">/loans/daily</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (onSelectScheme) onSelectScheme('weekly');
+                  else {
+                    try { window.history.pushState({ scheme: 'weekly' }, '', '/loans/weekly'); } catch (e) {}
+                    handleNav('scheme-loans');
+                  }
+                  onClose();
+                }}
+                className="p-3 rounded-2xl glass hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40 flex items-center space-x-2 text-left active:scale-95 transition"
+              >
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 shrink-0">
+                  <CalendarDays className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {lang === 'ta' ? 'வாராந்திர கடன்கள்' : 'Weekly Loans'}
+                  </p>
+                  <p className="text-[10px] text-slate-400">/loans/weekly</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (onSelectScheme) onSelectScheme('monthly');
+                  else {
+                    try { window.history.pushState({ scheme: 'monthly' }, '', '/loans/monthly'); } catch (e) {}
+                    handleNav('scheme-loans');
+                  }
+                  onClose();
+                }}
+                className="p-3 rounded-2xl glass hover:bg-purple-50 dark:hover:bg-purple-950/40 border border-purple-100 dark:border-purple-900/40 flex items-center space-x-2 text-left active:scale-95 transition"
+              >
+                <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-600 shrink-0">
+                  <CalendarDays className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {lang === 'ta' ? 'மாதாந்திர கடன்கள்' : 'Monthly Loans'}
+                  </p>
+                  <p className="text-[10px] text-slate-400">/loans/monthly</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  try { window.history.pushState({}, '', '/loans/closed'); } catch (e) {}
+                  handleNav('closed-loans');
+                }}
+                className="col-span-2 p-3 rounded-2xl glass hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-left active:scale-95 transition"
+              >
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 shrink-0">
+                    <FileSpreadsheet className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                      {lang === 'ta' ? 'முடிந்த கடன்கள் (Closed)' : 'Closed Loans Archive'}
+                    </p>
+                    <p className="text-[10px] text-slate-400">/loans/closed</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
           </div>
         )}
 
