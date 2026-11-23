@@ -107,7 +107,6 @@ export const Sidebar = ({
       } catch (e) {}
       setActiveTab('closed-loans');
     } else {
-      // daily, weekly, monthly
       if (onSelectScheme) {
         onSelectScheme(type);
       } else {
@@ -206,22 +205,23 @@ export const Sidebar = ({
 
   return (
     <aside
-      className={`min-h-[calc(100vh-4rem)] bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-700 dark:text-slate-200 transition-all duration-300 flex flex-col shrink-0 select-none shadow-sm border-r border-sky-100/80 dark:border-sky-900/40 sticky top-16 self-start max-h-[calc(100vh-4rem)] z-30 ${
+      className={`min-h-[calc(100vh-4rem)] bg-white/75 backdrop-blur-md text-ink transition-all duration-300 flex flex-col shrink-0 select-none shadow-golden border-r border-white/85 sticky top-16 self-start max-h-[calc(100vh-4rem)] z-30 ${
         isCollapsed ? 'w-16 sm:w-20 p-2 sm:p-2.5 items-center' : 'w-64 p-3.5 sm:p-4'
       }`}
     >
       {/* Header or Collapse Toggle */}
       <div className="flex items-center justify-between pb-2 px-1">
         {!isCollapsed && (
-          <span className="text-[10px] uppercase font-black tracking-widest text-sky-600/70 dark:text-sky-400/70">
+          <span className="text-[10px] uppercase font-black tracking-widest text-[#C88A00]">
             {isEmiAgent ? 'EMI NAVIGATION' : isLoanAgent ? 'LOAN NAVIGATION' : 'LOANS NAVIGATION'}
           </span>
         )}
         {onToggleCollapsed && (
           <button
             onClick={onToggleCollapsed}
-            className="p-1 rounded-xl text-slate-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-slate-800 transition mx-auto"
+            className="p-1 rounded-xl text-muted hover:text-ink hover:bg-[#FFE7A8]/50 transition mx-auto"
             title={isCollapsed ? 'Expand Navigation (M)' : 'Collapse Navigation (M)'}
+            aria-label={isCollapsed ? 'Expand Navigation' : 'Collapse Navigation'}
           >
             {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
           </button>
@@ -249,14 +249,15 @@ export const Sidebar = ({
                     }}
                     className={`w-full flex items-center justify-center p-3 rounded-2xl transition-all duration-150 group font-bold relative ${
                       isGroupActive
-                        ? 'btn-sky-primary text-white shadow-md shadow-sky-500/20'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 dark:hover:text-sky-400'
+                        ? 'btn-accent text-ink shadow-md shadow-[#C88A00]/25'
+                        : 'text-muted hover:bg-white/60 hover:text-ink'
                     }`}
                     title={lang === 'ta' ? item.ta : item.en}
+                    aria-label={lang === 'ta' ? item.ta : item.en}
                   >
-                    <Icon className={`w-5 h-5 shrink-0 ${isGroupActive ? 'text-white' : 'text-slate-400 group-hover:text-sky-500'}`} />
+                    <Icon className={`w-5 h-5 shrink-0 ${isGroupActive ? 'text-ink' : 'text-muted group-hover:text-ink'}`} />
                     {loanCounts.all > 0 && (
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-orange-500" />
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#C88A00]" />
                     )}
                   </button>
                 );
@@ -268,33 +269,33 @@ export const Sidebar = ({
                   <div
                     className={`w-full flex items-center justify-between rounded-2xl transition-all duration-150 group font-bold px-3 py-2.5 cursor-pointer ${
                       isGroupActive
-                        ? 'bg-sky-50/80 dark:bg-sky-950/50 text-sky-800 dark:text-sky-200 border border-sky-200/60 dark:border-sky-800/60'
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-sky-50/50 dark:hover:bg-slate-800/50'
+                        ? 'bg-[#FFE7A8]/60 text-ink border border-[#FFC94D]/60'
+                        : 'text-muted hover:bg-white/60 hover:text-ink'
                     }`}
                     onClick={() => setIsLoansExpanded(!isLoansExpanded)}
                   >
                     <div className="flex items-center space-x-2.5 min-w-0">
-                      <Icon className={`w-4 h-4 shrink-0 ${isGroupActive ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400 group-hover:text-sky-500'}`} />
-                      <span className="text-xs font-bold tracking-wide truncate">
+                      <Icon className={`w-4 h-4 shrink-0 ${isGroupActive ? 'text-[#C88A00]' : 'text-muted group-hover:text-ink'}`} />
+                      <span className="text-xs font-black tracking-wide truncate">
                         {lang === 'ta' ? item.ta : item.en}
                       </span>
                     </div>
 
                     <div className="flex items-center space-x-1.5">
                       {loanCounts.all > 0 && (
-                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 shadow-xs">
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-[#FFE7A8] text-[#8A4A1F] border border-[#FFC94D]/40">
                           {loanCounts.all}
                         </span>
                       )}
                       <ChevronDown
-                        className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                          isLoansExpanded ? 'rotate-180 text-sky-600 dark:text-sky-400' : ''
+                        className={`w-3.5 h-3.5 text-muted transition-transform duration-200 ${
+                          isLoansExpanded ? 'rotate-180 text-[#C88A00]' : ''
                         }`}
                       />
                     </div>
                   </div>
 
-                  {/* Expandable Sub-items with smooth height and animation */}
+                  {/* Expandable Sub-items */}
                   <div
                     className={`overflow-hidden transition-all duration-300 ease-in-out pl-2 space-y-1 ${
                       isLoansExpanded ? 'max-h-80 opacity-100 pt-1' : 'max-h-0 opacity-0 pointer-events-none'
@@ -308,14 +309,14 @@ export const Sidebar = ({
                           onClick={() => handleSubItemClick(sub.id)}
                           className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all duration-150 group font-bold ${
                             sub.isActive
-                              ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sm shadow-sky-500/20 translate-x-0.5'
-                              : 'text-slate-600 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-700 dark:hover:text-sky-300 hover:translate-x-0.5'
+                              ? 'btn-accent text-ink shadow-sm translate-x-0.5 font-black'
+                              : 'text-muted hover:bg-white/70 hover:text-ink hover:translate-x-0.5'
                           }`}
                         >
                           <div className="flex items-center space-x-2 min-w-0">
                             <SubIcon
                               className={`w-3.5 h-3.5 shrink-0 ${
-                                sub.isActive ? 'text-white' : 'text-slate-400 group-hover:text-sky-500'
+                                sub.isActive ? 'text-ink stroke-[2.5]' : 'text-muted group-hover:text-ink'
                               }`}
                             />
                             <span className="text-[11px] truncate tracking-tight">
@@ -327,10 +328,10 @@ export const Sidebar = ({
                             <span
                               className={`text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 ${
                                 sub.isActive
-                                  ? 'bg-white/25 text-white'
+                                  ? 'bg-white/40 text-ink'
                                   : sub.id === 'closed'
-                                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                                  : 'bg-sky-100 dark:bg-sky-950/80 text-sky-600 dark:text-sky-300'
+                                  ? 'bg-[#FFD6D2]/60 text-[#9B2C2C]'
+                                  : 'bg-[#FFE7A8] text-[#8A4A1F]'
                               }`}
                             >
                               {sub.count}
@@ -354,14 +355,15 @@ export const Sidebar = ({
                   isCollapsed ? 'justify-center p-3' : 'px-3.5 py-2.5 space-x-3 text-left'
                 } ${
                   isActive
-                    ? 'btn-sky-primary text-white shadow-md shadow-sky-500/20'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 dark:hover:text-sky-400'
+                    ? 'btn-accent text-ink shadow-md shadow-[#C88A00]/20 font-black'
+                    : 'text-muted hover:bg-white/60 hover:text-ink'
                 }`}
                 title={isCollapsed ? (lang === 'ta' ? item.ta : item.en) : undefined}
+                aria-label={lang === 'ta' ? item.ta : item.en}
               >
                 <Icon
                   className={`shrink-0 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'} ${
-                    isActive ? 'text-white' : 'text-slate-400 group-hover:text-sky-500'
+                    isActive ? 'text-ink stroke-[2.5]' : 'text-muted group-hover:text-ink'
                   }`}
                 />
                 {!isCollapsed && (
@@ -377,16 +379,16 @@ export const Sidebar = ({
 
       {/* WhatsApp Web shortcut in sidebar */}
       {!isCollapsed && onOpenWhatsAppHub && (
-        <div className="pt-3 border-t border-sky-100/80 dark:border-sky-900/40 mt-auto">
+        <div className="pt-3 border-t border-[#FFE7A8]/70 mt-auto">
           <button
             onClick={() => onOpenWhatsAppHub({})}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 hover:bg-emerald-100 transition shadow-xs"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-[#1F6B4F] bg-[#CDEFE0]/80 border border-[#1F6B4F]/25 hover:bg-[#CDEFE0] transition shadow-xs"
           >
             <div className="flex items-center space-x-2">
-              <Smartphone className="w-4 h-4 text-emerald-600" />
+              <Smartphone className="w-4 h-4 text-[#1F6B4F]" />
               <span>WhatsApp Web</span>
             </div>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-200/80 text-emerald-800 font-black">
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#1F6B4F]/15 text-[#1F6B4F] font-black">
               Send
             </span>
           </button>

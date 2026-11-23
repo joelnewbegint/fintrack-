@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   Layers,
   Coins,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 export const BottomNav = ({ activeTab, setActiveTab, onOpenMoreSheet }) => {
@@ -48,14 +49,14 @@ export const BottomNav = ({ activeTab, setActiveTab, onOpenMoreSheet }) => {
     tabs = [
       { id: 'dashboard', label: lang === 'ta' ? 'முகப்பு' : 'Home', icon: LayoutDashboard },
       { id: 'loans', label: lang === 'ta' ? 'கடன்கள்' : 'Loans', icon: Banknote },
-      { id: 'payments', label: lang === 'ta' ? 'செலுத்தியவை' : 'History', icon: Receipt },
+      { id: 'payments', label: lang === 'ta' ? 'வரலாறு' : 'History', icon: Receipt },
       { id: 'settings', label: lang === 'ta' ? 'சுயவிவரம்' : 'Profile', icon: Settings },
     ];
   } else if (isEmiAgent) {
     tabs = [
       { id: 'emiDashboard', label: lang === 'ta' ? 'EMI முகப்பு' : 'EMI Home', icon: LayoutDashboard },
-      { id: 'emiList', label: lang === 'ta' ? 'மாத தவணை' : 'Accounts', icon: Layers },
-      { id: 'settings', label: lang === 'ta' ? 'அமைப்புகள்' : 'Settings', icon: Settings },
+      { id: 'emiList', label: lang === 'ta' ? 'கணக்குகள்' : 'Accounts', icon: Layers },
+      { id: 'emiReports', label: lang === 'ta' ? 'அறிக்கை' : 'Reports', icon: FileSpreadsheet },
       { id: 'more', label: lang === 'ta' ? 'கூடுதல்' : 'More', icon: MoreHorizontal, isMore: true },
     ];
   } else if (isLoanAgent) {
@@ -67,56 +68,56 @@ export const BottomNav = ({ activeTab, setActiveTab, onOpenMoreSheet }) => {
       { id: 'more', label: lang === 'ta' ? 'கூடுதல்' : 'More', icon: MoreHorizontal, isMore: true },
     ];
   } else {
-    // Owner (Loans navigation; EMI has its own EmiLayout bottom nav)
+    // Owner
     tabs = [
       { id: 'dashboard', label: lang === 'ta' ? 'முகப்பு' : 'Home', icon: LayoutDashboard },
-      { id: 'customers', label: lang === 'ta' ? 'வாடிக்கையாளர்' : 'Customers', icon: Users },
-      { id: 'loans', label: lang === 'ta' ? 'கடன்' : 'Loans', icon: Banknote },
-      { id: 'payments', label: lang === 'ta' ? 'வசூல்' : 'Collect', icon: Receipt },
+      { id: 'loans', label: lang === 'ta' ? 'கடன்கள்' : 'Loans', icon: Banknote },
+      { id: 'emi', label: lang === 'ta' ? 'மாத தவணை' : 'EMI', icon: Layers, isEmiToggle: true },
+      { id: 'dailyClosing', label: lang === 'ta' ? 'அறிக்கை' : 'Reports', icon: FileSpreadsheet },
       { id: 'more', label: lang === 'ta' ? 'கூடுதல்' : 'More', icon: MoreHorizontal, isMore: true },
     ];
   }
 
+  const handleTabClick = (tab) => {
+    if (tab.isMore) {
+      if (onOpenMoreSheet) onOpenMoreSheet();
+      return;
+    }
+    if (tab.isEmiToggle) {
+      try {
+        window.history.pushState({}, '', '/emi');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      } catch (e) {}
+      return;
+    }
+    setActiveTab(tab.id);
+  };
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto z-40 pointer-events-none">
-      <nav className="pointer-events-auto h-16 w-full glass-panel border-t border-white/70 dark:border-sky-800/40 px-2 flex items-center justify-around shadow-2xl pb-safe">
+    <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto z-40 pointer-events-none px-3 pb-safe mb-2">
+      <nav className="pointer-events-auto h-16 w-full bg-white/90 backdrop-blur-md rounded-[28px] border border-white/95 px-2 flex items-center justify-around shadow-golden-lg text-ink">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive =
             activeTab === tab.id ||
             (tab.id === 'loans' && (activeTab === 'scheme-loans' || activeTab === 'closed-loans'));
 
-          if (tab.isMore) {
-            return (
-              <button
-                key={tab.id}
-                onClick={onOpenMoreSheet}
-                className="flex-1 flex flex-col items-center justify-center py-1 text-slate-500 dark:text-slate-400 active:scale-95 transition min-h-[44px]"
-              >
-                <div className="p-1 rounded-xl">
-                  <Icon className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-                </div>
-                <span className="text-[10px] font-bold mt-0.5 tracking-tight">{tab.label}</span>
-              </button>
-            );
-          }
-
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabClick(tab)}
               className={`flex-1 flex flex-col items-center justify-center py-1 transition active:scale-95 min-h-[44px] ${
-                isActive ? 'text-sky-600 dark:text-sky-400 font-black' : 'text-slate-500 dark:text-slate-400 font-medium'
+                isActive ? 'text-ink font-black' : 'text-muted font-bold'
               }`}
             >
               <div
-                className={`p-1 rounded-xl transition ${
-                  isActive ? 'bg-sky-100 dark:bg-sky-950/80 scale-110 shadow-xs' : ''
+                className={`p-1.5 rounded-full transition-all duration-200 ${
+                  isActive ? 'bg-[#FFC94D] text-ink shadow-xs scale-105' : 'hover:bg-white/50'
                 }`}
               >
                 <Icon
                   className={`w-5 h-5 ${
-                    isActive ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400 dark:text-slate-500'
+                    isActive ? 'text-ink stroke-[2.5]' : 'text-muted'
                   }`}
                 />
               </div>

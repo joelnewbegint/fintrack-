@@ -7,42 +7,42 @@ export const StatCard = ({
   amount,
   subtitle,
   icon: Icon,
-  gradient = 'from-sky-400 to-sky-500',
+  gradient, // legacy prop retained for compatibility
   textColor,
   delay = 0,
   onClick,
 }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay }}
       whileHover={{ y: -2, transition: { duration: 0.15 } }}
       onClick={onClick}
-      className={`glass glass-hover relative overflow-hidden rounded-2xl p-3.5 sm:p-4 border border-white/80 dark:border-sky-800/40 transition-all flex flex-col justify-between min-w-0 shadow-sm hover:shadow-md ${
+      className={`glass-card glass-hover relative overflow-hidden rounded-[20px] p-4 bg-white/75 border border-white/95 flex flex-col justify-between min-w-0 shadow-golden transition-all ${
         onClick ? 'cursor-pointer active:scale-[0.98]' : ''
       }`}
     >
       <div className="flex items-start justify-between gap-2.5 w-full">
         <div className="min-w-0 flex-1 space-y-0.5">
-          <p className="text-[10px] sm:text-[10.5px] font-bold text-slate-500 dark:text-slate-400 tracking-wider uppercase truncate">
+          <p className="text-[11px] font-bold text-muted tracking-wider uppercase truncate">
             {title}
           </p>
-          <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums truncate">
+          <h3 className="text-xl sm:text-2xl font-black text-ink tracking-tight tabular-nums truncate">
             <AnimatedCounter value={amount} isCurrency={true} />
           </h3>
           {subtitle && (
-            <p className="text-[10.5px] font-medium text-slate-400 dark:text-slate-400 truncate">
+            <p className="text-[11px] font-medium text-muted/80 truncate">
               {subtitle}
             </p>
           )}
         </div>
 
-        <div
-          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr ${gradient} text-white shadow-md flex items-center justify-center shrink-0 border border-white/50`}
-        >
-          <Icon className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
-        </div>
+        {Icon && (
+          <div className="w-10 h-10 rounded-full bg-[#FFE7A8] border border-[#FFC94D]/60 text-[#C88A00] shadow-sm flex items-center justify-center shrink-0">
+            <Icon className="w-5 h-5 stroke-[2.2]" />
+          </div>
+        )}
       </div>
     </motion.div>
   );

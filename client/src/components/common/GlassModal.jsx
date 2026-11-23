@@ -1,14 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { X, Sparkles, Check, AlertCircle } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 /**
- * Reusable GlassModal Component
- * - Centered dialog over dimmed blurred backdrop (180ms scale & fade-in)
- * - Closes on Esc or backdrop click
- * - Focus-trapped for accessibility
- * - Converts to responsive bottom sheet on mobile devices
- * - Scoped styling for Lavender Glass & existing glass themes
+ * Reusable Golden Cream GlassModal Component
+ * - Centered dialog on desktop (max blur 12px)
+ * - Responsive bottom sheet on mobile (<640px)
+ * - Esc key, backdrop tap, and focus trapping
  */
 export const GlassModal = ({
   isOpen,
@@ -25,7 +23,6 @@ export const GlassModal = ({
   const modalRef = useRef(null);
   const previouslyFocusedElement = useRef(null);
 
-  // Focus trap and keyboard Esc listener
   useEffect(() => {
     if (!isOpen) return;
 
@@ -63,10 +60,11 @@ export const GlassModal = ({
 
     window.addEventListener('keydown', handleKeyDown);
 
-    // Initial focus on first interactive element or modal container
     const timer = setTimeout(() => {
       if (modalRef.current) {
-        const firstInput = modalRef.current.querySelector('input, select, textarea, button:not([aria-label="Close"])');
+        const firstInput = modalRef.current.querySelector(
+          'input, select, textarea, button:not([aria-label="Close"])'
+        );
         if (firstInput) {
           firstInput.focus();
         } else {
@@ -75,7 +73,6 @@ export const GlassModal = ({
       }
     }, 50);
 
-    // Prevent body background scroll while open
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
@@ -93,44 +90,44 @@ export const GlassModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity duration-180 ease-out"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="glass-modal-title"
+      aria-labelledby="golden-modal-title"
     >
-      {/* Dimmed Blurred Backdrop */}
+      {/* Dimmed Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md transition-opacity duration-180 ease-out"
+        className="fixed inset-0 bg-[#2B3A4A]/40 backdrop-blur-sm transition-opacity duration-200"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal Dialog (Bottom-Sheet on mobile, Centered Card on sm+) */}
+      {/* Modal Dialog Container: Bottom Sheet on Mobile (<640px), Centered Card on sm+ */}
       <div
         ref={modalRef}
         tabIndex={-1}
-        className={`relative z-10 w-full ${maxWidth} bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/90 dark:border-white/10 shadow-2xl rounded-t-3xl sm:rounded-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col transform transition-all duration-180 ease-out animate-in fade-in zoom-in-95 outline-none overflow-hidden`}
+        className={`relative z-10 w-full ${maxWidth} bg-white/90 backdrop-blur-md border border-white/95 rounded-t-[28px] sm:rounded-[24px] max-h-[90vh] sm:max-h-[85vh] flex flex-col transform transition-all duration-200 ease-out outline-none overflow-hidden`}
         style={{
-          boxShadow: '0 20px 48px rgba(139, 123, 208, 0.20)',
+          boxShadow: '0 20px 48px rgba(43, 58, 74, 0.16)',
         }}
       >
         {/* Mobile Pull Handle Indicator */}
-        <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+        <div className="w-12 h-1.5 bg-[#FFE7A8] rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
 
         {/* Modal Header */}
         {customHeader ? (
           customHeader
         ) : (
-          <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-slate-200/60 dark:border-slate-800/60 flex items-start justify-between gap-3 shrink-0">
+          <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-[#FFE7A8]/70 flex items-start justify-between gap-3 shrink-0 bg-white/40">
             <div className="min-w-0 pr-2">
               <h3
-                id="glass-modal-title"
-                className="text-base sm:text-lg font-medium text-slate-900 dark:text-white tracking-tight truncate flex items-center space-x-2"
+                id="golden-modal-title"
+                className="text-base sm:text-lg font-black text-ink tracking-tight truncate flex items-center space-x-2"
               >
                 <span>{title}</span>
               </h3>
               {subtitle && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                <p className="text-xs text-muted mt-0.5 truncate">
                   {subtitle}
                 </p>
               )}
@@ -141,22 +138,22 @@ export const GlassModal = ({
                 type="button"
                 onClick={onClose}
                 aria-label={lang === 'ta' ? 'மூடுக' : 'Close modal'}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition active:scale-95 shrink-0"
+                className="p-1.5 rounded-full text-muted hover:text-ink hover:bg-[#FFE7A8]/60 transition active:scale-95 shrink-0"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 stroke-[2.5]" />
               </button>
             )}
           </div>
         )}
 
         {/* Modal Scrollable Body */}
-        <div className="px-5 py-4 sm:px-6 sm:py-5 overflow-y-auto flex-1 text-xs text-slate-700 dark:text-slate-300 space-y-4">
+        <div className="px-5 py-4 sm:px-6 sm:py-5 overflow-y-auto flex-1 text-xs text-ink space-y-4">
           {children}
         </div>
 
         {/* Modal Footer */}
         {footer && (
-          <div className="px-5 py-3.5 sm:px-6 sm:py-4 border-t border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md flex items-center justify-end gap-2.5 shrink-0">
+          <div className="px-5 py-3.5 sm:px-6 sm:py-4 border-t border-[#FFE7A8]/70 bg-white/60 flex items-center justify-end gap-2.5 shrink-0">
             {footer}
           </div>
         )}
@@ -166,4 +163,3 @@ export const GlassModal = ({
 };
 
 export default GlassModal;
-

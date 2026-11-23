@@ -1,68 +1,77 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        sky: {
-          50: '#F0F9FF',
-          100: '#E0F2FE',
-          200: '#BAE6FD',
-          300: '#7DD3FC',
-          400: '#38BDF8',
-          500: '#0EA5E9',
-          600: '#0284C7',
-          700: '#0369A1',
-          800: '#075985',
-          900: '#0C4A6E',
-          950: '#082F49',
+        cream: {
+          DEFAULT: '#FFFBEF',
+          50: '#FFFFFF',
+          100: '#FFFBEF',
+          200: '#FFF5D6',
+          300: '#FFEDB8',
+        },
+        'gold-soft': {
+          DEFAULT: '#FFE7A8',
+          light: '#FFF0C7',
+          dark: '#F5D382',
+        },
+        apricot: {
+          DEFAULT: '#FFC9A0',
+          light: '#FFD7B8',
+          dark: '#F5B07E',
+        },
+        accent: {
+          DEFAULT: '#FFC94D',
+          hover: '#FFBE2E',
+          active: '#F5B119',
+          deep: '#C88A00',
         },
         ink: {
-          DEFAULT: '#0C4A6E',
-          deep: '#031D2E',
-          light: '#075985',
+          DEFAULT: '#2B3A4A',
+          light: '#3F4D5B',
+          dark: '#1B2631',
         },
         muted: {
-          DEFAULT: '#64748B',
-          light: '#94A3B8',
-          dark: '#475569',
-        },
-        finance: {
-          daily: '#F59E0B',    // Amber
-          weekly: '#0EA5E9',   // Sky
-          monthly: '#14B8A6',  // Teal
+          DEFAULT: '#3F4D5B',
+          light: '#5A6978',
+          dark: '#2B3A4A',
         },
         status: {
-          success: '#22C55E',
-          warning: '#F59E0B',
-          danger: '#EF4444',
-        },
-        daily: {
-          light: '#fef3c7',
-          DEFAULT: '#f59e0b',
-          dark: '#b45309',
-        },
-        weekly: {
-          light: '#e0f2fe',
-          DEFAULT: '#0ea5e9',
-          dark: '#0369a1',
-        },
-        monthly: {
-          light: '#ccfbf1',
-          DEFAULT: '#14b8a6',
-          dark: '#0f766e',
+          due: {
+            bg: '#FFE3CF',
+            text: '#8A4A1F',
+          },
+          overdue: {
+            bg: '#FFD6D2',
+            text: '#9B2C2C',
+          },
+          paid: {
+            bg: '#CDEFE0',
+            text: '#1F6B4F',
+          },
+          upcoming: {
+            bg: '#FFFFFF',
+            text: '#2B3A4A',
+          },
         },
       },
       fontFamily: {
-        sans: ['Poppins', 'Noto Sans Tamil', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', '"Noto Sans Tamil"', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
       },
       boxShadow: {
-        glass: '0 8px 32px rgba(14, 165, 233, 0.15)',
-        'glass-hover': '0 16px 40px rgba(14, 165, 233, 0.25)',
-        'glass-dark': '0 8px 32px rgba(2, 132, 199, 0.25)',
+        golden: '0 8px 24px rgba(43, 58, 74, 0.12)',
+        'golden-lg': '0 16px 36px rgba(43, 58, 74, 0.16)',
+        'golden-sm': '0 4px 12px rgba(43, 58, 74, 0.08)',
+        glass: '0 8px 24px rgba(43, 58, 74, 0.12)',
+        'glass-hover': '0 16px 36px rgba(43, 58, 74, 0.16)',
       },
       borderRadius: {
+        card: '20px',
+        hero: '24px',
+        nav: '28px',
+        pill: '9999px',
         '2xl': '20px',
         '3xl': '24px',
       },
