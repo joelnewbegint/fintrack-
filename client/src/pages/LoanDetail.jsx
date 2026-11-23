@@ -339,6 +339,9 @@ export const LoanDetail = ({ loanId, onBack }) => {
                               dueAmount: inst.amount - (inst.paidAmount || 0),
                               financeType: loan.financeType,
                               duration: loan.duration,
+                              dueDate: inst.dueDate,
+                              date: inst.dueDate,
+                              installmentNo: inst.installmentNo,
                             })
                           }
                           className="btn-sky-primary min-h-[44px] px-4 py-2 text-xs font-black shadow-sm flex items-center space-x-1"
@@ -415,9 +418,12 @@ export const LoanDetail = ({ loanId, onBack }) => {
                                 dueAmount: inst.amount - (inst.paidAmount || 0),
                                 financeType: loan.financeType,
                                 duration: loan.duration,
+                                dueDate: inst.dueDate,
+                                date: inst.dueDate,
+                                installmentNo: inst.installmentNo,
                               })
                             }
-                            className="btn-sky-primary px-2.5 py-1 text-[10px] font-black active:scale-95 transition"
+                            className="bg-[#0878D1] hover:bg-[#064B8E] text-white px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xs active:scale-95 transition"
                           >
                             Collect
                           </button>

@@ -31,6 +31,28 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
+/**
+ * Extracts and formats the initial date string (YYYY-MM-DD) from a loan/installment item.
+ * Preserves the exact scheduled date safely across timezones.
+ */
+const getInitialDate = (item) => {
+  const raw = item?.dueDate || item?.date || item?.dueDetails?.date;
+  if (raw) {
+    if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
+      return raw.slice(0, 10);
+    }
+    try {
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) {
+        return formatDateForInput(d);
+      }
+    } catch (e) {
+      console.warn('Could not format initial date:', e);
+    }
+  }
+  return formatDateForInput();
+};
+
 export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
   const { isMobile } = useDeviceMode();
   const [selectedLoan, setSelectedLoan] = useState(loanItem);
@@ -47,8 +69,8 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
     0;
 
   const [amount, setAmount] = useState(initialDue);
-  const [mode, setMode] = useState('cash');
-  const [date, setDate] = useState(formatDateForInput());
+  const [mode, setMode] = useState('cash'); // 'cash' | 'upi'
+  const [date, setDate] = useState(() => getInitialDate(loanItem));
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -74,6 +96,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
       setSelectedLoan(loanItem);
       const due = loanItem.dueAmount || loanItem.installmentAmount || 0;
       setAmount(due);
+      setDate(getInitialDate(loanItem));
     }
   }, [loanItem]);
 
@@ -136,6 +159,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
     setSelectedLoan(formatted);
     setFullLoanData(loan);
     setAmount(loan.installmentAmount || 0);
+    setDate(getInitialDate(loan));
   };
 
   // ---------------------------------------------------------------------------
@@ -340,28 +364,31 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
     <div
       className={`fixed inset-0 z-50 flex ${
         isMobile ? 'flex-col justify-end' : 'items-center justify-center p-3 sm:p-4'
-      } bg-slate-950/75 backdrop-blur-md animate-fade-in`}
+      } bg-slate-950/70 backdrop-blur-md animate-fade-in`}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
-        className={`bg-white dark:bg-slate-900 ${
+        className={`bg-white ${
           isMobile
-            ? 'rounded-t-3xl max-w-lg w-full max-h-[92vh] flex flex-col p-4 pb-safe'
+            ? 'rounded-t-3xl max-w-lg w-full max-h-[94vh] flex flex-col p-4 pb-safe'
             : 'rounded-3xl max-w-xl w-full p-5 sm:p-6 max-h-[92vh] flex flex-col'
-        } shadow-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden my-auto`}
+        } shadow-2xl border border-[#D5E9FA] overflow-hidden my-auto`}
       >
         {/* Mobile Drag Handle */}
         {isMobile && (
-          <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto mb-2 shrink-0" />
+          <div className="w-12 h-1.5 rounded-full bg-[#D5E9FA] mx-auto mb-2 shrink-0" />
         )}
 
         {/* Modal Header */}
-        <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
+        <div className="flex justify-between items-center pb-3 border-b border-[#D5E9FA] shrink-0">
           <div className="min-w-0 flex-1">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center space-x-2">
-              <CreditCard className="w-5 h-5 text-sky-500 shrink-0" />
+            <h3 className="text-base sm:text-lg font-black text-[#183653] flex items-center space-x-2">
+              <CreditCard className="w-5 h-5 text-[#0878D1] shrink-0" />
               <span>Record Collection / வசூல் பதிவு</span>
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+            <p className="text-xs text-[#647C95] truncate mt-0.5">
               {selectedLoan
                 ? `${parsedName.primary} • ${selectedLoan.loanNo}`
                 : 'Select borrower loan account to collect installment'}
@@ -369,7 +396,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-white transition flex items-center justify-center shrink-0 ml-2"
+            className="w-8 h-8 rounded-full bg-[#F3F9FF] hover:bg-[#EAF5FF] text-[#647C95] hover:text-[#183653] border border-[#D5E9FA] transition flex items-center justify-center shrink-0 ml-2"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -377,7 +404,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
         </div>
 
         {error && (
-          <div className="mt-3 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold shrink-0 flex items-center space-x-2 animate-fade-in">
+          <div className="mt-3 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold shrink-0 flex items-center space-x-2 animate-fade-in">
             <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
             <span>{error}</span>
           </div>
@@ -388,47 +415,47 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
         ========================================================================= */}
         {recordedPayment ? (
           <div className="py-4 space-y-4 overflow-y-auto animate-fade-in flex-1 pr-1">
-            <div className="text-center space-y-2">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20 ring-4 ring-emerald-50 dark:ring-emerald-900/30">
-                <CheckCircle className="w-9 h-9 stroke-[2.5]" />
+            <div className="text-center space-y-1.5">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 text-[#18A879] flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20 ring-4 ring-emerald-50">
+                <CheckCircle className="w-8 h-8 stroke-[2.5]" />
               </div>
 
               <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                <h3 className="text-lg font-black text-[#183653]">
                   Payment Recorded Successfully!
                 </h3>
-                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                <p className="text-xs font-bold text-[#18A879] mt-0.5">
                   வசூல் வெற்றிகரமாக பதிவு செய்யப்பட்டது!
                 </p>
               </div>
             </div>
 
             {/* Official Receipt Summary Card */}
-            <div className="p-4 rounded-3xl bg-gradient-to-br from-emerald-50/70 via-white to-sky-50/60 dark:from-emerald-950/50 dark:via-slate-900 dark:to-sky-950/40 border-2 border-emerald-300 dark:border-emerald-700/80 shadow-md space-y-3">
-              <div className="flex items-center justify-between border-b border-emerald-200/60 dark:border-emerald-800/60 pb-2.5">
+            <div className="p-4 rounded-3xl bg-gradient-to-br from-[#EAF5FF] via-white to-[#F3F9FF] border-2 border-[#55B8F5] shadow-md space-y-3">
+              <div className="flex items-center justify-between border-b border-[#D5E9FA] pb-2.5">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                  <span className="text-[10px] uppercase font-bold text-[#647C95] tracking-wider block">
                     Receipt Number / ரசீது எண்
                   </span>
-                  <span className="font-mono font-black text-sm text-sky-700 dark:text-sky-300">
+                  <span className="font-mono font-black text-sm text-[#0878D1]">
                     {recordedPayment.receiptNo}
                   </span>
                 </div>
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]">
                   {recordedPayment.mode || 'CASH'}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2.5 text-xs">
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold">Customer / பெயர்</span>
-                  <p className="font-black text-slate-900 dark:text-white truncate">
+                  <span className="text-[10px] text-[#647C95] uppercase font-semibold">Customer / பெயர்</span>
+                  <p className="font-black text-[#183653] truncate">
                     {parsedName.primary}
                   </p>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold">Loan A/C / கடன் எண்</span>
-                  <p className="font-mono font-black text-slate-900 dark:text-white">
+                  <span className="text-[10px] text-[#647C95] uppercase font-semibold">Loan A/C / கடன் எண்</span>
+                  <p className="font-mono font-black text-[#183653]">
                     {selectedLoan.loanNo}
                   </p>
                 </div>
@@ -436,20 +463,20 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
 
               {/* Highlighted Amount & Updated Balance */}
               <div className="grid grid-cols-2 gap-2 pt-1">
-                <div className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-800 shadow-xs">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">
+                <div className="p-3 rounded-2xl bg-white border border-[#D5E9FA] shadow-xs">
+                  <span className="text-[10px] text-[#647C95] font-bold uppercase block">
                     Collected / வரவு
                   </span>
-                  <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums block mt-0.5">
+                  <span className="text-xl font-black text-[#18A879] tabular-nums block mt-0.5">
                     {formatCurrency(recordedPayment.amount)}
                   </span>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/70 dark:from-amber-950/60 dark:to-orange-950/50 border border-amber-300 dark:border-amber-700 shadow-xs">
-                  <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold uppercase block">
+                <div className="p-3 rounded-2xl bg-[#EAF5FF] border border-[#BFE3FA] shadow-xs">
+                  <span className="text-[10px] text-[#0878D1] font-bold uppercase block">
                     Balance Now / மீதி நிலுவை
                   </span>
-                  <span className="text-xl font-black text-amber-600 dark:text-amber-400 tabular-nums block mt-0.5">
+                  <span className="text-xl font-black text-[#064B8E] tabular-nums block mt-0.5">
                     {formatCurrency(recordedPayment.remainingBalance)}
                   </span>
                 </div>
@@ -462,7 +489,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                 <button
                   type="button"
                   onClick={handleWhatsAppShare}
-                  className="w-full flex items-center justify-center space-x-2 min-h-[46px] rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md shadow-emerald-500/25 active:scale-98 transition"
+                  className="w-full flex items-center justify-center space-x-2 min-h-[46px] rounded-2xl bg-[#18A879] hover:bg-[#138861] text-white font-black text-xs shadow-md shadow-[#18A879]/25 active:scale-98 transition"
                 >
                   <Share2 className="w-4 h-4" />
                   <span>Send WhatsApp Receipt to Borrower / வாட்ஸ்அப் ரசீது அனுப்பு</span>
@@ -472,7 +499,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full min-h-[46px] rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-black text-xs shadow-md active:scale-98 transition"
+                className="w-full min-h-[46px] rounded-2xl bg-[#0878D1] hover:bg-[#064B8E] text-white font-black text-xs shadow-md active:scale-98 transition"
               >
                 Done / நிறைவு
               </button>
@@ -482,7 +509,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
           /* =========================================================================
               STATE B: LOAN ACCOUNT SELECTION SEARCH LIST
           ========================================================================= */
-          <div className="mt-4 space-y-3 flex-1 overflow-y-auto pr-1">
+          <div className="mt-3 space-y-3 flex-1 overflow-y-auto pr-1">
             <SmartNameInput
               value={searchQuery}
               onChange={setSearchQuery}
@@ -499,17 +526,17 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
               onSelectCustomer={(cust) => {
                 setSearchQuery(cust.name);
               }}
-              inputClassName="w-full pl-10 pr-9 h-12 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-base sm:text-xs font-medium outline-none focus:ring-2 focus:ring-sky-400"
+              inputClassName="w-full pl-10 pr-9 h-11 rounded-2xl bg-[#F3F9FF] border border-[#D5E9FA] text-xs font-medium outline-none focus:ring-2 focus:ring-[#0878D1]/20 focus:border-[#0878D1]"
             />
 
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {loadingLoans ? (
-                <div className="p-8 text-center text-xs font-bold text-slate-400">
-                  <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-sky-500" />
+                <div className="p-8 text-center text-xs font-bold text-[#647C95]">
+                  <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#0878D1]" />
                   Loading active loans / கடன்கள் ஏற்றப்படுகிறது...
                 </div>
               ) : filteredLoans.length === 0 ? (
-                <div className="p-8 text-center text-xs font-bold text-slate-400 bg-slate-50 dark:bg-slate-800/40 rounded-2xl">
+                <div className="p-8 text-center text-xs font-bold text-[#647C95] bg-[#F3F9FF] rounded-2xl border border-[#D5E9FA]">
                   No active loans found matching query.
                 </div>
               ) : (
@@ -520,18 +547,18 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                     <div
                       key={l._id}
                       onClick={() => handleSelectLoan(l)}
-                      className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-slate-200/80 dark:border-slate-700/60 cursor-pointer flex items-center justify-between transition-all min-h-[58px]"
+                      className="p-3 rounded-2xl bg-[#F3F9FF] hover:bg-[#EAF5FF] border border-[#D5E9FA] cursor-pointer flex items-center justify-between transition-all"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center space-x-2">
-                          <span className="font-black text-xs text-slate-900 dark:text-white truncate">
+                          <span className="font-black text-xs text-[#183653] truncate">
                             {pName.primary}
                           </span>
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200 shrink-0">
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] shrink-0">
                             {l.financeType}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate mt-0.5">
+                        <p className="text-[11px] text-[#647C95] font-mono truncate mt-0.5">
                           {l.loanNo}
                           {l.customerId?.phone ? ` • 📞 ${l.customerId.phone}` : ''}
                           {l.customerId?.area ? ` • 📍 ${l.customerId.area}` : ''}
@@ -539,11 +566,11 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                       </div>
 
                       <div className="text-right shrink-0 ml-3">
-                        <p className="text-xs font-black tabular-nums text-sky-600 dark:text-sky-400 whitespace-nowrap">
+                        <p className="text-xs font-black tabular-nums text-[#0878D1] whitespace-nowrap">
                           {formatCurrency(l.installmentAmount)}
-                          <span className="text-[10px] font-normal text-slate-400 block">per due</span>
+                          <span className="text-[10px] font-normal text-[#647C95] block">per due</span>
                         </p>
-                        <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+                        <p className="text-[10px] font-bold text-[#064B8E] tabular-nums">
                           Bal: {formatCurrency(remBal)}
                         </p>
                       </div>
@@ -555,15 +582,15 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
           </div>
         ) : (
           /* =========================================================================
-              STATE C: LUXURY PAYMENT & BALANCE BREAKDOWN FORM
+              STATE C: EASY, CLEAN & ATTRACTIVE COLLECTION FORM
           ========================================================================= */
-          <form onSubmit={handleSubmit} className="mt-3 flex-1 overflow-y-auto space-y-4 pr-1 pb-2 scroll-smooth">
-            {/* 1. Clear & Attractive Borrower & Loan Summary Card */}
-            <div className="p-4 rounded-3xl bg-gradient-to-br from-sky-50/80 via-white to-blue-50/50 dark:from-sky-950/40 dark:via-slate-900 dark:to-blue-950/30 border border-sky-200/80 dark:border-sky-800/60 shadow-sm space-y-3">
+          <form onSubmit={handleSubmit} className="mt-3 flex-1 overflow-y-auto space-y-3.5 pr-1 pb-1 scroll-smooth">
+            {/* 1. Sleek & Compact Borrower & Loan Overview Card */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#F3F9FF] via-white to-[#EAF5FF] border border-[#D5E9FA] shadow-xs space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                <div className="flex items-center space-x-2.5 min-w-0 flex-1">
                   {/* Initials Avatar */}
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-md shadow-sky-500/25">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0878D1] to-[#064B8E] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm shadow-[#0878D1]/20">
                     {parsedName.primary
                       .split(' ')
                       .map((n) => n[0])
@@ -574,16 +601,16 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center space-x-2">
-                      <p className="font-black text-sm text-slate-900 dark:text-white truncate">
+                      <p className="font-black text-sm text-[#183653] truncate">
                         {parsedName.primary}
                       </p>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-sky-100 text-sky-800 dark:bg-sky-900/80 dark:text-sky-300 shrink-0">
-                        {financeType === 'daily' ? 'Daily (தினசரி)' : financeType === 'weekly' ? 'Weekly' : 'Monthly'}
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] shrink-0">
+                        {financeType === 'daily' ? 'Daily (தினசரி)' : financeType === 'weekly' ? 'Weekly (வாராந்திர)' : 'Monthly (மாதாந்திர)'}
                       </span>
                     </div>
 
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
-                      <span className="font-black text-sky-700 dark:text-sky-300">
+                    <div className="text-[11px] text-[#647C95] font-mono truncate flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
+                      <span className="font-bold text-[#0878D1]">
                         {selectedLoan.loanNo}
                       </span>
                       {customerPhone && (
@@ -603,7 +630,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                       setSelectedLoan(null);
                       setFullLoanData(null);
                     }}
-                    className="text-xs font-bold text-sky-600 hover:text-sky-700 dark:text-sky-400 shrink-0 ml-2 bg-sky-100/70 dark:bg-sky-950/80 px-2.5 py-1 rounded-xl transition"
+                    className="text-xs font-bold text-[#0878D1] hover:text-[#064B8E] shrink-0 ml-2 bg-[#EAF5FF] hover:bg-[#D5E9FA] px-2.5 py-1 rounded-xl transition"
                   >
                     Change / மாற்று
                   </button>
@@ -611,21 +638,21 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
               </div>
 
               {/* Visual Progress Bar */}
-              <div className="space-y-1 pt-1">
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                  <span>Loan Repayment Progress</span>
-                  <span className="font-mono text-sky-600 dark:text-sky-400">
-                    {currentProgressPct}% cleared {payNum > 0 ? `→ ${newProgressPct}%` : ''}
+              <div className="space-y-1">
+                <div className="flex justify-between items-center text-[10px] font-bold text-[#647C95]">
+                  <span>Repayment Progress / தவணை முன்னேற்றம்</span>
+                  <span className="font-mono text-[#0878D1] font-bold">
+                    {currentProgressPct}% {payNum > 0 ? `→ ${newProgressPct}%` : ''}
                   </span>
                 </div>
-                <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden relative">
+                <div className="w-full h-1.5 rounded-full bg-[#EAF5FF] overflow-hidden relative">
                   <div
-                    className="h-full bg-sky-500 transition-all duration-300"
+                    className="h-full bg-[#0878D1] transition-all duration-300"
                     style={{ width: `${currentProgressPct}%` }}
                   />
                   {payNum > 0 && newProgressPct > currentProgressPct && (
                     <div
-                      className="absolute top-0 bottom-0 bg-emerald-500 transition-all duration-300 opacity-90 animate-pulse"
+                      className="absolute top-0 bottom-0 bg-[#18A879] transition-all duration-300 opacity-90 animate-pulse"
                       style={{
                         left: `${currentProgressPct}%`,
                         width: `${Math.min(100 - currentProgressPct, newProgressPct - currentProgressPct)}%`,
@@ -636,30 +663,30 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
               </div>
 
               {/* 3 Metrics Financial Strip */}
-              <div className="grid grid-cols-3 gap-2 pt-1 text-center">
-                <div className="p-2 rounded-2xl bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase truncate">
+              <div className="grid grid-cols-3 gap-2 text-center pt-0.5">
+                <div className="p-1.5 rounded-xl bg-white border border-[#D5E9FA]">
+                  <span className="text-[9px] text-[#647C95] font-bold block uppercase truncate">
                     Total Due
                   </span>
-                  <span className="text-xs font-black text-slate-800 dark:text-slate-200 tabular-nums block mt-0.5">
+                  <span className="text-xs font-black text-[#183653] tabular-nums block mt-0.5">
                     {formatCurrency(totalPayable)}
                   </span>
                 </div>
 
-                <div className="p-2 rounded-2xl bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase truncate">
+                <div className="p-1.5 rounded-xl bg-white border border-[#D5E9FA]">
+                  <span className="text-[9px] text-[#18A879] font-bold block uppercase truncate">
                     Paid / வரவு
                   </span>
-                  <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 tabular-nums block mt-0.5">
+                  <span className="text-xs font-black text-[#18A879] tabular-nums block mt-0.5">
                     {formatCurrency(totalCollected)}
                   </span>
                 </div>
 
-                <div className="p-2 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/60 dark:from-amber-950/50 dark:to-orange-950/40 border border-amber-200 dark:border-amber-800/70">
-                  <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold block uppercase truncate">
+                <div className="p-1.5 rounded-xl bg-[#EAF5FF] border border-[#BFE3FA]">
+                  <span className="text-[9px] text-[#0878D1] font-bold block uppercase truncate">
                     Balance / நிலுவை
                   </span>
-                  <span className="text-xs font-black text-amber-600 dark:text-amber-400 tabular-nums block mt-0.5">
+                  <span className="text-xs font-black text-[#064B8E] tabular-nums block mt-0.5">
                     {formatCurrency(currentBalance)}
                   </span>
                 </div>
@@ -667,14 +694,14 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
             </div>
 
             {/* Entry Mode Switcher: Payment vs Holiday / Missed */}
-            <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 shrink-0">
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[#F3F9FF] border border-[#D5E9FA] shrink-0">
               <button
                 type="button"
                 onClick={() => setEntryMode('payment')}
-                className={`py-2 px-3 rounded-xl font-black text-xs transition flex items-center justify-center space-x-1.5 ${
+                className={`py-1.5 px-3 rounded-xl font-black text-xs transition flex items-center justify-center space-x-1.5 ${
                   entryMode === 'payment'
-                    ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    ? 'bg-[#0878D1] text-white shadow-xs'
+                    : 'text-[#647C95] hover:text-[#183653]'
                 }`}
               >
                 <Banknote className="w-3.5 h-3.5" />
@@ -683,9 +710,9 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
               <button
                 type="button"
                 onClick={() => setEntryMode('holiday')}
-                className={`py-2 px-3 rounded-xl font-black text-xs transition flex items-center justify-center space-x-1.5 ${
+                className={`py-1.5 px-3 rounded-xl font-black text-xs transition flex items-center justify-center space-x-1.5 ${
                   entryMode === 'holiday'
-                    ? 'bg-white text-[#0878D1] shadow-sm'
+                    ? 'bg-[#0878D1] text-white shadow-xs'
                     : 'text-[#647C95] hover:text-[#183653]'
                 }`}
               >
@@ -696,7 +723,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
 
             {entryMode === 'holiday' ? (
               /* Holiday / Missed Day Form */
-              <div className="space-y-4 pt-1 animate-fade-in">
+              <div className="space-y-3 pt-1 animate-fade-in">
                 <div>
                   <label className="block text-[11px] font-black uppercase tracking-wider text-[#647C95] mb-1.5">
                     Declaration Type / வகை
@@ -705,9 +732,9 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                     <button
                       type="button"
                       onClick={() => setHolidayType('holiday')}
-                      className={`py-3 px-3 rounded-2xl border font-bold text-xs flex items-center justify-center space-x-1.5 transition ${
+                      className={`py-2.5 px-3 rounded-xl border font-bold text-xs flex items-center justify-center space-x-1.5 transition ${
                         holidayType === 'holiday'
-                          ? 'border-[#0878D1] bg-[#EAF5FF] text-[#0878D1] shadow-sm'
+                          ? 'border-[#0878D1] bg-[#EAF5FF] text-[#0878D1] shadow-xs'
                           : 'bg-white text-[#647C95] hover:bg-[#EAF5FF]'
                       }`}
                     >
@@ -717,9 +744,9 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                     <button
                       type="button"
                       onClick={() => setHolidayType('missed')}
-                      className={`py-3 px-3 rounded-2xl border font-bold text-xs flex items-center justify-center space-x-1.5 transition ${
+                      className={`py-2.5 px-3 rounded-xl border font-bold text-xs flex items-center justify-center space-x-1.5 transition ${
                         holidayType === 'missed'
-                          ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-sm'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-xs'
                           : 'bg-white text-[#647C95] hover:bg-[#EAF5FF]'
                       }`}
                     >
@@ -737,7 +764,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full h-12 px-4 rounded-2xl bg-white border border-[#D5E9FA] text-[#183653] font-bold text-sm outline-none focus:ring-2 focus:ring-[#0878D1]/20 focus:border-[#0878D1]"
+                    className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#D5E9FA] text-[#183653] font-bold text-xs outline-none focus:ring-2 focus:ring-[#0878D1]/20 focus:border-[#0878D1]"
                   />
                 </div>
 
@@ -750,16 +777,16 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                     placeholder="e.g. Sunday, Festival, Shop Closed, Borrower Not Available"
                     value={holidayReason}
                     onChange={(e) => setHolidayReason(e.target.value)}
-                    className="w-full h-12 px-4 rounded-2xl bg-white border border-[#D5E9FA] text-[#183653] font-bold text-sm outline-none focus:ring-2 focus:ring-[#0878D1]/20 focus:border-[#0878D1]"
+                    className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#D5E9FA] text-[#183653] font-bold text-xs outline-none focus:ring-2 focus:ring-[#0878D1]/20 focus:border-[#0878D1]"
                   />
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-1">
                   <button
                     type="button"
                     disabled={submitting}
                     onClick={handleHolidaySubmit}
-                    className="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1] text-white font-black text-xs shadow-lg shadow-[#0878D1]/25 flex items-center justify-center space-x-2 disabled:opacity-50 active:scale-98 transition"
+                    className="w-full min-h-[46px] py-2.5 rounded-2xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1] text-white font-black text-xs shadow-md shadow-[#0878D1]/25 flex items-center justify-center space-x-2 disabled:opacity-50 active:scale-98 transition"
                   >
                     {submitting ? (
                       <span>Saving Declaration...</span>
@@ -776,14 +803,14 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
               </div>
             ) : (
               /* Payment Entry Form Fields */
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {/* 2. Amount Quick Presets */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-black uppercase tracking-wider text-[#647C95]">
                       Quick Amount Presets / தொகையை தேர்வு செய்
                     </label>
-                    <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400">
+                    <span className="text-[10px] font-bold text-[#0878D1]">
                       1 Due = {formatCurrency(installmentAmt)}
                     </span>
                   </div>
@@ -795,10 +822,10 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                         <button
                           type="button"
                           onClick={() => setAmount(installmentAmt)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black border transition min-h-[36px] flex items-center space-x-1 ${
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition min-h-[34px] flex items-center space-x-1 ${
                             amount === installmentAmt
-                              ? 'border-sky-500 bg-sky-500 text-white shadow-sm shadow-sky-500/25'
-                              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-sky-50'
+                              ? 'border-[#0878D1] bg-[#0878D1] text-white shadow-xs'
+                              : 'bg-white border-[#D5E9FA] text-[#183653] hover:bg-[#EAF5FF]'
                           }`}
                         >
                           <span>1 Due ({formatCurrency(installmentAmt)})</span>
@@ -808,10 +835,10 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                           <button
                             type="button"
                             onClick={() => setAmount(installmentAmt * 2)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black border transition min-h-[36px] ${
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition min-h-[34px] ${
                               amount === installmentAmt * 2
-                                ? 'border-sky-500 bg-sky-500 text-white shadow-sm shadow-sky-500/25'
-                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-sky-50'
+                                ? 'border-[#0878D1] bg-[#0878D1] text-white shadow-xs'
+                                : 'bg-white border-[#D5E9FA] text-[#183653] hover:bg-[#EAF5FF]'
                             }`}
                           >
                             2 Dues ({formatCurrency(installmentAmt * 2)})
@@ -822,10 +849,10 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                           <button
                             type="button"
                             onClick={() => setAmount(installmentAmt * 3)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black border transition min-h-[36px] ${
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition min-h-[34px] ${
                               amount === installmentAmt * 3
-                                ? 'border-sky-500 bg-sky-500 text-white shadow-sm shadow-sky-500/25'
-                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-sky-50'
+                                ? 'border-[#0878D1] bg-[#0878D1] text-white shadow-xs'
+                                : 'bg-white border-[#D5E9FA] text-[#183653] hover:bg-[#EAF5FF]'
                             }`}
                           >
                             3 Dues ({formatCurrency(installmentAmt * 3)})
@@ -834,36 +861,15 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                       </>
                     )}
 
-                    {/* Round number chips if distinct */}
-                    {[100, 200, 500].map((preset) => {
-                      if (preset === installmentAmt || preset === installmentAmt * 2 || preset === installmentAmt * 3) {
-                        return null;
-                      }
-                      return (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setAmount(preset)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black border transition min-h-[36px] ${
-                            amount === preset
-                              ? 'border-sky-500 bg-sky-500 text-white shadow-sm'
-                              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-sky-50'
-                          }`}
-                        >
-                          ₹{preset}
-                        </button>
-                      );
-                    })}
-
                     {/* Full Settlement Balance Chip */}
                     {currentBalance > 0 && (
                       <button
                         type="button"
                         onClick={() => setAmount(currentBalance)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-black border transition min-h-[36px] flex items-center space-x-1 ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition min-h-[34px] flex items-center space-x-1 ${
                           amount === currentBalance
-                            ? 'border-emerald-500 bg-emerald-600 text-white shadow-sm shadow-emerald-500/25'
-                            : 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100'
+                            ? 'border-[#18A879] bg-[#18A879] text-white shadow-xs'
+                            : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
                         }`}
                       >
                         <Sparkles className="w-3.5 h-3.5" />
@@ -873,107 +879,133 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                   </div>
                 </div>
 
-                {/* 3. Amount input */}
-                <div>
-                  <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">
-                    Payment Amount (வசூல் தொகை ₹) *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-black text-sky-500">
-                      ₹
-                    </span>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min="1"
-                      step="1"
-                      required
-                      value={amount || ''}
-                      onChange={(e) => {
-                        const val = e.target.value === '' ? '' : Number(e.target.value);
-                        setAmount(val);
-                      }}
-                      className="w-full pl-10 pr-4 h-13 rounded-2xl bg-white dark:bg-slate-900 border-2 border-sky-300 dark:border-sky-700 text-slate-900 dark:text-white font-black text-xl outline-none focus:ring-2 focus:ring-sky-400 tabular-nums shadow-xs"
-                    />
+                {/* 3. ⭐ CORE ENTERING GRID: AMOUNT & DATE SIDE-BY-SIDE ⭐ */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Payment Amount */}
+                  <div>
+                    <label className="block text-xs font-black text-[#183653] mb-1">
+                      Payment Amount / வசூல் தொகை ₹ *
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-black text-[#0878D1]">
+                        ₹
+                      </span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        step="1"
+                        required
+                        value={amount || ''}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? '' : Number(e.target.value);
+                          setAmount(val);
+                        }}
+                        className="w-full pl-9 pr-3 h-11 rounded-xl bg-white border-2 border-[#D5E9FA] text-[#183653] font-black text-lg outline-none focus:border-[#0878D1] focus:ring-2 focus:ring-[#0878D1]/20 tabular-nums shadow-xs transition"
+                        placeholder="Enter amount"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Collection Date */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-black text-[#183653]">
+                        Collection Date / தேதி *
+                      </label>
+                      {selectedLoan?.dueDate && (
+                        <span className="text-[10px] font-bold text-[#0878D1] bg-[#EAF5FF] border border-[#BFE3FA] px-1.5 py-0.5 rounded-md">
+                          {selectedLoan.installmentNo ? `Due #${selectedLoan.installmentNo}` : 'Scheduled'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        required
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="w-full px-3 h-11 rounded-xl bg-white border border-[#D5E9FA] text-[#183653] font-bold text-xs outline-none focus:border-[#0878D1] focus:ring-2 focus:ring-[#0878D1]/20 shadow-xs transition"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* =========================================================================
-                    4. ⭐ LIVE "BALANCE AFTER PAYMENT" SHOWCASE (MAIN USER REQUEST) ⭐
-                ========================================================================= */}
-                <div className="p-4 rounded-3xl bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/60 dark:from-emerald-950/40 dark:via-slate-900 dark:to-teal-950/40 border-2 border-emerald-300 dark:border-emerald-700 shadow-md space-y-3 animate-fade-in">
-                  <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 border-b border-emerald-200/70 dark:border-emerald-800/60 pb-2">
-                    <div className="flex items-center space-x-1.5">
-                      <Calculator className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                      <span>Live Balance Calculation / நேரலை நிலுவை கணக்கீடு</span>
+                {/* 4. ⭐ PAY OPTION (COLLECTION MODE) PROMINENT & DIRECTLY IN VIEW ⭐ */}
+                <div>
+                  <label className="block text-xs font-black text-[#183653] mb-1.5">
+                    Pay Option / செலுத்தும் முறை *
+                  </label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setMode('cash')}
+                      className={`min-h-[44px] px-3 py-2 rounded-xl flex items-center justify-center space-x-2 font-bold text-xs transition border-2 ${
+                        mode === 'cash'
+                          ? 'bg-[#EAF5FF] border-[#0878D1] text-[#0878D1] shadow-xs ring-2 ring-[#0878D1]/15'
+                          : 'bg-white border-[#D5E9FA] text-[#647C95] hover:bg-[#F3F9FF] hover:border-[#55B8F5]'
+                      }`}
+                    >
+                      <Banknote className="w-4 h-4" />
+                      <span>Cash / ரொக்கம்</span>
+                      {mode === 'cash' && <Check className="w-3.5 h-3.5 stroke-[3] ml-1" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMode('upi')}
+                      className={`min-h-[44px] px-3 py-2 rounded-xl flex items-center justify-center space-x-2 font-bold text-xs transition border-2 ${
+                        mode === 'upi'
+                          ? 'bg-[#EAF5FF] border-[#0878D1] text-[#0878D1] shadow-xs ring-2 ring-[#0878D1]/15'
+                          : 'bg-white border-[#D5E9FA] text-[#647C95] hover:bg-[#F3F9FF] hover:border-[#55B8F5]'
+                      }`}
+                    >
+                      <QrCode className="w-4 h-4" />
+                      <span>UPI / GPay</span>
+                      {mode === 'upi' && <Check className="w-3.5 h-3.5 stroke-[3] ml-1" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 5. ⭐ STREAMLINED LIVE BALANCE PREVIEW ⭐ */}
+                <div className="p-3 rounded-2xl bg-gradient-to-r from-[#F3F9FF] to-[#EAF5FF] border border-[#D5E9FA] shadow-xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-1.5 text-xs font-bold text-[#064B8E]">
+                      <Calculator className="w-3.5 h-3.5 text-[#0878D1]" />
+                      <span>Balance After Payment / செலுத்திய பின் நிலுவை</span>
                     </div>
-                    <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-200 px-2 py-0.5 rounded-full font-mono font-bold lowercase">
-                      auto-computed
+                    <span className="text-[10px] font-bold text-[#647C95] bg-white px-2 py-0.5 rounded-full border border-[#D5E9FA]">
+                      {remainingDuesCount} {financeType === 'daily' ? 'days' : financeType === 'weekly' ? 'weeks' : 'months'} remaining
                     </span>
                   </div>
 
-                  {/* Math Breakdown Strip */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-2.5 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-emerald-100 dark:border-emerald-900/60 shadow-2xs">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase block truncate">
-                        Current Outstanding / தற்போதைய நிலுவை
-                      </span>
-                      <span className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-200 tabular-nums block mt-0.5">
-                        {formatCurrency(currentBalance)}
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-emerald-100 dark:border-emerald-900/60 shadow-2xs">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase block truncate">
-                        Paying Now / செலுத்தும் வசூல்
-                      </span>
-                      <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 tabular-nums block mt-0.5">
-                        – {formatCurrency(payNum)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Highlighted Balance After Payment Card */}
-                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-md shadow-emerald-500/25 flex items-center justify-between">
-                    <div>
-                      <p className="text-[11px] font-black uppercase tracking-wider text-emerald-100">
-                        Balance After Payment / செலுத்திய பின் மீதி நிலுவை
-                      </p>
-                      <p className="text-2xl sm:text-3xl font-black tabular-nums tracking-tight mt-0.5">
+                  <div className="flex items-baseline justify-between pt-0.5">
+                    <div className="flex items-baseline space-x-2">
+                      <span className="text-xl sm:text-2xl font-black text-[#064B8E] tabular-nums tracking-tight">
                         {formatCurrency(balanceAfterPayment)}
-                      </p>
+                      </span>
+                      {payNum > 0 && (
+                        <span className="text-xs text-[#647C95] font-mono">
+                          ({formatCurrency(currentBalance)} – {formatCurrency(payNum)})
+                        </span>
+                      )}
                     </div>
 
-                    <div className="text-right shrink-0 ml-2">
-                      <span className="text-[10px] uppercase font-bold text-emerald-200 block">
-                        Remaining
+                    {isFullSettlement && (
+                      <span className="text-[11px] font-black text-[#18A879] bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full flex items-center space-x-1">
+                        <Sparkles className="w-3 h-3" />
+                        <span>Full Settlement!</span>
                       </span>
-                      <span className="text-xs font-black bg-white/20 px-2.5 py-1 rounded-xl inline-block mt-0.5">
-                        {remainingDuesCount} {financeType === 'daily' ? 'days' : financeType === 'weekly' ? 'weeks' : 'months'}
-                      </span>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Full Settlement Notice */}
-                  {isFullSettlement && (
-                    <div className="p-2.5 rounded-2xl bg-emerald-100/90 dark:bg-emerald-900/50 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center space-x-2">
-                      <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>
-                        🎉 Full Settlement! This payment completely clears and closes the loan account (₹0 balance remaining).
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Overpayment Notice */}
                   {isOverpaying && (
-                    <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-xs flex items-center justify-between">
-                      <span className="leading-tight">
-                        Note: Entered amount exceeds balance by {formatCurrency(payNum - currentBalance)}
-                      </span>
+                    <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold flex items-center justify-between">
+                      <span>Exceeds balance by {formatCurrency(payNum - currentBalance)}</span>
                       <button
                         type="button"
                         onClick={() => setAmount(currentBalance)}
-                        className="px-2.5 py-1 rounded-xl bg-amber-600 text-white font-bold text-[10px] hover:bg-amber-700 ml-2 shrink-0 active:scale-95"
+                        className="px-2 py-0.5 rounded-lg bg-amber-600 text-white text-[10px] font-bold hover:bg-amber-700 active:scale-95"
                       >
                         Set Exact ({formatCurrency(currentBalance)})
                       </button>
@@ -981,87 +1013,37 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                   )}
                 </div>
 
-                {/* 5. Payment Mode Selection */}
+                {/* 6. Collection Notes (Optional) */}
                 <div>
-                  <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">
-                    Collection Mode / செலுத்தும் முறை
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setMode('cash')}
-                      className={`min-h-[46px] p-2.5 rounded-2xl flex items-center justify-center space-x-2 font-black text-xs transition border ${
-                        mode === 'cash'
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25 border-emerald-400'
-                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-emerald-50'
-                      }`}
-                    >
-                      <Banknote className="w-4 h-4" />
-                      <span>Cash / ரொக்கம்</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setMode('upi')}
-                      className={`min-h-[46px] p-2.5 rounded-2xl flex items-center justify-center space-x-2 font-black text-xs transition border ${
-                        mode === 'upi'
-                          ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/25 border-sky-400'
-                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-sky-50'
-                      }`}
-                    >
-                      <QrCode className="w-4 h-4" />
-                      <span>UPI / GPay</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 6. Receipt Date Input */}
-                <div>
-                  <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">
-                    Receipt Date / ரசீது தேதி
-                  </label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full h-11 px-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-xs outline-none focus:ring-2 focus:ring-sky-400"
-                  />
-                </div>
-
-                {/* 7. Collection Notes Input */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                    Notes / குறிப்பு (Optional)
-                  </label>
                   <input
                     type="text"
-                    placeholder="e.g. Paid at shop, GPay UTR 29482..."
+                    placeholder="Notes / குறிப்பு (optional, e.g. GPay UTR, paid at shop...)"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full h-11 px-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium text-xs outline-none focus:ring-2 focus:ring-sky-400"
+                    className="w-full h-10 px-3 rounded-xl bg-white border border-[#D5E9FA] text-[#183653] font-medium text-xs outline-none focus:border-[#0878D1] focus:ring-2 focus:ring-[#0878D1]/20 transition"
                   />
                 </div>
               </div>
             )}
 
-            {/* Sticky Action Button at Bottom */}
+            {/* 7. Action Button at Bottom */}
             {entryMode === 'payment' && (
-              <div className="sticky bottom-0 pt-3 pb-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 shrink-0 z-10">
+              <div className="pt-1.5 shrink-0">
                 <button
                   type="submit"
                   disabled={submitting || payNum <= 0}
-                  className="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-xs sm:text-sm shadow-xl shadow-[#0878D1]/30 flex items-center justify-center space-x-2 transition active:scale-98"
+                  className="w-full min-h-[46px] py-2.5 rounded-2xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1] disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-xs sm:text-sm shadow-lg shadow-[#0878D1]/25 flex items-center justify-center space-x-2 transition active:scale-[0.98]"
                 >
                   {submitting ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Recording Collection...</span>
+                      <span>Recording Collection... / பதிவு செய்யப்படுகிறது...</span>
                     </>
                   ) : (
                     <>
-                      <Check className="w-5 h-5 stroke-[3]" />
+                      <Check className="w-4 h-4 stroke-[3]" />
                       <span>
-                        Confirm Payment {payNum > 0 ? `(Balance: ${formatCurrency(balanceAfterPayment)})` : ''} / வசூல் உறுதிப்படுத்து
+                        Confirm Payment {payNum > 0 ? `• ${formatCurrency(payNum)}` : ''} / வசூல் உறுதிப்படுத்து
                       </span>
                     </>
                   )}
