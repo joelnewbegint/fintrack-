@@ -595,11 +595,7 @@ export function App() {
 
       <div
         className={`flex-1 flex w-full relative z-10 ${
-          isMobile && !isRealPhone
-            ? 'max-w-[440px] mx-auto'
-            : isTablet
-            ? 'max-w-6xl mx-auto px-2 sm:px-4'
-            : 'max-w-[1720px] 2xl:max-w-[1920px] mx-auto px-2 sm:px-4 lg:px-6'
+          isMobile && !isRealPhone ? 'max-w-[440px] mx-auto' : ''
         }`}
       >
         {/* Desktop / Tablet Sidebar */}

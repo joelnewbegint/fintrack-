@@ -145,7 +145,7 @@ export const EmiLayout = ({
       {/* -------------------------------------------------------------
           BODY CONTAINER: SIDEBAR + MAIN CONTENT
       ------------------------------------------------------------- */}
-      <div className="flex-1 flex w-full max-w-[1720px] mx-auto relative">
+      <div className="flex-1 flex w-full relative">
         {/* DESKTOP SIDEBAR (Ocean Blue Theme) */}
         <aside className="hidden lg:flex flex-col w-60 shrink-0 p-4 border-r border-white/85 bg-white/70 backdrop-blur-md min-h-[calc(100vh-4rem)] sticky top-16 self-start max-h-[calc(100vh-4rem)] select-none shadow-ocean">
           <div className="mb-4 px-2">
