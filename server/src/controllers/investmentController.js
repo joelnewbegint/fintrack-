@@ -1,6 +1,7 @@
 import Investment from '../models/Investment.js';
 import Loan from '../models/Loan.js';
 import Payment from '../models/Payment.js';
+import Expense from '../models/Expense.js';
 import AuditLog from '../models/AuditLog.js';
 import User from '../models/User.js';
 
@@ -36,15 +37,33 @@ export const getInvestments = async (req, res, next) => {
       totalRemainingBalance += l.remainingBalance || 0;
     }
 
-    // Total repayments collected
+    // Compute lifetime cash disbursed to all borrowers across all loans
+    const allLoans = await Loan.find();
+    let totalCashDisbursedAllLoans = 0;
+    for (const l of allLoans) {
+      const disb = Number(l.disbursedAmount);
+      totalCashDisbursedAllLoans += disb > 0 ? disb : (Number(l.principal) || 0);
+    }
+
+    // Total repayments collected across all loans
     const allPayments = await Payment.find();
     let totalCollectedAllTime = 0;
     for (const p of allPayments) {
       totalCollectedAllTime += p.amount || 0;
     }
 
-    // Available estimated cash in hand = activeWorkingCapital + totalCollectedAllTime - totalPrincipalDisbursed
-    const estimatedLiquidCash = Math.max(0, activeWorkingCapital + totalCollectedAllTime - totalPrincipalDisbursed);
+    // Total expenses paid
+    const allExpenses = await Expense.find();
+    let totalExpensesAllTime = 0;
+    for (const exp of allExpenses) {
+      totalExpensesAllTime += exp.amount || 0;
+    }
+
+    // Real Liquid Cash in hand = Active Capital + Total Collections - Total Disbursed - Total Expenses
+    const estimatedLiquidCash = Math.max(
+      0,
+      activeWorkingCapital + totalCollectedAllTime - totalCashDisbursedAllLoans - totalExpensesAllTime
+    );
 
     res.status(200).json({
       success: true,

@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import Loan from '../models/Loan.js';
 import Settings from '../models/Settings.js';
 import AuditLog from '../models/AuditLog.js';
+import { emailBackup } from '../services/backupService.js';
 
 export const checkOverdueLoans = async () => {
   try {
@@ -72,6 +73,17 @@ export const initCronJobs = () => {
   // Run everyday at 00:05 AM
   cron.schedule('5 0 * * *', async () => {
     await checkOverdueLoans();
+  });
+
+  // Run everyday at 23:55 (11:55 PM IST) - Daily automated database email backup
+  cron.schedule('55 23 * * *', async () => {
+    try {
+      console.log('⏰ [Cron] Running automated nightly email backup to configured recipient...');
+      const result = await emailBackup();
+      console.log('✅ [Cron] Nightly email backup completed successfully:', result);
+    } catch (err) {
+      console.error('❌ [Cron] Error running automated nightly email backup:', err.message);
+    }
   });
 
   // Also run 10 seconds after server startup

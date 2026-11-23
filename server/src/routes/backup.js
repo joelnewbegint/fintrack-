@@ -55,6 +55,30 @@ router.get('/data', protect, restrictTo('owner'), async (req, res) => {
 });
 
 /**
+ * POST /api/backup/email-now
+ * Manual on-demand email trigger for Owners from the Web UI or API.
+ * Protected: JWT auth required, role must be 'owner'.
+ */
+router.post('/email-now', protect, restrictTo('owner'), async (req, res) => {
+  try {
+    console.log(`[BackupRoute] Owner (${req.user?.name || req.user?._id}) triggered instant email backup...`);
+    const result = await emailBackup();
+    return res.status(200).json({
+      success: true,
+      message: 'Full database backup generated and sent to email successfully!',
+      result,
+    });
+  } catch (err) {
+    console.error('❌ [BackupRoute] Error sending instant email backup:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to generate or email database backup: ' + err.message,
+      error: err.message,
+    });
+  }
+});
+
+/**
  * POST /api/backup/run
  * Automated backup endpoint invoked by external cron (e.g. cron-job.org).
  * Protected: Header 'x-cron-key' must match process.env.CRON_KEY.

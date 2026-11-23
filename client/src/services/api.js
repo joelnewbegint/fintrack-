@@ -1552,7 +1552,50 @@ export const api = {
     if (result.ok) return result.data;
 
     const investments = getStored(STORAGE_KEYS.INVESTMENTS, initialInvestments);
-    return { success: true, investments };
+    let totalInvested = 0;
+    let totalReturned = 0;
+    for (const inv of investments) {
+      totalInvested += Number(inv.amount) || 0;
+      totalReturned += Number(inv.totalReturned) || 0;
+    }
+    const activeWorkingCapital = Math.max(0, totalInvested - totalReturned);
+
+    const loans = getStored(STORAGE_KEYS.LOANS, []);
+    let totalCashDisbursedAllLoans = 0;
+    for (const l of loans) {
+      const disb = Number(l.disbursedAmount);
+      totalCashDisbursedAllLoans += disb > 0 ? disb : (Number(l.principal) || 0);
+    }
+
+    const payments = getStored(STORAGE_KEYS.PAYMENTS, []);
+    let totalCollectedAllTime = 0;
+    for (const p of payments) {
+      totalCollectedAllTime += Number(p.amount) || 0;
+    }
+
+    const expenses = getStored(STORAGE_KEYS.EXPENSES, []);
+    let totalExpensesAllTime = 0;
+    for (const exp of expenses) {
+      totalExpensesAllTime += Number(exp.amount) || 0;
+    }
+
+    const estimatedLiquidCash = Math.max(
+      0,
+      activeWorkingCapital + totalCollectedAllTime - totalCashDisbursedAllLoans - totalExpensesAllTime
+    );
+
+    return {
+      success: true,
+      investments,
+      summary: {
+        totalInvested,
+        totalReturned,
+        activeWorkingCapital,
+        totalCollectedAllTime,
+        estimatedLiquidCash,
+        activeCount: investments.filter((i) => i.status !== 'closed').length,
+      },
+    };
   },
 
   createInvestment: async (data) => {
@@ -1975,6 +2018,33 @@ export const api = {
     }
 
     return await res.blob();
+  },
+
+  sendBackupEmailNow: async () => {
+    const baseUrl = getApiBaseUrl();
+    const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
+    const token = isRemembered
+      ? localStorage.getItem('fintrack_token')
+      : sessionStorage.getItem('fintrack_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token && token.trim() && token !== 'undefined' && token !== 'null') {
+      headers['Authorization'] = `Bearer ${token.trim()}`;
+    }
+
+    const res = await fetch(`${baseUrl}/api/backup/email-now`, {
+      method: 'POST',
+      headers,
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
+      if (res.status === 403) {
+        throw new Error('Access denied: Only owner accounts can trigger email backups.');
+      }
+      throw new Error(data.message || `Failed to send email backup (HTTP ${res.status})`);
+    }
+
+    return data;
   },
 
   getFullBackupData: async () => {

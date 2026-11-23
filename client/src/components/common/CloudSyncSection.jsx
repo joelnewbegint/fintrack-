@@ -20,6 +20,7 @@ import {
   Copy,
   Zap,
   Globe,
+  Mail,
 } from 'lucide-react';
 
 export const CloudSyncSection = () => {
@@ -37,6 +38,8 @@ export const CloudSyncSection = () => {
   const [importing, setImporting] = useState(false);
   const [importSuccess, setImportSuccess] = useState(null);
   const [copiedBackup, setCopiedBackup] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailStatus, setEmailStatus] = useState(null);
 
   // Initialize active URL and check status
   useEffect(() => {
@@ -134,6 +137,25 @@ export const CloudSyncSection = () => {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleSendBackupEmail = async () => {
+    try {
+      setEmailLoading(true);
+      setEmailStatus(null);
+      const res = await api.sendBackupEmailNow();
+      setEmailStatus({
+        success: true,
+        message: res.message || 'Database backup Excel sent to your email successfully!',
+      });
+    } catch (err) {
+      setEmailStatus({
+        success: false,
+        message: err.message || 'Failed to send backup email',
+      });
+    } finally {
+      setEmailLoading(false);
+    }
   };
 
   const isOnline = healthStatus?.online;
@@ -442,6 +464,57 @@ export const CloudSyncSection = () => {
               />
             </label>
           </div>
+        </div>
+
+        {/* 4. Automated Nightly Email Backup (Gmail SMTP) */}
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/30 dark:border-emerald-500/20 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                    Automated Nightly Email Backup (Gmail SMTP)
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold border border-emerald-300 dark:border-emerald-800">
+                    Active / தயார்
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                  ஒவ்வொரு இரவும் 11:55 PM IST-க்கு முழு தரவுத்தளமும் (Excel) உங்கள் மின்னஞ்சலுக்கு தானாகவே அனுப்பப்படுகிறது.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSendBackupEmail}
+              disabled={emailLoading}
+              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-lg shadow-emerald-500/25 active:scale-95 transition flex items-center justify-center space-x-1.5 shrink-0 disabled:opacity-50"
+            >
+              <Mail className={`w-3.5 h-3.5 ${emailLoading ? 'animate-bounce' : ''}`} />
+              <span>{emailLoading ? 'Sending Email...' : 'Send Backup to Email Now / இப்போது மின்னஞ்சலில் பெறுக'}</span>
+            </button>
+          </div>
+
+          {emailStatus && (
+            <div
+              className={`p-3 rounded-xl text-xs font-bold flex items-center space-x-2 ${
+                emailStatus.success
+                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                  : 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+              }`}
+            >
+              {emailStatus.success ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              )}
+              <span>{emailStatus.message}</span>
+            </div>
+          )}
         </div>
       </div>
 
