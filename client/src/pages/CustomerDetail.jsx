@@ -693,10 +693,10 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                     setHolidayReason('Sunday / Holiday');
                     setHolidayDate(new Date().toISOString().split('T')[0]);
                   }}
-                  className="flex items-center space-x-1.5 h-9 px-3 rounded-xl border border-purple-300 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 hover:bg-purple-100 text-xs font-bold transition shadow-xs active:scale-95"
+                  className="flex items-center space-x-1.5 h-9 px-3 rounded-xl border border-[#D5E9FA] bg-[#EAF5FF] text-[#0878D1] hover:bg-[#D5E9FA]/60 text-xs font-bold transition shadow-xs active:scale-95"
                   title="Declare Holiday or Missed Collection Day"
                 >
-                  <Coffee className="w-3.5 h-3.5 text-purple-600" />
+                  <Coffee className="w-3.5 h-3.5 text-[#0878D1]" />
                   <span>Declare Holiday / Missed</span>
                 </button>
               </div>
@@ -761,7 +761,7 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                         inst.status === 'paid'
                           ? 'bg-emerald-50/20'
                           : inst.status === 'holiday'
-                          ? 'bg-purple-50/30'
+                          ? 'bg-[#EAF5FF]/40'
                           : inst.status === 'missed'
                           ? 'bg-amber-50/30'
                           : inst.status === 'overdue'
@@ -785,7 +785,7 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                             inst.status === 'paid'
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                               : inst.status === 'holiday'
-                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border border-purple-300 font-black'
+                              ? 'bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] font-black'
                               : inst.status === 'missed'
                               ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 font-black'
                               : inst.status === 'partial'
@@ -836,7 +836,7 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                                   'Holiday / விடுமுறை'
                                 )
                               }
-                              className="px-2 py-0.5 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 hover:bg-purple-100 text-[10px] font-bold transition active:scale-95"
+                              className="px-2 py-0.5 rounded-lg border border-[#D5E9FA] bg-[#EAF5FF] text-[#0878D1] hover:bg-[#D5E9FA] text-[10px] font-bold transition active:scale-95"
                               title="Declare as Holiday (விடுமுறை)"
                             >
                               🏖️ Holiday
@@ -932,18 +932,18 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
 
       {/* Declare Holiday or Missed Day Modal */}
       {holidayModalTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 animate-scale-up">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#183653]/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white/95 backdrop-blur-[20px] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#D5E9FA] space-y-5 animate-scale-up">
+            <div className="flex items-center justify-between pb-3 border-b border-[#D5E9FA]">
               <div className="flex items-center space-x-2">
-                <Coffee className="w-5 h-5 text-purple-600" />
-                <h3 className="font-black text-base text-slate-900 dark:text-white">
+                <Coffee className="w-5 h-5 text-[#0878D1]" />
+                <h3 className="font-black text-base text-[#183653]">
                   Declare Holiday / Missed Day
                 </h3>
               </div>
               <button
                 onClick={() => setHolidayModalTarget(null)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600 transition"
+                className="p-1 rounded-full text-[#647C95] hover:text-[#183653] transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -951,7 +951,7 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
 
             <div className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-400 font-bold uppercase tracking-wider mb-1.5 text-[10px]">
+                <label className="block text-[#647C95] font-bold uppercase tracking-wider mb-1.5 text-[10px]">
                   Declaration Type / வகை
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -960,8 +960,8 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                     onClick={() => setHolidayType('holiday')}
                     className={`py-2.5 px-3 rounded-2xl border font-bold flex items-center justify-center space-x-2 transition ${
                       holidayType === 'holiday'
-                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 shadow-sm'
-                        : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                        ? 'border-[#0878D1] bg-[#EAF5FF] text-[#0878D1] shadow-sm'
+                        : 'border-[#D5E9FA] text-[#647C95] hover:bg-[#F3F9FF]'
                     }`}
                   >
                     <span>🏖️ Holiday / விடுமுறை</span>
@@ -971,8 +971,8 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                     onClick={() => setHolidayType('missed')}
                     className={`py-2.5 px-3 rounded-2xl border font-bold flex items-center justify-center space-x-2 transition ${
                       holidayType === 'missed'
-                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 shadow-sm'
-                        : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                        ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-sm'
+                        : 'border-[#D5E9FA] text-[#647C95] hover:bg-[#F3F9FF]'
                     }`}
                   >
                     <span>⚠️ Missed / தவறிய நாள்</span>
@@ -981,19 +981,19 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
               </div>
 
               <div>
-                <label className="block text-slate-400 font-bold uppercase tracking-wider mb-1.5 text-[10px]">
+                <label className="block text-[#647C95] font-bold uppercase tracking-wider mb-1.5 text-[10px]">
                   Date / தேதி
                 </label>
                 <input
                   type="date"
                   value={holidayDate}
                   onChange={(e) => setHolidayDate(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-[#D5E9FA] bg-[#F3F9FF] text-xs font-bold text-[#183653] outline-none focus:ring-2 focus:ring-[#0878D1]"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-bold uppercase tracking-wider mb-1.5 text-[10px]">
+                <label className="block text-[#647C95] font-bold uppercase tracking-wider mb-1.5 text-[10px]">
                   Installment Number (Optional / குறிப்பிட்ட தவணை எண்)
                 </label>
                 <input
@@ -1003,12 +1003,12 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                   onChange={(e) =>
                     setHolidayModalTarget({ ...holidayModalTarget, installmentNo: e.target.value })
                   }
-                  className="w-full h-11 px-3.5 rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-[#D5E9FA] bg-[#F3F9FF] text-xs font-bold text-[#183653] outline-none focus:ring-2 focus:ring-[#0878D1]"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-bold uppercase tracking-wider mb-1.5 text-[10px]">
+                <label className="block text-[#647C95] font-bold uppercase tracking-wider mb-1.5 text-[10px]">
                   Reason / குறிப்பு
                 </label>
                 <input
@@ -1016,7 +1016,7 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                   placeholder="e.g. Sunday, Festival, Shop Closed, Customer Away"
                   value={holidayReason}
                   onChange={(e) => setHolidayReason(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full h-11 px-3.5 rounded-2xl border border-[#D5E9FA] bg-[#F3F9FF] text-xs font-bold text-[#183653] outline-none focus:ring-2 focus:ring-[#0878D1]"
                 />
               </div>
 
@@ -1024,7 +1024,7 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                 <button
                   type="button"
                   onClick={() => setHolidayModalTarget(null)}
-                  className="px-4 py-2.5 rounded-2xl border border-slate-300 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-100 transition"
+                  className="px-4 py-2.5 rounded-2xl border border-[#D5E9FA] text-[#647C95] font-bold hover:bg-[#F3F9FF] transition"
                 >
                   Cancel
                 </button>
@@ -1040,7 +1040,7 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                       holidayReason
                     )
                   }
-                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black shadow-md hover:opacity-95 transition active:scale-95 disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] text-white font-black shadow-md hover:opacity-95 transition active:scale-95 disabled:opacity-50"
                 >
                   {declaringHoliday ? 'Saving...' : 'Declare / அறிவிக்க'}
                 </button>

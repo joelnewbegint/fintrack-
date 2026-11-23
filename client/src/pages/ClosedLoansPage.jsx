@@ -26,12 +26,10 @@ import {
 const getAvatarStyle = (name = '') => {
   const char = (name || 'B').trim().charAt(0).toUpperCase();
   const palette = [
-    'bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 ring-1 ring-blue-300/40',
-    'bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 ring-1 ring-purple-300/40',
-    'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 ring-1 ring-emerald-300/40',
-    'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 ring-1 ring-rose-300/40',
-    'bg-sky-100 text-sky-700 dark:bg-sky-950/70 dark:text-sky-300 ring-1 ring-sky-300/40',
-    'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 ring-1 ring-amber-300/40',
+    'bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]',
+    'bg-[#EAF5FF] text-[#064B8E] border border-[#D5E9FA]',
+    'bg-[#EAF5FF] text-[#18A879] border border-[#D5E9FA]',
+    'bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]',
   ];
   const code = char.charCodeAt(0) || 0;
   return {

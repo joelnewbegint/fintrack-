@@ -452,33 +452,33 @@ export const StatementDownloadModal = ({
           <div
             className={`p-4 rounded-2xl border transition ${
               loans.length > 0
-                ? 'bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/30 dark:from-indigo-950/30 dark:via-slate-800/60 dark:to-slate-900 border-indigo-200 dark:border-indigo-900/60 shadow-xs'
-                : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-800 opacity-60'
+                ? 'bg-gradient-to-br from-[#EAF5FF]/70 via-white to-[#EAF5FF]/30 border-[#D5E9FA] shadow-xs'
+                : 'bg-slate-50 border-slate-200 opacity-60'
             }`}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-start space-x-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 text-white flex items-center justify-center shrink-0 shadow-sm shadow-indigo-600/20">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0878D1] to-[#064B8E] text-white flex items-center justify-center shrink-0 shadow-sm shadow-[#0878D1]/20">
                   <Calendar className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <h4 className="font-black text-xs text-slate-900 dark:text-white">
+                    <h4 className="font-black text-xs text-[#183653]">
                       4. Repayment Schedule Statement
                     </h4>
-                    <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950/60 px-2 py-0.2 rounded-full">
+                    <span className="text-[10px] font-bold text-[#0878D1] bg-[#EAF5FF] px-2 py-0.2 rounded-full border border-[#D5E9FA]">
                       தவணை அட்டவணை
                     </span>
                   </div>
-                  <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-[10.5px] text-[#647C95] mt-0.5">
                     Download official day-by-day installment repayment schedule table with due dates, amounts, and signature columns.
                   </p>
                   <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10.5px]">
-                    <span className="text-slate-600 dark:text-slate-400">
-                      Target Loan: <strong className="text-slate-900 dark:text-white">{(activeData.filteredLoans[0] || loans[0])?.loanNo || 'N/A'}</strong>
+                    <span className="text-[#647C95]">
+                      Target Loan: <strong className="text-[#183653]">{(activeData.filteredLoans[0] || loans[0])?.loanNo || 'N/A'}</strong>
                     </span>
                     <span>•</span>
-                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">
+                    <span className="text-[#0878D1] font-bold">
                       {(activeData.filteredLoans[0] || loans[0])?.duration || 100} Installments
                     </span>
                   </div>
@@ -487,15 +487,15 @@ export const StatementDownloadModal = ({
             </div>
 
             {/* Action Button */}
-            <div className="mt-3 pt-2.5 border-t border-indigo-200/60 dark:border-indigo-900/40 flex items-center justify-between gap-2">
-              <span className="text-[10px] text-slate-400">
+            <div className="mt-3 pt-2.5 border-t border-[#D5E9FA] flex items-center justify-between gap-2">
+              <span className="text-[10px] text-[#647C95]">
                 Official B/W print-ready schedule table
               </span>
               <button
                 type="button"
                 onClick={handleDownloadSchedule}
                 disabled={loans.length === 0 || generatingType !== null}
-                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs shadow-md shadow-indigo-600/20 active:scale-95 transition disabled:opacity-40 flex items-center space-x-1.5"
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1] text-white font-black text-xs shadow-md shadow-[#0878D1]/20 active:scale-95 transition disabled:opacity-40 flex items-center space-x-1.5"
               >
                 {generatingType === 'schedule_pdf' ? (
                   <>

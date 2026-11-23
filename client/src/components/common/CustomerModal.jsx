@@ -838,12 +838,12 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
             </div>
 
             {/* Created Summary Card */}
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50/70 dark:from-sky-950/50 dark:to-indigo-950/50 border border-sky-200 dark:border-sky-800 text-left space-y-2.5">
-              <div className="flex items-center justify-between border-b border-sky-200/60 dark:border-sky-800/60 pb-2">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+            <div className="p-4 rounded-2xl bg-[#EAF5FF] border border-[#D5E9FA] text-left space-y-2.5">
+              <div className="flex items-center justify-between border-b border-[#D5E9FA] pb-2">
+                <span className="text-[10px] font-bold text-[#647C95] uppercase tracking-wide">
                   Official Loan ID
                 </span>
-                <span className="font-mono font-black text-sm text-sky-700 dark:text-sky-300">
+                <span className="font-mono font-black text-sm text-[#0878D1]">
                   {createdLoan.loanNo}
                 </span>
               </div>
@@ -907,7 +907,7 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
               <button
                 type="button"
                 onClick={handleDownloadSchedule}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs shadow-md shadow-indigo-500/25 active:scale-98 transition"
+                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1] text-white font-black text-xs shadow-md shadow-[#0878D1]/25 active:scale-98 transition"
               >
                 <div className="flex items-center space-x-2.5">
                   <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
@@ -915,17 +915,17 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
                   </div>
                   <div>
                     <p className="leading-tight">2. Download Repayment Schedule (PDF)</p>
-                    <p className="text-[10px] text-indigo-100 font-medium">
+                    <p className="text-[10px] text-white/80 font-medium">
                       தவணை அட்டவணை PDF பதிவிறக்கம் (Daily Ledger Schedule)
                     </p>
                   </div>
                 </div>
                 {scheduleSuccess ? (
-                  <span className="text-[10px] bg-white text-indigo-700 font-black px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] bg-white text-[#0878D1] font-black px-2 py-0.5 rounded-full">
                     Saved ✓
                   </span>
                 ) : (
-                  <ChevronRight className="w-4 h-4 text-indigo-200" />
+                  <ChevronRight className="w-4 h-4 text-white/80" />
                 )}
               </button>
 
@@ -934,9 +934,9 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
                 <button
                   type="button"
                   onClick={handlePrintPdf}
-                  className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition"
+                  className="p-3 rounded-2xl bg-white border border-[#D5E9FA] hover:bg-[#EAF5FF] text-[#183653] font-bold text-xs flex items-center justify-center space-x-1.5 transition"
                 >
-                  <Printer className="w-4 h-4 text-purple-600" />
+                  <Printer className="w-4 h-4 text-[#0878D1]" />
                   <span>Print Form / அச்சிடு</span>
                 </button>
 
@@ -1394,48 +1394,48 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
                 </div>
 
                 {/* Live Calculation Summary Banner - 4-Stat Luxury Cards (2x2 on Mobile, 4 across on sm) */}
-                <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-sky-50 via-white to-indigo-50/60 dark:from-sky-950/50 dark:via-slate-900 dark:to-indigo-950/50 border-2 border-sky-200 dark:border-sky-800/80 shadow-md">
-                  <div className="text-[11px] font-black uppercase text-sky-800 dark:text-sky-300 tracking-wider mb-2.5 flex items-center justify-between">
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-[#EAF5FF] via-white to-[#EAF5FF]/60 border border-[#D5E9FA] shadow-sm">
+                  <div className="text-[11px] font-black uppercase text-[#064B8E] tracking-wider mb-2.5 flex items-center justify-between">
                     <span>Instant Financial Breakdown / நேரலை கணக்கீடு</span>
-                    <span className="text-slate-400 font-mono font-bold lowercase text-[10px]">auto-computed</span>
+                    <span className="text-[#647C95] font-mono font-bold lowercase text-[10px]">auto-computed</span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-left">
-                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-sky-100 dark:border-sky-900/60 shadow-xs">
-                      <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide truncate">
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/95 border border-[#D5E9FA] shadow-xs">
+                      <span className="text-[10px] text-[#647C95] font-bold block uppercase tracking-wide truncate">
                         Net Disbursed / கையில்
                       </span>
-                      <strong className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 tabular-nums block mt-1">
+                      <strong className="text-sm sm:text-base font-black text-[#18A879] tabular-nums block mt-1">
                         {formatCurrency(inHandAmount)}
                       </strong>
                     </div>
 
-                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-sky-100 dark:border-sky-900/60 shadow-xs">
-                      <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide truncate">
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/95 border border-[#D5E9FA] shadow-xs">
+                      <span className="text-[10px] text-[#647C95] font-bold block uppercase tracking-wide truncate">
                         Installment / தவணை
                       </span>
-                      <strong className="text-sm sm:text-base font-black text-sky-600 dark:text-sky-400 tabular-nums block mt-1">
+                      <strong className="text-sm sm:text-base font-black text-[#0878D1] tabular-nums block mt-1">
                         {formatCurrency(installmentAmount)}
-                        <span className="text-[10px] font-normal text-slate-400 ml-1">
+                        <span className="text-[10px] font-normal text-[#647C95] ml-1">
                           /{financeType === 'daily' ? 'day' : 'inst'}
                         </span>
                       </strong>
                     </div>
 
-                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-sky-100 dark:border-sky-900/60 shadow-xs">
-                      <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide truncate">
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/95 border border-[#D5E9FA] shadow-xs">
+                      <span className="text-[10px] text-[#647C95] font-bold block uppercase tracking-wide truncate">
                         Total Due / மொத்தம்
                       </span>
-                      <strong className="text-sm sm:text-base font-black text-slate-900 dark:text-white tabular-nums block mt-1">
+                      <strong className="text-sm sm:text-base font-black text-[#183653] tabular-nums block mt-1">
                         {formatCurrency(totalPayable)}
                       </strong>
                     </div>
 
-                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-sky-100 dark:border-sky-900/60 shadow-xs">
-                      <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide truncate">
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/95 border border-[#D5E9FA] shadow-xs">
+                      <span className="text-[10px] text-[#647C95] font-bold block uppercase tracking-wide truncate">
                         Due Date / முடிவு
                       </span>
-                      <strong className="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400 block mt-1">
+                      <strong className="text-xs sm:text-sm font-black text-[#0878D1] block mt-1">
                         {calculateEndDate()}
                       </strong>
                     </div>
@@ -1443,11 +1443,11 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
                 </div>
 
                 {/* Loan View Sticky Action Footer */}
-                <div className="sticky bottom-0 pt-3.5 pb-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 z-10">
+                <div className="sticky bottom-0 pt-3.5 pb-1 bg-white/95 backdrop-blur-sm border-t border-[#D5E9FA] flex items-center justify-between gap-3 z-10">
                   <button
                     type="button"
                     onClick={() => switchTab('profile')}
-                    className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs transition flex items-center space-x-1.5"
+                    className="px-4 py-2.5 rounded-xl border border-[#D5E9FA] text-[#183653] hover:bg-[#EAF5FF] font-bold text-xs transition flex items-center space-x-1.5"
                   >
                     <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
                     <span>Back to Profile / சுயவிவரம்</span>
@@ -1456,7 +1456,7 @@ export const CustomerModal = ({ customer = null, onClose, onSuccess }) => {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex-1 max-w-md min-h-[46px] rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black text-xs shadow-xl shadow-sky-500/30 transition active:scale-98 flex items-center justify-center space-x-2"
+                    className="flex-1 max-w-md min-h-[46px] rounded-2xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:opacity-95 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black text-xs shadow-xl shadow-[#0878D1]/30 transition active:scale-98 flex items-center justify-center space-x-2"
                   >
                     {submitting ? (
                       <>

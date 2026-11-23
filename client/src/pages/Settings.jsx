@@ -286,11 +286,11 @@ export const Settings = () => {
               onClick={() => setActiveSection('audit')}
               className={`flex items-center space-x-2 h-11 px-4 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 ${
                 activeSection === 'audit'
-                  ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-sky-500/25 ring-2 ring-sky-400/40'
-                  : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100/60 dark:border-sky-900/40'
+                  ? 'bg-gradient-to-r from-[#0878D1] to-[#064B8E] text-white shadow-[#0878D1]/25 ring-2 ring-[#0878D1]/40'
+                  : 'bg-white/75 text-[#183653] hover:bg-[#EAF5FF] border border-[#D5E9FA]'
               }`}
             >
-              <Shield className="w-4 h-4 text-indigo-400" />
+              <Shield className="w-4 h-4 text-[#0878D1]" />
               <span>Audit Trail & Backup (தணிக்கை & பேக்அப்)</span>
             </button>
           </>
@@ -315,7 +315,7 @@ export const Settings = () => {
           <div className="glass-card rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800/80 shadow-md space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center space-x-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-md shrink-0">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#0878D1] to-[#064B8E] flex items-center justify-center text-white text-2xl font-black shadow-md shrink-0">
                   {profileData.name ? profileData.name.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div>
@@ -712,7 +712,7 @@ export const Settings = () => {
               {isOwner && (
                 <button
                   type="submit"
-                  className="py-3 px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-lg shadow-blue-500/25 active:scale-95 transition flex items-center space-x-2"
+                  className="py-3 px-6 rounded-2xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-[#0878D1]/25 active:scale-95 transition flex items-center space-x-2"
                 >
                   <Save className="w-4 h-4" />
                   <span>Save Business Settings</span>

@@ -112,7 +112,7 @@ export const InvestmentModal = ({ onClose, onSuccess, initialReturnItem = null, 
           <div>
             <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center space-x-2">
               {isEditMode ? (
-                <Edit3 className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+                <Edit3 className="w-5 h-5 text-[#0878D1] flex-shrink-0" />
               ) : (
                 <Landmark className="w-5 h-5 text-sky-500 flex-shrink-0" />
               )}

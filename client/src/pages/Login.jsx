@@ -66,9 +66,9 @@ export const Login = () => {
     <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{
-        backgroundColor: '#F4FAFF',
+        backgroundColor: '#F3F9FF',
         backgroundImage:
-          'radial-gradient(circle at 92% 8%, rgba(111, 180, 242, 0.45) 0%, transparent 45%), radial-gradient(circle at 8% 85%, rgba(142, 197, 245, 0.35) 0%, transparent 50%), linear-gradient(165deg, #F4FAFF 0%, #BFE3FA 48%, #8EC5F5 100%)',
+          'radial-gradient(circle at 92% 8%, rgba(85, 184, 245, 0.45) 0%, transparent 45%), radial-gradient(circle at 8% 85%, rgba(8, 120, 209, 0.25) 0%, transparent 50%), linear-gradient(165deg, #F3F9FF 0%, #EAF5FF 48%, #D5E9FA 100%)',
       }}
     >
       {/* Top right language toggle */}
@@ -76,29 +76,29 @@ export const Login = () => {
         <button
           onClick={toggleLanguage}
           type="button"
-          className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-white/80 backdrop-blur-md border border-[#BFE3FA] text-xs font-bold text-ink hover:border-[#6FB4F2] hover:bg-white transition active:scale-95 shadow-ocean-sm"
+          className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-white/75 backdrop-blur-[20px] border border-[#D5E9FA] text-xs font-bold text-[#183653] hover:border-[#0878D1] hover:bg-white transition active:scale-95 shadow-sm"
         >
-          <Globe className="w-3.5 h-3.5 text-[#1F6FC8]" />
+          <Globe className="w-3.5 h-3.5 text-[#0878D1]" />
           <span>{lang === 'ta' ? 'English' : 'தமிழ்'}</span>
         </button>
       </div>
 
       {/* Main Ocean Blue Glass Card */}
-      <div className="max-w-md w-full rounded-[24px] p-6 sm:p-8 relative z-10 bg-white/75 backdrop-blur-md border border-white/95 shadow-ocean-lg space-y-5 text-ink">
+      <div className="max-w-md w-full rounded-[24px] p-6 sm:p-8 relative z-10 bg-white/75 backdrop-blur-[20px] border border-[#D5E9FA] shadow-lg space-y-5 text-[#183653]">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex p-3.5 rounded-2xl bg-gradient-to-br from-[#6FB4F2] to-[#8EC5F5] shadow-md shadow-[#1F6FC8]/20 border border-white text-ink">
+          <div className="inline-flex p-3.5 rounded-2xl bg-gradient-to-br from-[#0878D1] to-[#064B8E] shadow-md shadow-[#0878D1]/20 border border-white text-white">
             <Wallet className="w-7 h-7" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-ink">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#183653]">
               VK BANKER'S & FINANCE
             </h1>
-            <p className="text-xs text-[#1F6FC8] font-bold tracking-wide mt-0.5">
+            <p className="text-xs text-[#0878D1] font-bold tracking-wide mt-0.5">
               வி.கே. பேங்கர்ஸ் & பைனான்ஸ்
             </p>
           </div>
-          <p className="text-xs text-muted font-medium">
+          <p className="text-xs text-[#647C95] font-medium">
             {lang === 'ta'
               ? 'நிதி மற்றும் மாத தவணை மேலாண்மை - Staff & Agent Login'
               : 'Finance & Monthly EMI Management System'}
@@ -107,8 +107,8 @@ export const Login = () => {
 
         {/* Cold-Start Waking Banner */}
         {isWakingUp && (
-          <div className="p-3 rounded-2xl bg-[#BFE3FA]/70 border border-[#6FB4F2] text-ink text-xs font-semibold leading-relaxed flex items-center space-x-2.5 animate-pulse">
-            <Server className="w-4 h-4 text-[#1F6FC8] shrink-0" />
+          <div className="p-3 rounded-2xl bg-[#EAF5FF] border border-[#D5E9FA] text-[#183653] text-xs font-semibold leading-relaxed flex items-center space-x-2.5 animate-pulse">
+            <Server className="w-4 h-4 text-[#0878D1] shrink-0" />
             <span>
               {lang === 'ta'
                 ? 'சர்வர் தொடங்குகிறது, ஒரு நிமிடம் காத்திருக்கவும்...'
@@ -130,11 +130,11 @@ export const Login = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-ink mb-1.5">
+            <label className="block text-xs font-bold text-[#183653] mb-1.5">
               Username or Email / பயனர்பெயர்
             </label>
             <div className="relative">
-              <User className="w-4 h-4 absolute left-3.5 top-3.5 text-[#1F6FC8]" />
+              <User className="w-4 h-4 absolute left-3.5 top-3.5 text-[#0878D1]" />
               <input
                 type="text"
                 required
@@ -148,11 +148,11 @@ export const Login = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-ink mb-1.5">
+            <label className="block text-xs font-bold text-[#183653] mb-1.5">
               Password / கடவுச்சொல்
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-[#1F6FC8]" />
+              <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-[#0878D1]" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
@@ -165,7 +165,7 @@ export const Login = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-3.5 text-muted hover:text-ink transition"
+                className="absolute right-3.5 top-3.5 text-[#647C95] hover:text-[#183653] transition"
                 tabIndex={-1}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -185,23 +185,23 @@ export const Login = () => {
               <div
                 className={`w-5 h-5 rounded-lg border flex items-center justify-center transition shadow-xs ${
                   rememberMe
-                    ? 'bg-[#6FB4F2] border-[#1F6FC8] text-ink'
-                    : 'bg-white/90 border-[#BFE3FA] group-hover:border-[#6FB4F2] text-transparent'
+                    ? 'bg-[#0878D1] border-[#064B8E] text-white'
+                    : 'bg-white/90 border-[#D5E9FA] group-hover:border-[#0878D1] text-transparent'
                 }`}
               >
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-ink transition">
+                <span className="text-xs font-bold text-[#183653] transition">
                   {lang === 'ta' ? 'உள்நுழைந்தே இருக்கவும்' : 'Keep me signed in'}
                 </span>
-                <span className="text-[10px] text-muted font-medium">
+                <span className="text-[10px] text-[#647C95] font-medium">
                   {lang === 'ta' ? 'அடுத்த முறை தானாக திறக்கும்' : 'Stay signed in on this device'}
                 </span>
               </div>
             </label>
 
-            <span className="badge-paid px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+            <span className="bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] px-2.5 py-0.5 rounded-full text-[10px] font-bold">
               Secure
             </span>
           </div>
@@ -210,7 +210,7 @@ export const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="btn-accent w-full h-12 text-sm font-bold shadow-ocean flex items-center justify-center space-x-2 active:scale-[0.98] transition cursor-pointer"
+            className="w-full h-12 text-sm font-black rounded-full bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:opacity-95 text-white shadow-md shadow-[#0878D1]/20 flex items-center justify-center space-x-2 active:scale-[0.98] transition cursor-pointer"
           >
             {loading ? (
               <span>Signing in...</span>

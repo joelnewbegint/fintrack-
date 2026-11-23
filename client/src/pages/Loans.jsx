@@ -49,7 +49,7 @@ const getAvatarStyle = (name = '') => {
   const char = (name || 'B').trim().charAt(0).toUpperCase();
   return {
     char,
-    classes: 'bg-[#BFE3FA] text-[#1F6FC8] border border-[#6FB4F2]/50 shadow-xs',
+    classes: 'bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] shadow-xs',
   };
 };
 
@@ -1388,7 +1388,7 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
                                 ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/80'
                                 : loan.financeType === 'weekly'
                                 ? 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200/80'
-                                : 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200/80'
+                                : 'bg-[#EAF5FF] text-[#18A879] border border-[#D5E9FA]'
                             }`}
                           >
                             {loan.financeType === 'daily'

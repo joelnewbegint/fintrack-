@@ -70,6 +70,7 @@ export const Dashboard = ({
   onOpenInvestment,
   onOpenExpenses,
   onOpenNewCustomer,
+  onNavigateTab,
 }) => {
   const { t, lang } = useLanguage();
   const { user, isOwner, isClient } = useAuth();
@@ -170,9 +171,9 @@ export const Dashboard = ({
 
   const collectionTrend = stats?.collectionTrend || [];
   const financeTypeSplit = (stats?.financeTypeSplit || []).map((item) => {
-    let c = '#0EA5E9'; // sky
-    if (item.key === 'daily') c = '#F59E0B'; // amber
-    if (item.key === 'monthly') c = '#14B8A6'; // teal
+    let c = '#0878D1'; // primary blue
+    if (item.key === 'daily') c = '#55B8F5'; // sky blue
+    if (item.key === 'monthly') c = '#18A879'; // success emerald
     return { ...item, color: c };
   });
   const monthlyChartData = stats?.monthlyChartData || [];
@@ -262,25 +263,25 @@ export const Dashboard = ({
       const d = payload[0].payload;
       return (
         <div
-          className="rounded-2xl p-3 text-xs shadow-xl border border-white/90 dark:border-slate-700 min-w-[170px]"
+          className="rounded-2xl p-3 text-xs shadow-xl border border-[#D5E9FA] min-w-[170px]"
           style={{
-            background: 'rgba(255, 255, 255, 0.96)',
-            backdropFilter: 'blur(14px)',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(16px)',
           }}
         >
-          <div className="font-extrabold text-slate-800 dark:text-slate-900 mb-1 flex items-center justify-between gap-2">
+          <div className="font-extrabold text-[#183653] mb-1 flex items-center justify-between gap-2">
             <span>📅 {d.date || d.displayDate}</span>
             {d.count > 0 && (
-              <span className="text-[10px] text-sky-700 bg-sky-100/80 px-2 py-0.5 rounded-full font-bold">
+              <span className="text-[10px] text-[#0878D1] bg-[#EAF5FF] px-2 py-0.5 rounded-full font-bold border border-[#D5E9FA]">
                 {d.count} {d.count === 1 ? 'entry' : 'entries'}
               </span>
             )}
           </div>
-          <div className="text-base font-black text-sky-600 tracking-tight">
+          <div className="text-base font-black text-[#0878D1] tracking-tight">
             ₹{Number(d.amount || 0).toLocaleString('en-IN')}
           </div>
           {(d.cash > 0 || d.upi > 0) && (
-            <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-200 flex items-center justify-between text-[10px] font-semibold text-slate-600">
+            <div className="mt-2 pt-2 border-t border-[#D5E9FA] flex items-center justify-between text-[10px] font-semibold text-[#647C95]">
               <span>Cash: ₹{Number(d.cash || 0).toLocaleString('en-IN')}</span>
               <span>UPI: ₹{Number(d.upi || 0).toLocaleString('en-IN')}</span>
             </div>
@@ -293,32 +294,32 @@ export const Dashboard = ({
 
   // Reusable Collection Trend Card with 7D/14D/30D selector & Area/Bar switcher
   const renderCollectionTrendCard = (compact = false) => (
-    <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg min-w-0">
+    <div className="bg-white/75 backdrop-blur-[20px] rounded-3xl p-5 border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.08)] min-w-0">
       {/* Header with Title and Interactive Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse" />
-            <h3 className="font-black text-sm text-slate-900 dark:text-white">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#0878D1] animate-pulse" />
+            <h3 className="font-black text-sm text-[#183653]">
               {t('collectionTrend30Days') || 'Collection Trend'}
             </h3>
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-[11px] text-[#647C95] mt-0.5">
             Daily repayment cashflow history
           </p>
         </div>
 
         <div className="flex items-center space-x-2 self-start sm:self-auto">
           {/* 7D / 14D / 30D Time Range Selector */}
-          <div className="inline-flex p-0.5 bg-slate-100/90 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-inner">
+          <div className="inline-flex p-0.5 bg-[#EAF5FF] rounded-xl border border-[#D5E9FA] shadow-xs">
             {[7, 14, 30].map((days) => (
               <button
                 key={days}
                 onClick={() => setTrendDays(days)}
                 className={`px-2.5 py-1 text-[11px] font-extrabold rounded-lg transition-all ${
                   trendDays === days
-                    ? 'bg-sky-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-[#0878D1] text-white shadow-sm'
+                    : 'text-[#647C95] hover:text-[#183653]'
                 }`}
               >
                 {days}D
@@ -327,14 +328,14 @@ export const Dashboard = ({
           </div>
 
           {/* Area vs Bar View Switcher */}
-          <div className="inline-flex p-0.5 bg-slate-100/90 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-inner">
+          <div className="inline-flex p-0.5 bg-[#EAF5FF] rounded-xl border border-[#D5E9FA] shadow-xs">
             <button
               onClick={() => setTrendChartType('area')}
               title="Smooth Wave Area"
               className={`p-1.5 rounded-lg transition-all ${
                 trendChartType === 'area'
-                  ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                  ? 'bg-white text-[#0878D1] shadow-xs'
+                  : 'text-[#647C95] hover:text-[#183653]'
               }`}
             >
               <TrendingUp className="w-3.5 h-3.5" />
@@ -344,8 +345,8 @@ export const Dashboard = ({
               title="Daily Cashflow Columns"
               className={`p-1.5 rounded-lg transition-all ${
                 trendChartType === 'bar'
-                  ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                  ? 'bg-white text-[#0878D1] shadow-xs'
+                  : 'text-[#647C95] hover:text-[#183653]'
               }`}
             >
               <BarChart2 className="w-3.5 h-3.5" />
@@ -355,28 +356,28 @@ export const Dashboard = ({
       </div>
 
       {/* 3 Metric Summary Strip */}
-      <div className="grid grid-cols-3 gap-2 py-2 px-3 mb-3 bg-sky-50/70 dark:bg-sky-950/30 rounded-2xl border border-sky-100 dark:border-sky-900/40">
+      <div className="grid grid-cols-3 gap-2 py-2 px-3 mb-3 bg-[#EAF5FF] rounded-2xl border border-[#D5E9FA]">
         <div>
-          <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 block tracking-wider">
+          <span className="text-[10px] uppercase font-bold text-[#647C95] block tracking-wider">
             {trendDays}D Total
           </span>
-          <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+          <span className="text-sm sm:text-base font-black text-[#183653]">
             ₹{trendSliceTotal.toLocaleString('en-IN')}
           </span>
         </div>
         <div>
-          <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 block tracking-wider">
+          <span className="text-[10px] uppercase font-bold text-[#647C95] block tracking-wider">
             Daily Avg
           </span>
-          <span className="text-sm sm:text-base font-black text-sky-600 dark:text-sky-400">
+          <span className="text-sm sm:text-base font-black text-[#183653]">
             ₹{trendSliceAvg.toLocaleString('en-IN')}
           </span>
         </div>
         <div>
-          <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 block tracking-wider">
+          <span className="text-[10px] uppercase font-bold text-[#647C95] block tracking-wider">
             Peak Day
           </span>
-          <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 truncate block">
+          <span className="text-sm sm:text-base font-black text-[#0878D1] truncate block">
             {trendSlicePeak > 0 ? `₹${trendSlicePeak.toLocaleString('en-IN')}` : '₹0'}
           </span>
         </div>
@@ -385,19 +386,19 @@ export const Dashboard = ({
       {/* Chart View */}
       <div className={`${compact ? 'h-48' : 'h-64'} w-full`}>
         {trendSliceTotal === 0 ? (
-          <div className="h-full w-full flex flex-col items-center justify-center p-4 text-center rounded-2xl bg-white/40 dark:bg-slate-900/30 border border-dashed border-sky-200 dark:border-sky-800">
-            <div className="w-10 h-10 rounded-2xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center text-sky-600 mb-2">
+          <div className="h-full w-full flex flex-col items-center justify-center p-4 text-center rounded-2xl bg-[#EAF5FF]/60 border border-dashed border-[#D5E9FA]">
+            <div className="w-10 h-10 rounded-2xl bg-[#EAF5FF] border border-[#D5E9FA] flex items-center justify-center text-[#0878D1] mb-2">
               <Coins className="w-5 h-5" />
             </div>
-            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+            <p className="text-xs font-bold text-[#183653]">
               No Collections Recorded in the Last {trendDays} Days
             </p>
-            <p className="text-[11px] text-slate-400 max-w-xs mt-0.5">
+            <p className="text-[11px] text-[#647C95] max-w-xs mt-0.5">
               Installments collected will plot your daily cashflow trend curve here.
             </p>
             <button
               onClick={onOpenPayment}
-              className="mt-3 px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold shadow-sm transition active:scale-95 flex items-center space-x-1"
+              className="mt-3 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1] text-white text-xs font-bold shadow-sm transition active:scale-95 flex items-center space-x-1"
             >
               <span>+ Record Collection</span>
             </button>
@@ -408,21 +409,21 @@ export const Dashboard = ({
               <BarChart data={activeTrendData} margin={{ top: 16, right: 10, left: -14, bottom: 0 }}>
                 <defs>
                   <linearGradient id="barTrendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6FB4F2" stopOpacity={0.95} />
-                    <stop offset="100%" stopColor="#BFE3FA" stopOpacity={0.85} />
+                    <stop offset="0%" stopColor="#0878D1" stopOpacity={0.95} />
+                    <stop offset="100%" stopColor="#55B8F5" stopOpacity={0.85} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.12} />
                 <XAxis
                   dataKey="displayDate"
-                  tick={{ fontSize: 10, fill: '#64748B' }}
-                  axisLine={{ stroke: '#E2E8F0' }}
+                  tick={{ fontSize: 10, fill: '#647C95' }}
+                  axisLine={{ stroke: '#D5E9FA' }}
                   tickLine={false}
                 />
                 <YAxis
                   domain={[0, trendYDomainMax]}
                   tickFormatter={(v) => formatShortCurrency(v)}
-                  tick={{ fontSize: 10, fill: '#64748B' }}
+                  tick={{ fontSize: 10, fill: '#647C95' }}
                   axisLine={false}
                   tickLine={false}
                 />
@@ -430,13 +431,13 @@ export const Dashboard = ({
                 {trendSliceAvg > 0 && (
                   <ReferenceLine
                     y={trendSliceAvg}
-                    stroke="#94A3B8"
+                    stroke="#55B8F5"
                     strokeDasharray="3 3"
                     label={{
                       value: `Avg ${formatShortCurrency(trendSliceAvg)}`,
                       position: 'insideTopRight',
                       fontSize: 9,
-                      fill: '#64748B',
+                      fill: '#0878D1',
                       fontWeight: 700,
                     }}
                   />
@@ -452,21 +453,21 @@ export const Dashboard = ({
               <AreaChart data={activeTrendData} margin={{ top: 16, right: 10, left: -14, bottom: 0 }}>
                 <defs>
                   <linearGradient id="areaTrendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6FB4F2" stopOpacity={0.45} />
-                    <stop offset="95%" stopColor="#BFE3FA" stopOpacity={0.05} />
+                    <stop offset="5%" stopColor="#0878D1" stopOpacity={0.45} />
+                    <stop offset="95%" stopColor="#55B8F5" stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.12} />
                 <XAxis
                   dataKey="displayDate"
-                  tick={{ fontSize: 10, fill: '#64748B' }}
-                  axisLine={{ stroke: '#E2E8F0' }}
+                  tick={{ fontSize: 10, fill: '#647C95' }}
+                  axisLine={{ stroke: '#D5E9FA' }}
                   tickLine={false}
                 />
                 <YAxis
                   domain={[0, trendYDomainMax]}
                   tickFormatter={(v) => formatShortCurrency(v)}
-                  tick={{ fontSize: 10, fill: '#64748B' }}
+                  tick={{ fontSize: 10, fill: '#647C95' }}
                   axisLine={false}
                   tickLine={false}
                 />
@@ -474,13 +475,13 @@ export const Dashboard = ({
                 {trendSliceAvg > 0 && (
                   <ReferenceLine
                     y={trendSliceAvg}
-                    stroke="#94A3B8"
+                    stroke="#55B8F5"
                     strokeDasharray="3 3"
                     label={{
                       value: `Avg ${formatShortCurrency(trendSliceAvg)}`,
                       position: 'insideTopRight',
                       fontSize: 9,
-                      fill: '#64748B',
+                      fill: '#0878D1',
                       fontWeight: 700,
                     }}
                   />
@@ -488,7 +489,7 @@ export const Dashboard = ({
                 <Area
                   type="monotone"
                   dataKey="amount"
-                  stroke="#0284C7"
+                  stroke="#0878D1"
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#areaTrendGrad)"
@@ -501,14 +502,14 @@ export const Dashboard = ({
                         cx={cx}
                         cy={cy}
                         r={4}
-                        fill="#0284C7"
+                        fill="#0878D1"
                         stroke="#FFFFFF"
                         strokeWidth={2}
                         className="drop-shadow-sm"
                       />
                     );
                   }}
-                  activeDot={{ r: 6, fill: '#0284C7', stroke: '#FFFFFF', strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: '#0878D1', stroke: '#FFFFFF', strokeWidth: 2 }}
                 />
               </AreaChart>
             )}
@@ -520,17 +521,17 @@ export const Dashboard = ({
 
   // Render the Today's Collection List Component (used in right panel on Laptop, or stacked on Tablet)
   const renderTodayCollectionList = () => (
-    <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg space-y-4 min-w-0">
+    <div className="bg-white/75 backdrop-blur-[20px] rounded-3xl p-5 border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.08)] space-y-4 min-w-0">
       {/* Header with Segmented Switch: Pending vs Completed Collections */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5 pb-3 border-b border-sky-100 dark:border-sky-900/40">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5 pb-3 border-b border-[#D5E9FA]">
         <div>
-          <div className="flex items-center space-x-1 p-1 rounded-2xl glass border border-sky-200/60 dark:border-sky-800/60">
+          <div className="flex items-center space-x-1 p-1 rounded-2xl bg-[#EAF5FF] border border-[#D5E9FA]">
             <button
               onClick={() => setPanelTab('pending')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center space-x-1.5 ${
                 panelTab === 'pending'
-                  ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-md shadow-sky-500/25 ring-1 ring-sky-300'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-sky-600'
+                  ? 'bg-gradient-to-r from-[#0878D1] to-[#064B8E] text-white shadow-md shadow-[#0878D1]/25 ring-1 ring-[#55B8F5]'
+                  : 'text-[#647C95] hover:text-[#0878D1]'
               }`}
             >
               <Clock className="w-3.5 h-3.5" />
@@ -540,15 +541,15 @@ export const Dashboard = ({
               onClick={() => setPanelTab('completed')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center space-x-1.5 ${
                 panelTab === 'completed'
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25 ring-1 ring-emerald-300'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600'
+                  ? 'bg-gradient-to-r from-[#18A879] to-[#0878D1] text-white shadow-md shadow-[#18A879]/25 ring-1 ring-[#18A879]'
+                  : 'text-[#647C95] hover:text-[#18A879]'
               }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Completed ({completedTodayList.length})</span>
             </button>
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
+          <p className="text-[11px] text-[#647C95] mt-1.5">
             {panelTab === 'pending'
               ? 'Collections to be collected. Disappears automatically once paid.'
               : 'Paid collections saved in archive with official receipts.'}
@@ -557,22 +558,22 @@ export const Dashboard = ({
 
         {/* Quick Filter */}
         <div className="relative w-full xl:w-48">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#647C95] pointer-events-none" />
           <input
             type="text"
             placeholder={panelTab === 'pending' ? 'Filter dues...' : 'Filter receipts...'}
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
-            className="pl-8 pr-3 py-1.5 rounded-xl glass border border-sky-200/60 dark:border-sky-800/60 text-xs w-full focus:outline-none focus:ring-2 focus:ring-sky-400"
+            className="pl-8 pr-3 py-1.5 rounded-xl bg-white/90 border border-[#D5E9FA] text-xs text-[#183653] placeholder-[#647C95] w-full focus:outline-none focus:ring-2 focus:ring-[#0878D1]/20 focus:border-[#0878D1]"
           />
         </div>
       </div>
 
       {panelTab === 'pending' ? (
         filteredTodayList.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-400 glass rounded-2xl space-y-2">
-            <CheckCheck className="w-8 h-8 text-emerald-500 mx-auto" />
-            <p className="font-bold text-slate-700 dark:text-slate-200">All Collections Completed!</p>
+          <div className="p-8 text-center text-xs text-[#647C95] bg-[#EAF5FF]/50 rounded-2xl space-y-2 border border-[#D5E9FA]">
+            <CheckCheck className="w-8 h-8 text-[#18A879] mx-auto" />
+            <p className="font-bold text-[#183653]">All Collections Completed!</p>
             <p className="text-[11px]">No pending dues remaining for today. All paid collections are saved in the Completed list.</p>
           </div>
         ) : (
@@ -582,7 +583,7 @@ export const Dashboard = ({
               return (
                 <div
                   key={`${item.loanId}-${item.dueDate}`}
-                  className="p-3.5 rounded-2xl glass glass-hover border border-white/80 dark:border-sky-800/40 space-y-2.5 animate-fade-in min-w-0"
+                  className="p-3.5 rounded-2xl bg-white/75 hover:bg-white/95 border border-[#D5E9FA] shadow-xs space-y-2.5 animate-fade-in min-w-0 transition-all"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div
@@ -590,45 +591,45 @@ export const Dashboard = ({
                       onClick={() => onViewLoan && onViewLoan(item.loanId)}
                     >
                       <div className="flex items-center space-x-2">
-                        <span className="font-black text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                        <span className="font-black text-xs sm:text-sm text-[#183653] truncate">
                           {parsed.primary}
                         </span>
                         <span
                           className={`px-2 py-0.5 rounded-full font-black text-[10px] uppercase border shrink-0 ${
                             item.financeType === 'daily'
-                              ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/70 dark:text-amber-300'
+                              ? 'bg-[#EAF5FF] text-[#0878D1] border-[#D5E9FA]'
                               : item.financeType === 'weekly'
-                              ? 'bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-950/70 dark:text-sky-300'
-                              : 'bg-teal-100 text-teal-900 border-teal-300 dark:bg-teal-950/70 dark:text-teal-300'
+                              ? 'bg-[#EAF5FF] text-[#064B8E] border-[#D5E9FA]'
+                              : 'bg-[#EAF5FF] text-[#18A879] border-[#D5E9FA]'
                           }`}
                         >
                           {item.financeType}
                         </span>
                       </div>
                       {parsed.secondary && (
-                        <p className="text-[11px] text-slate-400 truncate leading-none">
+                        <p className="text-[11px] text-[#647C95] truncate leading-none">
                           {parsed.secondary}
                         </p>
                       )}
                     </div>
 
                     <div className="text-right shrink-0">
-                      <p className="font-black tabular-nums text-sm sm:text-base text-slate-900 dark:text-white whitespace-nowrap">
+                      <p className="font-black tabular-nums text-sm sm:text-base text-[#183653] whitespace-nowrap">
                         {formatCurrency(item.dueAmount)}
                       </p>
                       {item.isOverdue ? (
-                        <span className="text-[10px] font-bold text-red-500 whitespace-nowrap">
+                        <span className="text-[10px] font-bold text-[#9B2C2C] whitespace-nowrap">
                           Overdue ({getOverdueDays(item.dueDate)}d)
                         </span>
                       ) : (
-                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                        <span className="text-[10px] font-bold text-[#18A879] whitespace-nowrap">
                           Due Today
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-sky-100/70 dark:border-sky-900/40 text-[11px] text-slate-500 font-mono">
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#D5E9FA] text-[11px] text-[#647C95] font-mono">
                     <div className="flex items-center space-x-1.5 truncate min-w-0">
                       <span>{item.loanNo}</span>
                       <span>•</span>
@@ -644,10 +645,10 @@ export const Dashboard = ({
                     <div className="flex items-center space-x-1.5 shrink-0">
                       <button
                         onClick={() => setWhatsappItem(item)}
-                        className="p-1.5 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-xl glass border border-sky-200 dark:border-sky-800 text-slate-600 hover:text-emerald-600 hover:border-emerald-400 transition active:scale-95 shadow-sm"
+                        className="p-1.5 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-xl bg-white border border-[#D5E9FA] text-[#18A879] hover:bg-[#EAF5FF] hover:border-[#55B8F5] transition active:scale-95 shadow-xs"
                         title="Send WhatsApp Reminder"
                       >
-                        <Send className="w-3.5 h-3.5 text-emerald-500" />
+                        <Send className="w-3.5 h-3.5 text-[#18A879]" />
                       </button>
 
                       <button
@@ -757,8 +758,8 @@ export const Dashboard = ({
           onClick={() => setDashboardView('overview')}
           className={`flex items-center space-x-2 px-3.5 py-2 rounded-2xl text-xs font-black transition-all shrink-0 ${
             dashboardView === 'overview'
-              ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-md shadow-sky-500/25 ring-1 ring-sky-300'
-              : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40'
+              ? 'bg-gradient-to-r from-[#0878D1] to-[#064B8E] text-white shadow-md shadow-[#0878D1]/25 ring-1 ring-[#55B8F5]'
+              : 'bg-white/75 backdrop-blur-[20px] text-[#183653] hover:bg-[#EAF5FF] border border-[#D5E9FA]'
           }`}
         >
           <TrendingUp className="w-4 h-4" />
@@ -769,8 +770,8 @@ export const Dashboard = ({
           onClick={() => setDashboardView('completed')}
           className={`flex items-center space-x-2 px-3.5 py-2 rounded-2xl text-xs font-black transition-all shrink-0 ${
             dashboardView === 'completed'
-              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25 ring-1 ring-emerald-300'
-              : 'glass text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+              ? 'bg-gradient-to-r from-[#18A879] to-[#0878D1] text-white shadow-md shadow-[#18A879]/25 ring-1 ring-[#18A879]'
+              : 'bg-white/75 backdrop-blur-[20px] text-[#183653] hover:bg-[#EAF5FF] border border-[#D5E9FA]'
           }`}
         >
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -781,11 +782,11 @@ export const Dashboard = ({
           onClick={() => setDashboardView('settled')}
           className={`flex items-center space-x-2 px-3.5 py-2 rounded-2xl text-xs font-black transition-all shrink-0 ${
             dashboardView === 'settled'
-              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/25 ring-1 ring-indigo-300'
-              : 'glass text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'
+              ? 'bg-gradient-to-r from-[#55B8F5] to-[#0878D1] text-white shadow-md shadow-[#55B8F5]/25 ring-1 ring-[#55B8F5]'
+              : 'bg-white/75 backdrop-blur-[20px] text-[#183653] hover:bg-[#EAF5FF] border border-[#D5E9FA]'
           }`}
         >
-          <Award className="w-4 h-4 text-amber-300" />
+          <Award className="w-4 h-4 text-[#0878D1]" />
           <span>{lang === 'ta' ? 'முடிந்தவை' : 'Settled'} ({completedLoansList.length})</span>
         </button>
       </div>
@@ -1039,21 +1040,21 @@ export const Dashboard = ({
               </p>
             </div>
 
-            <div className="glass rounded-3xl p-5 border border-purple-200/80 dark:border-purple-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full bg-gradient-to-br from-purple-50/40 via-indigo-50/20 to-transparent dark:from-purple-950/20 dark:via-indigo-950/10 dark:to-transparent">
+            <div className="bg-white/75 backdrop-blur-[20px] rounded-3xl p-5 border border-[#D5E9FA] shadow-lg min-w-0 flex flex-col justify-between h-full bg-gradient-to-br from-[#EAF5FF]/60 via-white/80 to-transparent">
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-purple-600 dark:text-purple-300 font-bold uppercase tracking-wider truncate">
+                  <span className="text-[11px] text-[#0878D1] font-bold uppercase tracking-wider truncate">
                     {lang === 'ta' ? 'மொத்த வட்டி & லாபம்' : 'Sum of Interest & Profit'}
                   </span>
-                  <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-600 shrink-0">
-                    <Coins className="w-4 h-4 text-purple-500" />
+                  <div className="w-8 h-8 rounded-xl bg-[#EAF5FF] border border-[#D5E9FA] flex items-center justify-center text-[#0878D1] shrink-0">
+                    <Coins className="w-4 h-4 text-[#0878D1]" />
                   </div>
                 </div>
-                <p className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-300 mt-2 tabular-nums whitespace-nowrap">
+                <p className="text-2xl sm:text-3xl font-black text-[#0878D1] mt-2 tabular-nums whitespace-nowrap">
                   +{formatCurrency(sumInterestAndProfit)}
                 </p>
               </div>
-              <p className="text-[11px] text-slate-400 mt-2 truncate">
+              <p className="text-[11px] text-[#647C95] mt-2 truncate">
                 {lang === 'ta'
                   ? `நடப்பு: ${formatCurrency(activeInterestVal)} + ஈட்டியது: ${formatCurrency(settledProfitVal)}`
                   : `Active: ${formatCurrency(activeInterestVal)} + Settled: ${formatCurrency(settledProfitVal)}`}
@@ -1180,26 +1181,78 @@ export const Dashboard = ({
                MOBILE DASHBOARD (Top to Bottom: Section F, E, A)
             ======================================================== */
             <div className="space-y-4">
-              {/* 1. Greeting + Date + ⚡ Quick Enter */}
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <h2 className="font-black text-base text-slate-900 dark:text-white tracking-tight">
-                    {lang === 'ta' ? 'வணக்கம்' : 'Welcome back'}, {user?.name?.split(' ')[0] || 'Sir'}
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
-                    {new Date().toLocaleDateString(lang === 'ta' ? 'ta-IN' : 'en-IN', {
-                      weekday: 'long',
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                  </p>
-                </div>
-                <div className="flex items-center space-x-1.5 shrink-0">
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+              {/* 1. Mobile Ocean Blue Welcome Banner with Quick Actions */}
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0878D1] via-[#0764AF] to-[#064B8E] text-white p-5 shadow-[0_10px_30px_rgba(8,120,209,0.22)] border border-white/20">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/20 text-white backdrop-blur-xs mb-1">
+                      <Sparkles className="w-2.5 h-2.5 text-[#55B8F5]" />
+                      <span>{lang === 'ta' ? 'வி.கே. பேங்கர்ஸ்' : "VK Banker's"}</span>
+                    </span>
+                    <h2 className="font-black text-lg text-white tracking-tight leading-tight">
+                      {lang === 'ta' ? 'வணக்கம்' : 'Welcome'}, {user?.name?.split(' ')[0] || 'Sir'}
+                    </h2>
+                    <p className="text-[11px] text-white/80 capitalize">
+                      {new Date().toLocaleDateString(lang === 'ta' ? 'ta-IN' : 'en-IN', {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/20 text-white border border-white/30 shrink-0">
                     {user?.role === 'owner' ? 'Owner' : user?.role === 'client' ? 'Client' : 'Agent'}
                   </span>
                 </div>
+
+                {/* Mobile Quick Action Buttons */}
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/20">
+                  <button
+                    onClick={onOpenNewLoan}
+                    className="flex-1 py-1.5 px-2.5 rounded-xl bg-white text-[#0878D1] font-black text-xs shadow-sm active:scale-95 transition text-center"
+                  >
+                    + Loan
+                  </button>
+                  <button
+                    onClick={onOpenNewCustomer}
+                    className="flex-1 py-1.5 px-2.5 rounded-xl bg-white/20 text-white font-black text-xs border border-white/30 backdrop-blur-xs active:scale-95 transition text-center"
+                  >
+                    + Customer
+                  </button>
+                  <button
+                    onClick={onOpenPayment}
+                    className="flex-1 py-1.5 px-2.5 rounded-xl bg-[#55B8F5] text-[#064B8E] font-black text-xs shadow-sm active:scale-95 transition text-center"
+                  >
+                    Collect
+                  </button>
+                </div>
+              </div>
+
+              {/* Bento Quick Navigation (6 Modules: Customers, Loans, Payments, Reports, Calendar, Settings) */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'customers', label: lang === 'ta' ? 'வாடிக்கையாளர்' : 'Customers', icon: Users, count: cards.totalCustomers || stats?.totalCustomers || 0 },
+                  { id: 'loans', label: lang === 'ta' ? 'கடன்கள்' : 'Loans', icon: Banknote, count: cards.activeLoans || 0 },
+                  { id: 'payments', label: lang === 'ta' ? 'ரசீதுகள்' : 'Payments', icon: CreditCard, count: formatShortCurrency(cards.totalCollected || 0) },
+                  { id: 'dailyClosing', label: lang === 'ta' ? 'கணக்கு முடிவு' : 'Reports', icon: BarChart2, count: 'EOD' },
+                  { id: 'calendar', label: lang === 'ta' ? 'நாட்காட்டி' : 'Calendar', icon: CalendarCheck, count: 'Dues' },
+                  { id: 'settings', label: lang === 'ta' ? 'அமைப்புகள்' : 'Settings', icon: Briefcase, count: 'Config' },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => onNavigateTab && onNavigateTab(item.id)}
+                      className="bg-white/75 backdrop-blur-[20px] rounded-2xl p-2.5 border border-[#D5E9FA] shadow-xs cursor-pointer active:scale-95 transition text-center flex flex-col items-center justify-center space-y-1"
+                    >
+                      <div className="w-8 h-8 rounded-xl bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] flex items-center justify-center">
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] font-bold text-[#183653] truncate w-full">{item.label}</span>
+                      <span className="text-[10px] font-black text-[#0878D1] truncate w-full">{item.count}</span>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* 2. Horizontal Swipe Carousel of Key Metric Cards (Snap scrolling) */}
@@ -1237,17 +1290,17 @@ export const Dashboard = ({
                 {/* Available Capital / Investment Card (Minus Loans Disbursed, Add to Lend) */}
                 <div
                   onClick={() => onOpenInvestment && onOpenInvestment()}
-                  className="w-[84%] shrink-0 snap-center glass rounded-3xl p-4 border border-indigo-300/80 dark:border-indigo-800/60 shadow-lg bg-gradient-to-br from-indigo-500/10 via-sky-500/10 to-cyan-500/10 cursor-pointer active:scale-98 transition relative overflow-hidden"
+                  className="w-[84%] shrink-0 snap-center bg-white/75 backdrop-blur-[20px] rounded-3xl p-4 border border-[#D5E9FA] shadow-sm cursor-pointer active:scale-98 transition relative overflow-hidden"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
+                    <span className="text-[11px] font-black text-[#0878D1] uppercase tracking-wide">
                       {lang === 'ta' ? 'முதலீட்டு கையிருப்பு (Available)' : 'Available Capital to Lend'}
                     </span>
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 via-sky-500 to-cyan-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/25">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0878D1] to-[#064B8E] text-white flex items-center justify-center shadow-md shadow-[#0878D1]/20">
                       <Landmark className="w-4 h-4" />
                     </div>
                   </div>
-                  <p className="text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums mt-1 whitespace-nowrap">
+                  <p className="text-xl sm:text-2xl font-black text-[#183653] tabular-nums mt-1 whitespace-nowrap">
                     {formatCurrency(
                       cards.availableInvestment !== undefined
                         ? cards.availableInvestment
@@ -1255,7 +1308,7 @@ export const Dashboard = ({
                     )}
                   </p>
                   <div className="flex items-center justify-between mt-1 text-[10px]">
-                    <span className="text-slate-500 dark:text-slate-400 font-bold">
+                    <span className="text-[#647C95] font-bold">
                       {lang === 'ta'
                         ? `முதலீடு: ${formatCurrency(cards.totalInvested || 0)}`
                         : `Pool: ${formatCurrency(cards.totalInvested || 0)}`}
@@ -1350,19 +1403,19 @@ export const Dashboard = ({
                 </div>
 
                 {/* 4. Active Interest (Auto-reduces as loans settle) */}
-                <div className="w-[82%] shrink-0 snap-center glass rounded-3xl p-4 border border-indigo-200/80 dark:border-indigo-900/60 shadow-md">
+                <div className="w-[82%] shrink-0 snap-center bg-white/75 backdrop-blur-[20px] rounded-3xl p-4 border border-[#D5E9FA] shadow-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wide">
+                    <span className="text-[11px] font-bold text-[#0878D1] uppercase tracking-wide">
                       {lang === 'ta' ? 'நடப்பு வட்டி (Interest)' : 'Active Interest'}
                     </span>
-                    <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-indigo-600">
+                    <div className="w-8 h-8 rounded-xl bg-[#EAF5FF] flex items-center justify-center text-[#0878D1]">
                       <Coins className="w-4 h-4" />
                     </div>
                   </div>
-                  <p className="text-xl font-black text-indigo-600 tabular-nums mt-1 whitespace-nowrap">
+                  <p className="text-xl font-black text-[#183653] tabular-nums mt-1 whitespace-nowrap">
                     {formatCurrency(cards.activeInterest || 0)}
                   </p>
-                  <p className="text-[10px] text-indigo-500/80 dark:text-indigo-400 mt-0.5">
+                  <p className="text-[10px] text-[#647C95] mt-0.5">
                     {lang === 'ta' ? 'முடிவுற்றதும் குறையும்' : 'Auto-reduces as loans settle'}
                   </p>
                 </div>
@@ -1404,19 +1457,19 @@ export const Dashboard = ({
                 </div>
 
                 {/* 7. Total Sum of Interest and Profit */}
-                <div className="w-[82%] shrink-0 snap-center glass rounded-3xl p-4 border border-purple-300/80 dark:border-purple-800/60 shadow-md bg-gradient-to-br from-purple-50/70 via-indigo-50/40 to-violet-50/70 dark:from-purple-950/30 dark:via-indigo-950/20 dark:to-violet-950/30">
+                <div className="w-[82%] shrink-0 snap-center bg-white/75 backdrop-blur-[20px] rounded-3xl p-4 border border-[#D5E9FA] shadow-md bg-gradient-to-br from-[#EAF5FF] via-white/80 to-[#EAF5FF]">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wide">
+                    <span className="text-[11px] font-bold text-[#0878D1] uppercase tracking-wide">
                       {lang === 'ta' ? 'மொத்த வட்டி & லாபம்' : 'Total Interest & Profit'}
                     </span>
-                    <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-600">
+                    <div className="w-8 h-8 rounded-xl bg-[#EAF5FF] border border-[#D5E9FA] flex items-center justify-center text-[#0878D1]">
                       <TrendingUp className="w-4 h-4" />
                     </div>
                   </div>
-                  <p className="text-xl font-black text-purple-700 dark:text-purple-300 tabular-nums mt-1 whitespace-nowrap">
+                  <p className="text-xl font-black text-[#0878D1] tabular-nums mt-1 whitespace-nowrap">
                     +{formatCurrency(sumInterestAndProfit)}
                   </p>
-                  <p className="text-[10px] text-purple-600/90 dark:text-purple-400 mt-0.5 truncate">
+                  <p className="text-[10px] text-[#647C95] mt-0.5 truncate">
                     {lang === 'ta'
                       ? `நடப்பு: ${formatCurrency(activeInterestVal)} + ஈட்டியது: ${formatCurrency(settledProfitVal)}`
                       : `Active: ${formatCurrency(activeInterestVal)} + Settled: ${formatCurrency(settledProfitVal)}`}
@@ -1820,8 +1873,260 @@ export const Dashboard = ({
             /* ========================================================
                DESKTOP & TABLET DASHBOARD (Rich Multi-pane Layout)
             ======================================================== */
-            <div className="space-y-5">
-              {/* 1. Key Metric Cards (Exactly 8 cards in 4x2 matrix matching design mockup) */}
+            <div className="space-y-6">
+              {/* 1. Ocean Blue Welcome Banner with Modern Fintech Styling */}
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0878D1] via-[#0764AF] to-[#064B8E] text-white p-6 sm:p-7 shadow-[0_14px_40px_rgba(8,120,209,0.25)] border border-white/20">
+                {/* Modern Fintech Background Glow and Geometrics */}
+                <div className="absolute -right-12 -top-12 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+                <div className="absolute right-32 -bottom-16 w-48 h-48 rounded-full bg-[#55B8F5]/20 blur-xl pointer-events-none" />
+                <svg
+                  className="absolute right-0 top-0 bottom-0 h-full w-1/2 opacity-10 pointer-events-none hidden md:block"
+                  viewBox="0 0 400 200"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M0 100 C 100 20, 200 180, 400 60"
+                    stroke="white"
+                    strokeWidth="3"
+                    fill="none"
+                  />
+                  <path
+                    d="M0 130 C 120 50, 220 200, 400 90"
+                    stroke="white"
+                    strokeWidth="2"
+                    fill="none"
+                  />
+                </svg>
+
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+                  {/* Greeting and Status */}
+                  <div className="space-y-1.5 max-w-xl">
+                    <div className="flex items-center space-x-2">
+                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/15 text-white border border-white/25 backdrop-blur-xs">
+                        <Sparkles className="w-3 h-3 text-[#55B8F5]" />
+                        <span>{lang === 'ta' ? 'வி.கே. பேங்கர்ஸ் ஃபின்டெக்' : "VK Banker's Fintech"}</span>
+                      </span>
+                      <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#18A879]/90 text-white shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        <span>{lang === 'ta' ? 'நேரலை இணைப்பு' : 'DB Online'}</span>
+                      </span>
+                    </div>
+
+                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-xs">
+                      {lang === 'ta' ? 'வணக்கம்' : 'Welcome back'}, {user?.name || 'Administrator'}
+                    </h1>
+
+                    <p className="text-xs sm:text-sm text-white/85 font-medium leading-relaxed">
+                      {new Date().toLocaleDateString(lang === 'ta' ? 'ta-IN' : 'en-IN', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })} • {lang === 'ta' ? 'வங்கி செயல்பாடுகள் மற்றும் வசூல் பதிவேடு' : 'Financial portfolio overview & real-time collection ledger'}
+                    </p>
+                  </div>
+
+                  {/* Quick Action Buttons */}
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                      onClick={onOpenNewLoan}
+                      className="px-4 py-2.5 rounded-xl bg-white text-[#0878D1] font-black text-xs hover:bg-[#EAF5FF] transition-all shadow-md active:scale-95 flex items-center space-x-1.5"
+                    >
+                      <PlusCircle className="w-4 h-4 text-[#0878D1]" />
+                      <span>{lang === 'ta' ? '+ புதிய கடன்' : '+ New Loan'}</span>
+                    </button>
+
+                    <button
+                      onClick={onOpenNewCustomer}
+                      className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-black text-xs border border-white/30 backdrop-blur-xs transition-all active:scale-95 flex items-center space-x-1.5"
+                    >
+                      <Users className="w-4 h-4" />
+                      <span>{lang === 'ta' ? '+ வாடிக்கையாளர்' : '+ Customer'}</span>
+                    </button>
+
+                    <button
+                      onClick={onOpenPayment}
+                      className="px-4 py-2.5 rounded-xl bg-[#55B8F5] hover:bg-[#43a9e8] text-[#064B8E] font-black text-xs transition-all shadow-md active:scale-95 flex items-center space-x-1.5"
+                    >
+                      <CreditCard className="w-4 h-4 text-[#064B8E]" />
+                      <span>{lang === 'ta' ? 'வசூல் பதிவு' : 'Collect EMI'}</span>
+                    </button>
+
+                    {isOwner && onOpenInvestment && (
+                      <button
+                        onClick={onOpenInvestment}
+                        className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black text-xs border border-white/25 backdrop-blur-xs transition-all active:scale-95 flex items-center space-x-1.5"
+                      >
+                        <Landmark className="w-4 h-4 text-[#55B8F5]" />
+                        <span>{lang === 'ta' ? 'முதலீடு' : 'Investment'}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Bento Grid Navigation Cards (Customers, Loans, Payments, Reports, Calendar, Settings) */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-3.5">
+                {/* Customers */}
+                <div
+                  onClick={() => onNavigateTab ? onNavigateTab('customers') : onOpenNewCustomer && onOpenNewCustomer()}
+                  className="bg-white/75 backdrop-blur-[20px] rounded-2xl p-4 border border-[#D5E9FA] hover:border-[#0878D1] shadow-[0_8px_30px_rgba(8,120,209,0.06)] hover:shadow-[0_12px_36px_rgba(8,120,209,0.14)] cursor-pointer transition-all flex flex-col justify-between group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#647C95] group-hover:text-[#0878D1] group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#647C95]">
+                      {lang === 'ta' ? 'வாடிக்கையாளர்கள்' : 'Customers'}
+                    </span>
+                    <p className="text-lg font-black text-[#183653] tabular-nums mt-0.5">
+                      {cards.totalCustomers || stats?.totalCustomers || 0}
+                    </p>
+                    <span className="text-[10px] text-[#0878D1] font-semibold flex items-center space-x-1 mt-1">
+                      <span>{lang === 'ta' ? 'கணக்குகள் காண்க' : 'View directory'}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Loans */}
+                <div
+                  onClick={() => onNavigateTab ? onNavigateTab('loans') : (onOpenNewLoan && onOpenNewLoan())}
+                  className="bg-white/75 backdrop-blur-[20px] rounded-2xl p-4 border border-[#D5E9FA] hover:border-[#0878D1] shadow-[0_8px_30px_rgba(8,120,209,0.06)] hover:shadow-[0_12px_36px_rgba(8,120,209,0.14)] cursor-pointer transition-all flex flex-col justify-between group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Banknote className="w-5 h-5" />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#647C95] group-hover:text-[#0878D1] group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#647C95]">
+                      {lang === 'ta' ? 'கடன் கோப்புகள்' : 'Loans Portfolio'}
+                    </span>
+                    <p className="text-lg font-black text-[#183653] tabular-nums mt-0.5">
+                      {cards.activeLoans || 0} <span className="text-xs font-semibold text-[#647C95]">/ {cards.totalLoans || 0}</span>
+                    </p>
+                    <span className="text-[10px] text-[#0878D1] font-semibold flex items-center space-x-1 mt-1">
+                      <span>{lang === 'ta' ? 'அனைத்தும் காண்க' : 'Active contracts'}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Payments */}
+                <div
+                  onClick={() => onNavigateTab ? onNavigateTab('payments') : (onOpenPayment && onOpenPayment())}
+                  className="bg-white/75 backdrop-blur-[20px] rounded-2xl p-4 border border-[#D5E9FA] hover:border-[#0878D1] shadow-[0_8px_30px_rgba(8,120,209,0.06)] hover:shadow-[0_12px_36px_rgba(8,120,209,0.14)] cursor-pointer transition-all flex flex-col justify-between group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-[#EAF5FF] text-[#18A879] border border-[#D5E9FA] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <CreditCard className="w-5 h-5" />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#647C95] group-hover:text-[#0878D1] group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#647C95]">
+                      {lang === 'ta' ? 'வசூல் ரசீதுகள்' : 'Payments & Receipts'}
+                    </span>
+                    <p className="text-lg font-black text-[#18A879] tabular-nums mt-0.5 truncate">
+                      {formatShortCurrency(cards.totalCollected || 0)}
+                    </p>
+                    <span className="text-[10px] text-[#18A879] font-semibold flex items-center space-x-1 mt-1">
+                      <span>{lang === 'ta' ? 'ரசீது பதிவேடு' : 'Payment register'}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Reports & Daily Closing */}
+                <div
+                  onClick={() => onNavigateTab ? onNavigateTab('dailyClosing') : setShowBreakdownModal(true)}
+                  className="bg-white/75 backdrop-blur-[20px] rounded-2xl p-4 border border-[#D5E9FA] hover:border-[#0878D1] shadow-[0_8px_30px_rgba(8,120,209,0.06)] hover:shadow-[0_12px_36px_rgba(8,120,209,0.14)] cursor-pointer transition-all flex flex-col justify-between group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <BarChart2 className="w-5 h-5" />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#647C95] group-hover:text-[#0878D1] group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#647C95]">
+                      {lang === 'ta' ? 'தினசரி கணக்கு' : 'Daily Closing'}
+                    </span>
+                    <p className="text-lg font-black text-[#183653] tabular-nums mt-0.5 truncate">
+                      {lang === 'ta' ? 'முடிவு கணக்கு' : 'EOD Ledger'}
+                    </p>
+                    <span className="text-[10px] text-[#0878D1] font-semibold flex items-center space-x-1 mt-1">
+                      <span>{lang === 'ta' ? 'கணக்கு தணிக்கை' : 'Audit report'}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Calendar */}
+                <div
+                  onClick={() => onNavigateTab && onNavigateTab('calendar')}
+                  className="bg-white/75 backdrop-blur-[20px] rounded-2xl p-4 border border-[#D5E9FA] hover:border-[#0878D1] shadow-[0_8px_30px_rgba(8,120,209,0.06)] hover:shadow-[0_12px_36px_rgba(8,120,209,0.14)] cursor-pointer transition-all flex flex-col justify-between group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <CalendarCheck className="w-5 h-5" />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#647C95] group-hover:text-[#0878D1] group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#647C95]">
+                      {lang === 'ta' ? 'நாட்காட்டி' : 'Calendar'}
+                    </span>
+                    <p className="text-lg font-black text-[#183653] tabular-nums mt-0.5 truncate">
+                      {lang === 'ta' ? 'தவணை அட்டவணை' : 'Schedule'}
+                    </p>
+                    <span className="text-[10px] text-[#0878D1] font-semibold flex items-center space-x-1 mt-1">
+                      <span>{lang === 'ta' ? 'மாத அட்டவணை' : 'View maturities'}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Settings */}
+                <div
+                  onClick={() => onNavigateTab && onNavigateTab('settings')}
+                  className="bg-white/75 backdrop-blur-[20px] rounded-2xl p-4 border border-[#D5E9FA] hover:border-[#0878D1] shadow-[0_8px_30px_rgba(8,120,209,0.06)] hover:shadow-[0_12px_36px_rgba(8,120,209,0.14)] cursor-pointer transition-all flex flex-col justify-between group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Briefcase className="w-5 h-5" />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#647C95] group-hover:text-[#0878D1] group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#647C95]">
+                      {lang === 'ta' ? 'அமைப்புகள்' : 'Settings'}
+                    </span>
+                    <p className="text-lg font-black text-[#183653] tabular-nums mt-0.5 truncate">
+                      {lang === 'ta' ? 'கட்டமைப்பு' : 'Configure'}
+                    </p>
+                    <span className="text-[10px] text-[#0878D1] font-semibold flex items-center space-x-1 mt-1">
+                      <span>{lang === 'ta' ? 'விவரங்கள்' : 'Rules & Staff'}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Financial Summary Header */}
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#0878D1]" />
+                  <h3 className="text-base font-black text-[#183653] tracking-tight">
+                    {lang === 'ta' ? 'நிதிச் சுருக்கம்' : 'Financial Summary'}
+                  </h3>
+                </div>
+                <span className="text-xs font-semibold text-[#647C95]">
+                  {lang === 'ta' ? 'நேரலை மூலதனம் & வசூல் நிலவரம்' : 'Real-time capital & collection breakdown'}
+                </span>
+              </div>
+
+              {/* Key Metric Cards (8 cards in 4x2 matrix matching design mockup) */}
               <div
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5 items-stretch"
               >
@@ -1839,7 +2144,7 @@ export const Dashboard = ({
                       : 'Click for daily & scheme br...'
                   }
                   icon={Wallet}
-                  gradient="from-emerald-400 to-teal-500"
+                  gradient="from-[#18A879] to-[#0878D1]"
                   delay={0}
                   onClick={() => setShowBreakdownModal(true)}
                 />
@@ -1850,7 +2155,7 @@ export const Dashboard = ({
                   amount={cards.totalLent}
                   subtitle={`${cards.totalLoans || 0} loans issued`}
                   icon={Banknote}
-                  gradient="from-sky-400 to-sky-600"
+                  gradient="from-[#0878D1] to-[#064B8E]"
                   delay={0.03}
                 />
 
@@ -1858,9 +2163,9 @@ export const Dashboard = ({
                 <StatCard
                   title={lang === 'ta' ? 'மொத்த வசூல்' : 'TOTAL COLLECTED'}
                   amount={cards.totalCollected}
-                  subtitle="Gross repaid across accou..."
+                  subtitle="Gross repaid across accounts"
                   icon={CheckCircle2}
-                  gradient="from-emerald-400 to-teal-500"
+                  gradient="from-[#18A879] to-[#064B8E]"
                   delay={0.06}
                 />
 
@@ -1870,7 +2175,7 @@ export const Dashboard = ({
                   amount={cards.totalExpenses || 0}
                   subtitle="Business & office expenses"
                   icon={TrendingUp}
-                  gradient="from-rose-400 to-pink-500"
+                  gradient="from-[#0878D1] to-[#55B8F5]"
                   delay={0.09}
                   onClick={() => onOpenExpenses && onOpenExpenses()}
                 />
@@ -1881,7 +2186,7 @@ export const Dashboard = ({
                   amount={cards.totalOutstanding}
                   subtitle={`${cards.activeLoans || 0} active loans pending`}
                   icon={Clock}
-                  gradient="from-amber-400 to-amber-500"
+                  gradient="from-[#55B8F5] to-[#0878D1]"
                   delay={0.12}
                 />
 
@@ -1889,9 +2194,9 @@ export const Dashboard = ({
                 <StatCard
                   title={lang === 'ta' ? 'செயலில் உள்ள வட்டி' : 'ACTIVE INTEREST'}
                   amount={cards.activeInterest}
-                  subtitle={lang === 'ta' ? 'முடிவுற்றதும் குறையும்' : 'Auto-reduces as loans sett...'}
+                  subtitle={lang === 'ta' ? 'முடிவுற்றதும் குறையும்' : 'Auto-reduces as loans settle'}
                   icon={Coins}
-                  gradient="from-indigo-400 to-purple-600"
+                  gradient="from-[#0878D1] to-[#064B8E]"
                   delay={0.15}
                 />
 
@@ -1901,7 +2206,7 @@ export const Dashboard = ({
                   amount={cards.settledAmount}
                   subtitle={`${cards.completedLoans || 0} completed loans`}
                   icon={ShieldCheck}
-                  gradient="from-teal-400 to-cyan-600"
+                  gradient="from-[#55B8F5] to-[#0878D1]"
                   delay={0.18}
                   onClick={() => setDashboardView('settled')}
                 />
@@ -1912,10 +2217,23 @@ export const Dashboard = ({
                   amount={cards.profitFromSettled ?? cards.profitEarned}
                   subtitle={lang === 'ta' ? 'முடிந்த கணக்குகளின் நிகர லாபம்' : 'Realized profit from settled'}
                   icon={Award}
-                  gradient="from-emerald-400 to-green-600"
+                  gradient="from-[#18A879] to-[#0878D1]"
                   delay={0.21}
                   onClick={() => setDashboardView('settled')}
                 />
+              </div>
+
+              {/* 4. Business Overview & Lending Schemes Header */}
+              <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#55B8F5]" />
+                  <h3 className="text-base font-black text-[#183653] tracking-tight">
+                    {lang === 'ta' ? 'வணிகக் கண்ணோட்டம் & திட்டங்கள்' : 'Business Overview & Lending Schemes'}
+                  </h3>
+                </div>
+                <span className="text-xs font-semibold text-[#647C95]">
+                  {lang === 'ta' ? 'தினசரி, வாராந்திர & மாதாந்திர நிதி' : 'Daily, Weekly & Monthly Schemes'}
+                </span>
               </div>
 
               {/* 2. Three Finance-Type Cards (Daily / Weekly / Monthly) */}
@@ -1960,15 +2278,15 @@ export const Dashboard = ({
 
               {/* 2.5 Per-Agent Summary Cards for Owners */}
               {isOwner && agentList.length > 0 && (
-                <div className="glass rounded-3xl p-5 border border-white/80 dark:border-white/10 shadow-md space-y-3">
+                <div className="bg-white/75 backdrop-blur-[20px] rounded-3xl p-5 border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.08)] space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <Users className="w-4 h-4 text-[#8B7BD0]" />
-                      <h3 className="text-sm font-medium text-slate-900 dark:text-white">
+                      <Users className="w-4 h-4 text-[#0878D1]" />
+                      <h3 className="text-sm font-bold text-[#183653]">
                         {lang === 'ta' ? 'கள முகவர்கள் வசூல் விவரம் (Agent Performance)' : 'Field Collection Agents Performance'}
                       </h3>
                     </div>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    <span className="text-[11px] text-[#647C95] font-semibold">
                       {agentList.length} {lang === 'ta' ? 'செயலில் உள்ள முகவர்கள்' : 'Active Agents'}
                     </span>
                   </div>
@@ -1976,17 +2294,17 @@ export const Dashboard = ({
                     {agentList.map((agent) => (
                       <div
                         key={agent._id || agent.id}
-                        className="p-3.5 rounded-2xl bg-white/50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between"
+                        className="p-3.5 rounded-2xl bg-white/70 border border-[#D5E9FA] flex items-center justify-between shadow-xs"
                       >
                         <div className="min-w-0">
-                          <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
+                          <p className="text-xs font-bold text-[#183653] truncate">
                             {agent.name}
                           </p>
-                          <p className="text-[10.5px] text-slate-400 truncate mt-0.5">
+                          <p className="text-[10.5px] text-[#647C95] truncate mt-0.5">
                             {agent.phone || agent.email}
                           </p>
                         </div>
-                        <span className="badge-paid px-2.5 py-1 text-[10px] font-medium rounded-full shrink-0">
+                        <span className="badge-paid px-2.5 py-1 text-[10px] font-bold rounded-full shrink-0">
                           {lang === 'ta' ? 'செயலில்' : 'Active'}
                         </span>
                       </div>
@@ -2005,11 +2323,11 @@ export const Dashboard = ({
                     {/* Charts Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Donut Chart: Scheme Distribution */}
-                      <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg min-w-0">
-                        <h3 className="font-black text-sm text-slate-900 dark:text-white mb-1">
+                      <div className="bg-white/75 backdrop-blur-[20px] rounded-3xl p-5 border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.08)] min-w-0">
+                        <h3 className="font-black text-sm text-[#183653] mb-1">
                           {t('financeTypeDistribution')}
                         </h3>
-                        <p className="text-[11px] text-slate-500 mb-2">Loan book by scheme</p>
+                        <p className="text-[11px] text-[#647C95] mb-2">Loan book by scheme</p>
                         <div className="h-48 w-full">
                           <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -2033,25 +2351,25 @@ export const Dashboard = ({
                       </div>
 
                       {/* Bar Chart: 6-Month Profit Recovery */}
-                      <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg min-w-0">
-                        <h3 className="font-black text-sm text-slate-900 dark:text-white mb-1">
+                      <div className="bg-white/75 backdrop-blur-[20px] rounded-3xl p-5 border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.08)] min-w-0">
+                        <h3 className="font-black text-sm text-[#183653] mb-1">
                           Monthly Financials (6M)
                         </h3>
-                        <p className="text-[11px] text-slate-500 mb-2">Collections vs net profit</p>
+                        <p className="text-[11px] text-[#647C95] mb-2">Collections vs net profit</p>
                         <div className="h-48 w-full">
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={monthlyChartData}>
-                              <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                              <XAxis dataKey="month" tick={{ fontSize: 9 }} />
-                              <YAxis tickFormatter={formatShortCurrency} tick={{ fontSize: 9 }} />
+                              <CartesianGrid strokeDasharray="3 3" opacity={0.15} stroke="#D5E9FA" />
+                              <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#647C95' }} stroke="#D5E9FA" />
+                              <YAxis tickFormatter={formatShortCurrency} tick={{ fontSize: 9, fill: '#647C95' }} stroke="#D5E9FA" />
                               <Tooltip
                                 formatter={(val, name) => [
                                   formatCurrency(val),
                                   name === 'collected' ? 'Collections' : 'Net Profit',
                                 ]}
                               />
-                              <Bar dataKey="collected" fill="#0EA5E9" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="profit" fill="#14B8A6" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="collected" fill="#0878D1" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="profit" fill="#18A879" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
@@ -2060,7 +2378,18 @@ export const Dashboard = ({
                   </div>
 
                   {/* Right Column: Today's Collection Panel (5 cols) */}
-                  <div className="lg:col-span-5 sticky top-20 min-w-0">
+                  <div className="lg:col-span-5 sticky top-20 min-w-0 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#18A879]" />
+                        <h3 className="text-base font-black text-[#183653] tracking-tight">
+                          {lang === 'ta' ? 'சமீபத்திய வசூல் செயல்பாடுகள்' : 'Recent Activities'}
+                        </h3>
+                      </div>
+                      <span className="text-xs font-semibold text-[#647C95]">
+                        {lang === 'ta' ? 'தவணை & ரசீதுகள்' : 'Dues & Receipts'}
+                      </span>
+                    </div>
                     {renderTodayCollectionList()}
                   </div>
                 </div>
@@ -2072,8 +2401,8 @@ export const Dashboard = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {renderCollectionTrendCard(true)}
 
-                    <div className="glass rounded-3xl p-5 border border-white/70 dark:border-sky-800/40 shadow-lg">
-                      <h3 className="font-black text-sm text-slate-900 dark:text-white mb-2">
+                    <div className="bg-white/75 backdrop-blur-[20px] rounded-3xl p-5 border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.08)]">
+                      <h3 className="font-black text-sm text-[#183653] mb-2">
                         {t('financeTypeDistribution')}
                       </h3>
                       <div className="h-52 w-full">

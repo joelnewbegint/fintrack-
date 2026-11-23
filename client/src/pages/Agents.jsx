@@ -153,15 +153,15 @@ export const Agents = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 text-xs font-bold border border-orange-200">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#EAF5FF] text-[#0878D1] text-xs font-bold border border-[#D5E9FA]">
               பணியாளர்கள் & முகவர்கள்
             </span>
-            <span className="text-xs text-slate-500 font-medium">RBAC Security Center</span>
+            <span className="text-xs text-[#647C95] font-medium">RBAC Security Center</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black text-[#183653] tracking-tight mt-1">
             {lang === 'ta' ? 'முகவர்கள் நிர்வாகம்' : 'Agents & Staff Management'}
           </h1>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-[#647C95]">
             {lang === 'ta'
               ? 'கடன் முகவர்கள் மற்றும் மாத தவணை முகவர்களை உருவாக்கவும், நிர்வகிக்கவும்'
               : 'Create, assign, deactivate, and manage credentials for Loan Agents and EMI Agents.'}
@@ -170,10 +170,7 @@ export const Agents = () => {
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="h-10 px-4 rounded-xl font-bold text-xs text-white shadow-md transition flex items-center space-x-1.5 active:scale-95"
-          style={{
-            background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-          }}
+          className="h-10 px-4 rounded-xl font-bold text-xs text-white shadow-md transition flex items-center space-x-1.5 active:scale-95 bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1]"
         >
           <UserPlus className="w-4 h-4 stroke-[2.5]" />
           <span>+ Create New Agent / புதிய முகவர்</span>

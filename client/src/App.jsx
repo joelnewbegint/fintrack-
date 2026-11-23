@@ -678,6 +678,7 @@ export function App() {
                   onOpenNewCustomer={() => setShowGlobalCustomerModal(true)}
                   onOpenInvestment={() => setShowGlobalInvestmentModal(true)}
                   onOpenExpenses={() => setActiveTab('expenses')}
+                  onNavigateTab={(tab) => setActiveTab(tab)}
                 />
               )}
 

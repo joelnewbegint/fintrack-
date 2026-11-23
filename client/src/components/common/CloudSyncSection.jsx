@@ -309,17 +309,17 @@ export const CloudSyncSection = () => {
       </div>
 
       {/* 3. Free 1-Click Render Cloud Deployment Box */}
-      <div className="p-5 rounded-3xl bg-gradient-to-r from-indigo-500/10 via-purple-500/5 to-transparent border border-indigo-500/30 dark:border-indigo-500/20 space-y-3">
+      <div className="p-5 rounded-3xl bg-gradient-to-r from-[#0878D1]/10 via-[#55B8F5]/5 to-transparent border border-[#D5E9FA] space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md">
+            <div className="w-10 h-10 rounded-2xl bg-[#0878D1] text-white flex items-center justify-center shrink-0 shadow-md">
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">
+              <h4 className="font-extrabold text-sm text-[#183653]">
                 Free Permanent Cloud Backend (Render 1-Click)
               </h4>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
+              <p className="text-xs text-[#647C95]">
                 கணினியை ஆன் செய்து வைத்திருக்காமல் 24 மணி நேரமும் அனைத்து போன், டேப்லெட், லேப்டாப்பில் தரவு தெரிய Render-ல் இலவசமாக ஹோஸ்ட் செய்யலாம்.
               </p>
             </div>
@@ -329,19 +329,19 @@ export const CloudSyncSection = () => {
             href="https://render.com/deploy?repo=https://github.com/joelnewbegint/fintrack-"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-black shadow-lg shadow-indigo-500/25 active:scale-95 transition flex items-center justify-center space-x-1.5 shrink-0"
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1] text-white text-xs font-black shadow-lg shadow-[#0878D1]/25 active:scale-95 transition flex items-center justify-center space-x-1.5 shrink-0"
           >
             <ExternalLink className="w-3.5 h-3.5" />
             <span>1-Click Deploy to Render</span>
           </a>
         </div>
 
-        <div className="p-3 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-indigo-200/60 dark:border-indigo-800/40 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="p-3 rounded-2xl bg-white/75 border border-[#D5E9FA] text-[11px] text-[#183653] space-y-1">
           <p>
             <strong>எளிய வழிமுறை:</strong> மேலே உள்ள பட்டனை கிளிக் செய்யவும் → Render-ல் உங்கள் GitHub-ஐ லாகின் செய்யவும் → <strong>"Apply"</strong> கொடுத்தால் 2 நிமிடத்தில் உங்கள் சர்வர் தயாராகிவிடும்.
           </p>
           <p>
-            அதில் வரும் URL-ஐ (e.g. <code className="font-mono text-indigo-600 font-bold">https://fintrack-30zs.onrender.com</code>) உங்கள் அனைத்து போன் & உலாவிகளிலும் உள்ளிட்டால் போதுமானது!
+            அதில் வரும் URL-ஐ (e.g. <code className="font-mono text-[#0878D1] font-bold">https://fintrack-30zs.onrender.com</code>) உங்கள் அனைத்து போன் & உலாவிகளிலும் உள்ளிட்டால் போதுமானது!
           </p>
         </div>
       </div>

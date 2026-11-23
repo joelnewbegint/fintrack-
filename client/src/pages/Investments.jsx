@@ -142,7 +142,7 @@ export const Investments = ({ onOpenNewInvestment }) => {
           amount={summary.estimatedLiquidCash || 0}
           subtitle="Available for new lending"
           icon={Wallet}
-          gradient="from-sky-500 to-indigo-600"
+          gradient="from-[#0878D1] to-[#064B8E]"
         />
       </div>
 

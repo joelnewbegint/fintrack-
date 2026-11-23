@@ -136,7 +136,7 @@ export const FloatingPaymentButton = ({
                   className="w-full min-h-[52px] p-3.5 rounded-2xl glass hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/60 text-slate-900 dark:text-white flex items-center justify-between shadow-sm active:scale-98 transition text-left"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/60 text-purple-600 dark:text-purple-300 flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-[#EAF5FF] border border-[#D5E9FA] text-[#0878D1] flex items-center justify-center shrink-0">
                       <UserPlus className="w-5 h-5" />
                     </div>
                     <div>

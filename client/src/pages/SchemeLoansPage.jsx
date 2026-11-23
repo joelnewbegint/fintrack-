@@ -121,12 +121,10 @@ const SCHEME_CONFIG = {
 const getAvatarStyle = (name = '') => {
   const char = (name || 'B').trim().charAt(0).toUpperCase();
   const palette = [
-    'bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 ring-1 ring-blue-300/40',
-    'bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 ring-1 ring-purple-300/40',
-    'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 ring-1 ring-emerald-300/40',
-    'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 ring-1 ring-rose-300/40',
-    'bg-sky-100 text-sky-700 dark:bg-sky-950/70 dark:text-sky-300 ring-1 ring-sky-300/40',
-    'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 ring-1 ring-amber-300/40',
+    'bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]',
+    'bg-[#EAF5FF] text-[#064B8E] border border-[#D5E9FA]',
+    'bg-[#EAF5FF] text-[#18A879] border border-[#D5E9FA]',
+    'bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]',
   ];
   const code = char.charCodeAt(0) || 0;
   return {
@@ -290,7 +288,7 @@ export const SchemeLoansPage = ({
         en: 'Active Loans Breakdown',
         ta: 'நடப்பு கடன்கள் விபரம்',
         total: summary.activeLoansCount,
-        color: 'text-indigo-600',
+        color: 'text-[#0878D1]',
         field: 'remainingBalance',
         label: lang === 'ta' ? 'நிலுவை' : 'Balance',
         isCount: true,
@@ -514,24 +512,24 @@ export const SchemeLoansPage = ({
           }}
           className="p-4 rounded-2xl relative overflow-hidden border cursor-pointer hover:shadow-lg transition-all duration-200 group active:scale-[0.98]"
           style={{
-            background: 'rgba(255, 255, 255, 0.82)',
-            backdropFilter: 'blur(16px)',
-            borderColor: 'rgba(224, 231, 255, 0.9)',
-            boxShadow: '0 4px 16px -2px rgba(99, 102, 241, 0.1)',
+            background: 'rgba(255, 255, 255, 0.75)',
+            backdropFilter: 'blur(20px)',
+            borderColor: '#D5E9FA',
+            boxShadow: '0 4px 16px -2px rgba(8, 120, 209, 0.08)',
           }}
         >
           <div className="flex items-center justify-between pb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#0878D1]">
               {lang === 'ta' ? 'நடப்பு கடன்கள்' : 'Active Loans'}
             </span>
-            <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition">
+            <div className="w-6 h-6 rounded-lg bg-[#EAF5FF] text-[#0878D1] flex items-center justify-center group-hover:scale-110 transition">
               <Users className="w-3.5 h-3.5" />
             </div>
           </div>
-          <p className="text-base sm:text-lg font-black text-slate-800 dark:text-white">
+          <p className="text-base sm:text-lg font-black text-[#183653]">
             <CountUpNumber end={summary.activeLoansCount} isCurrency={false} />
           </p>
-          <p className="text-[9px] text-indigo-500 font-bold mt-0.5 flex items-center justify-between">
+          <p className="text-[9px] text-[#0878D1] font-bold mt-0.5 flex items-center justify-between">
             <span>{lang === 'ta' ? 'இயங்கும் கடன்கள்' : 'Open accounts'}</span>
             <span className="opacity-0 group-hover:opacity-100 transition text-[9px]">🔍</span>
           </p>

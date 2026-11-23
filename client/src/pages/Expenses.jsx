@@ -71,14 +71,14 @@ export const Expenses = ({ onNavigateToDashboard }) => {
     rent: {
       label: lang === 'ta' ? 'அலுவலக வாடகை' : 'Office Rent',
       icon: Building,
-      color: 'indigo',
-      bg: 'bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950 dark:text-indigo-300',
+      color: 'sky',
+      bg: 'bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]',
     },
     salary: {
       label: lang === 'ta' ? 'ஊழியர் சம்பளம்' : 'Staff Salary',
       icon: Users,
-      color: 'purple',
-      bg: 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950 dark:text-purple-300',
+      color: 'ocean',
+      bg: 'bg-[#EAF5FF] text-[#064B8E] border border-[#D5E9FA]',
     },
     stationery: {
       label: lang === 'ta' ? 'நோட்டு & அச்சு செலவு' : 'Stationery & Printing',

@@ -685,8 +685,8 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                 onClick={() => setEntryMode('holiday')}
                 className={`py-2 px-3 rounded-xl font-black text-xs transition flex items-center justify-center space-x-1.5 ${
                   entryMode === 'holiday'
-                    ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    ? 'bg-white text-[#0878D1] shadow-sm'
+                    : 'text-[#647C95] hover:text-[#183653]'
                 }`}
               >
                 <Coffee className="w-3.5 h-3.5" />
@@ -698,7 +698,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
               /* Holiday / Missed Day Form */
               <div className="space-y-4 pt-1 animate-fade-in">
                 <div>
-                  <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
+                  <label className="block text-[11px] font-black uppercase tracking-wider text-[#647C95] mb-1.5">
                     Declaration Type / வகை
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -707,11 +707,11 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                       onClick={() => setHolidayType('holiday')}
                       className={`py-3 px-3 rounded-2xl border font-bold text-xs flex items-center justify-center space-x-1.5 transition ${
                         holidayType === 'holiday'
-                          ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 shadow-sm'
-                          : 'bg-white dark:bg-slate-850 text-slate-600 hover:bg-slate-50'
+                          ? 'border-[#0878D1] bg-[#EAF5FF] text-[#0878D1] shadow-sm'
+                          : 'bg-white text-[#647C95] hover:bg-[#EAF5FF]'
                       }`}
                     >
-                      <Coffee className="w-4 h-4 text-purple-600" />
+                      <Coffee className="w-4 h-4 text-[#0878D1]" />
                       <span>🏖️ Holiday / விடுமுறை</span>
                     </button>
                     <button
@@ -719,8 +719,8 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                       onClick={() => setHolidayType('missed')}
                       className={`py-3 px-3 rounded-2xl border font-bold text-xs flex items-center justify-center space-x-1.5 transition ${
                         holidayType === 'missed'
-                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 shadow-sm'
-                          : 'bg-white dark:bg-slate-850 text-slate-600 hover:bg-slate-50'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-sm'
+                          : 'bg-white text-[#647C95] hover:bg-[#EAF5FF]'
                       }`}
                     >
                       <AlertCircle className="w-4 h-4 text-amber-600" />
@@ -730,19 +730,19 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-black text-[#183653] mb-1">
                     Date / தேதி
                   </label>
                   <input
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full h-12 px-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-purple-200/80 dark:border-purple-850/60 text-slate-900 dark:text-white font-bold text-sm outline-none focus:ring-2 focus:ring-purple-400"
+                    className="w-full h-12 px-4 rounded-2xl bg-white border border-[#D5E9FA] text-[#183653] font-bold text-sm outline-none focus:ring-2 focus:ring-[#0878D1]/20 focus:border-[#0878D1]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-black text-[#183653] mb-1">
                     Reason / குறிப்பு
                   </label>
                   <input
@@ -750,7 +750,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                     placeholder="e.g. Sunday, Festival, Shop Closed, Borrower Not Available"
                     value={holidayReason}
                     onChange={(e) => setHolidayReason(e.target.value)}
-                    className="w-full h-12 px-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-purple-200/80 dark:border-purple-850/60 text-slate-900 dark:text-white font-bold text-sm outline-none focus:ring-2 focus:ring-purple-400"
+                    className="w-full h-12 px-4 rounded-2xl bg-white border border-[#D5E9FA] text-[#183653] font-bold text-sm outline-none focus:ring-2 focus:ring-[#0878D1]/20 focus:border-[#0878D1]"
                   />
                 </div>
 
@@ -759,7 +759,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                     type="button"
                     disabled={submitting}
                     onClick={handleHolidaySubmit}
-                    className="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-xs shadow-lg shadow-purple-500/25 flex items-center justify-center space-x-2 disabled:opacity-50 active:scale-98 transition"
+                    className="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1] text-white font-black text-xs shadow-lg shadow-[#0878D1]/25 flex items-center justify-center space-x-2 disabled:opacity-50 active:scale-98 transition"
                   >
                     {submitting ? (
                       <span>Saving Declaration...</span>
@@ -1050,7 +1050,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                 <button
                   type="submit"
                   disabled={submitting || payNum <= 0}
-                  className="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-xs sm:text-sm shadow-xl shadow-sky-500/30 flex items-center justify-center space-x-2 transition active:scale-98"
+                  className="w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-xs sm:text-sm shadow-xl shadow-[#0878D1]/30 flex items-center justify-center space-x-2 transition active:scale-98"
                 >
                   {submitting ? (
                     <>

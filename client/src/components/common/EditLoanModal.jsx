@@ -712,7 +712,7 @@ export const EditLoanModal = ({
           </div>
 
           {/* 8. Impact Summary Card */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50/60 dark:from-sky-950/40 dark:to-indigo-950/40 border border-sky-200 dark:border-sky-800 space-y-2 text-xs">
+          <div className="p-3.5 rounded-2xl bg-[#EAF5FF] border border-[#D5E9FA] space-y-2 text-xs">
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-bold block">

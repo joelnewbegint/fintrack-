@@ -4,38 +4,65 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Ocean Blue Global Color Palette (Strict Specification)
+        primary: {
+          DEFAULT: '#0878D1', // Primary Blue
+          deep: '#064B8E',    // Deep Ocean
+          sky: '#55B8F5',     // Sky Blue
+          light: '#EAF5FF',   // Light Blue
+        },
+        ocean: {
+          DEFAULT: '#0878D1',
+          primary: '#0878D1',
+          deep: '#064B8E',
+          sky: '#55B8F5',
+          light: '#EAF5FF',
+          bg: '#F3F9FF',
+          border: '#D5E9FA',
+          text: '#183653',
+          muted: '#647C95',
+        },
         ice: {
-          DEFAULT: '#F4FAFF',
+          DEFAULT: '#F3F9FF',
           50: '#FFFFFF',
-          100: '#F4FAFF',
-          200: '#E6F4FE',
-          300: '#D5EDFD',
+          100: '#F3F9FF',
+          200: '#EAF5FF',
+          300: '#D5E9FA',
         },
         sky: {
-          DEFAULT: '#BFE3FA',
-          light: '#D7EEFC',
-          dark: '#A6D7F8',
+          DEFAULT: '#55B8F5',
+          light: '#EAF5FF',
+          dark: '#0878D1',
         },
         'ocean-soft': {
-          DEFAULT: '#8EC5F5',
-          light: '#A6D2F7',
-          dark: '#73B4F1',
+          DEFAULT: '#EAF5FF',
+          light: '#F3F9FF',
+          dark: '#D5E9FA',
         },
         accent: {
-          DEFAULT: '#6FB4F2',
-          hover: '#5EA7E8',
-          active: '#4A98DE',
-          deep: '#1F6FC8',
+          DEFAULT: '#0878D1',
+          hover: '#064B8E',
+          active: '#053C72',
+          deep: '#064B8E',
         },
         ink: {
-          DEFAULT: '#2B3A4A',
-          light: '#3F4D5B',
-          dark: '#1B2631',
+          DEFAULT: '#183653',
+          light: '#647C95',
+          dark: '#0C1C2B',
         },
         muted: {
-          DEFAULT: '#3F4D5B',
-          light: '#5A6978',
-          dark: '#2B3A4A',
+          DEFAULT: '#647C95',
+          light: '#889EB5',
+          dark: '#183653',
+        },
+        border: {
+          DEFAULT: '#D5E9FA',
+          ocean: '#D5E9FA',
+        },
+        success: {
+          DEFAULT: '#18A879',
+          bg: '#EAF5FF',
+          text: '#18A879',
         },
         status: {
           due: {
@@ -47,12 +74,12 @@ export default {
             text: '#9B2C2C',
           },
           paid: {
-            bg: '#CDEFE0',
-            text: '#1F6B4F',
+            bg: '#EAF5FF',
+            text: '#18A879',
           },
           upcoming: {
             bg: '#FFFFFF',
-            text: '#2B3A4A',
+            text: '#183653',
           },
         },
       },
@@ -61,11 +88,11 @@ export default {
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       boxShadow: {
-        ocean: '0 8px 24px rgba(43, 58, 74, 0.12)',
-        'ocean-lg': '0 16px 36px rgba(43, 58, 74, 0.16)',
-        'ocean-sm': '0 4px 12px rgba(43, 58, 74, 0.08)',
-        glass: '0 8px 24px rgba(43, 58, 74, 0.12)',
-        'glass-hover': '0 16px 36px rgba(43, 58, 74, 0.16)',
+        ocean: '0 8px 30px rgba(8, 120, 209, 0.08)',
+        'ocean-lg': '0 16px 40px rgba(6, 75, 142, 0.12)',
+        'ocean-sm': '0 4px 16px rgba(8, 120, 209, 0.05)',
+        glass: '0 8px 30px rgba(8, 120, 209, 0.08)',
+        'glass-hover': '0 16px 40px rgba(8, 120, 209, 0.14)',
       },
       borderRadius: {
         card: '20px',

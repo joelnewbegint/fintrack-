@@ -213,14 +213,14 @@ export const Navbar = ({
   // DESKTOP & TABLET TOP BAR
   // -------------------------------------------------------------------------
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-white/90 shadow-ocean transition-colors">
+    <header className="sticky top-0 z-40 w-full bg-white/75 backdrop-blur-[20px] border-b border-[#D5E9FA] shadow-[0_4px_20px_rgba(8,120,209,0.06)] transition-colors">
       <div className="w-full px-3 sm:px-5 h-16 flex items-center justify-between gap-2.5">
         {/* Left: Sidebar Toggle + Luxury Wallet Monogram + VK BANKER'S */}
         <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
           {onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-muted hover:text-ink hover:bg-[#BFE3FA]/40 transition active:scale-95"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-[#647C95] hover:text-[#183653] hover:bg-[#EAF5FF] transition active:scale-95"
               title="Toggle Sidebar (M)"
               aria-label="Toggle Navigation Sidebar"
             >
@@ -229,10 +229,10 @@ export const Navbar = ({
           )}
 
           {/* Premium Ocean Brand Icon */}
-          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-[#6FB4F2] to-[#8EC5F5] text-ink flex items-center justify-center shadow-md shadow-[#1F6FC8]/20 shrink-0 border border-white">
+          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-[#0878D1] to-[#064B8E] text-white flex items-center justify-center shadow-md shadow-[#0878D1]/20 shrink-0 border border-white">
             <Wallet className="w-5 h-5 drop-shadow-xs" />
             <span
-              className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#1F6B4F] ring-2 ring-white"
+              className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#18A879] ring-2 ring-white"
               title="System Online"
             />
           </div>
@@ -240,29 +240,44 @@ export const Navbar = ({
           {/* Brand Name */}
           <div className="flex flex-col justify-center min-w-0">
             <div className="flex items-center space-x-2">
-              <span className="font-black text-sm sm:text-base text-ink tracking-tight leading-tight whitespace-nowrap">
+              <span className="font-black text-sm sm:text-base text-[#183653] tracking-tight leading-tight whitespace-nowrap">
                 {lang === 'ta' ? 'வி.கே. பேங்கர்ஸ் & பைனான்ஸ்' : "VK BANKER'S & FINANCE"}
               </span>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#BFE3FA] text-[#1F6FC8] border border-[#6FB4F2]/60 tracking-wide hidden md:inline-flex items-center">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] tracking-wide hidden md:inline-flex items-center">
                 {lang === 'ta' ? "VK Banker's" : 'வி.கே.'}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Center: Search pill */}
-        <div className="flex-1 max-w-xs sm:max-w-sm mx-1 sm:mx-2">
+        {/* Center: Search pill & Loans Shortcut */}
+        <div className="flex-1 max-w-xs sm:max-w-md mx-1 sm:mx-2 flex items-center space-x-2">
           <button
             onClick={onOpenSearch}
-            className="w-full h-9 flex items-center justify-between px-3.5 rounded-full bg-white/70 border border-[#BFE3FA] text-xs text-muted hover:border-[#6FB4F2] hover:text-ink transition shadow-xs"
+            className="flex-1 h-9 flex items-center justify-between px-3.5 rounded-full bg-white/80 border border-[#D5E9FA] text-xs text-[#647C95] hover:border-[#55B8F5] hover:text-[#183653] transition shadow-xs"
           >
             <div className="flex items-center space-x-2 min-w-0">
-              <Search className="w-3.5 h-3.5 text-muted shrink-0" />
-              <span className="truncate text-[11px] font-medium">{lang === 'ta' ? 'தேடல் / Search...' : 'Search...'}</span>
+              <Search className="w-3.5 h-3.5 text-[#647C95] shrink-0" />
+              <span className="truncate text-[11px] font-medium">{lang === 'ta' ? 'தேடல் / Search...' : 'Search customers, loans...'}</span>
             </div>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#BFE3FA]/50 text-muted font-bold shrink-0">
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#EAF5FF] text-[#0878D1] font-bold shrink-0">
               /
             </span>
+          </button>
+
+          {/* Loans Shortcut */}
+          <button
+            onClick={onOpenLoanForm || onOpenLoans || (() => {
+              if (typeof window !== 'undefined') {
+                window.history.pushState({}, '', '/loans');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }
+            })}
+            className="hidden xl:inline-flex items-center space-x-1.5 h-9 px-3 rounded-full bg-white/80 border border-[#D5E9FA] hover:bg-[#EAF5FF] hover:border-[#55B8F5] text-xs font-bold text-[#183653] transition shadow-xs shrink-0"
+            title="View Loans"
+          >
+            <Coins className="w-3.5 h-3.5 text-[#0878D1]" />
+            <span>{lang === 'ta' ? 'கடன்கள்' : 'Loans'}</span>
           </button>
         </div>
 
@@ -278,13 +293,13 @@ export const Navbar = ({
           {/* Synced Pill */}
           <button
             onClick={handleSyncClick}
-            className="h-9 px-3 rounded-full bg-white/80 border border-[#BFE3FA] text-xs font-bold text-ink hover:bg-[#BFE3FA]/50 flex items-center space-x-1.5 transition active:scale-95 shadow-xs"
+            className="h-9 px-3 rounded-full bg-white/80 border border-[#D5E9FA] text-xs font-bold text-[#183653] hover:bg-[#EAF5FF] flex items-center space-x-1.5 transition active:scale-95 shadow-xs"
             title="Cloud Sync Status"
           >
             {isManualSyncing || syncState.status === 'syncing' ? (
-              <RefreshCw className="w-3 h-3 text-[#1F6FC8] animate-spin" />
+              <RefreshCw className="w-3 h-3 text-[#0878D1] animate-spin" />
             ) : syncState.status === 'synced' ? (
-              <span className="w-2 h-2 rounded-full bg-[#1F6B4F] shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-[#18A879] shrink-0" />
             ) : (
               <span className="w-2 h-2 rounded-full bg-[#8A4A1F] shrink-0 animate-pulse" />
             )}
@@ -294,10 +309,10 @@ export const Navbar = ({
           {/* Notification Bell */}
           <button
             onClick={onOpenNotifications}
-            className="relative h-9 w-9 rounded-full bg-white/80 border border-[#BFE3FA] hover:bg-[#BFE3FA]/50 text-ink flex items-center justify-center transition active:scale-95 shadow-xs"
+            className="relative h-9 w-9 rounded-full bg-white/80 border border-[#D5E9FA] hover:bg-[#EAF5FF] text-[#183653] flex items-center justify-center transition active:scale-95 shadow-xs"
             aria-label="Notifications"
           >
-            <Bell className="w-4 h-4 text-ink" />
+            <Bell className="w-4 h-4 text-[#183653]" />
             {unreadNotificationsCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#9B2C2C] text-white text-[8.5px] font-black flex items-center justify-center shadow-xs">
                 {cappedNotificationBadge}
@@ -308,15 +323,15 @@ export const Navbar = ({
           {/* Quick Language Toggle */}
           <button
             onClick={toggleLanguage}
-            className="h-9 px-3 rounded-full bg-white/80 border border-[#BFE3FA] hover:bg-[#BFE3FA]/50 text-xs font-black text-ink flex items-center space-x-1 transition active:scale-95 shadow-xs"
+            className="h-9 px-3 rounded-full bg-white/80 border border-[#D5E9FA] hover:bg-[#EAF5FF] text-xs font-black text-[#183653] flex items-center space-x-1 transition active:scale-95 shadow-xs"
             title="Toggle Language / மொழி மாற்றம்"
           >
-            <Globe className="w-3.5 h-3.5 text-[#1F6FC8]" />
+            <Globe className="w-3.5 h-3.5 text-[#0878D1]" />
             <span className="text-[11px] font-black">{lang === 'ta' ? 'தமிழ்' : 'EN'}</span>
           </button>
 
           {/* Role Badge */}
-          <div className="hidden lg:flex items-center space-x-1 px-2.5 py-1 rounded-full bg-[#BFE3FA] text-[#1F6FC8] border border-[#6FB4F2]/60 text-[10.5px] font-black">
+          <div className="hidden lg:flex items-center space-x-1 px-2.5 py-1 rounded-full bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] text-[10.5px] font-black">
             <ShieldCheck className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>{isOwner ? 'OWNER' : isLoanAgent ? 'LOAN AGENT' : isEmiAgent ? 'EMI AGENT' : 'STAFF'}</span>
           </div>
@@ -331,8 +346,8 @@ export const Navbar = ({
               }}
               className={`h-9 px-3 rounded-full border text-xs font-bold flex items-center space-x-1.5 transition active:scale-95 shadow-xs ${
                 showMoreMenu
-                  ? 'bg-[#BFE3FA] border-[#6FB4F2] text-ink ring-2 ring-[#6FB4F2]/30'
-                  : 'bg-white/80 border-[#BFE3FA] text-ink hover:bg-[#BFE3FA]/50'
+                  ? 'bg-[#EAF5FF] border-[#55B8F5] text-[#0878D1] ring-2 ring-[#0878D1]/20'
+                  : 'bg-white/80 border-[#D5E9FA] text-[#183653] hover:bg-[#EAF5FF]'
               }`}
               title="More Options & Utilities"
               aria-label="More options"

@@ -189,67 +189,67 @@ export const DailyClosing = () => {
       {/* 1. Overall Summary Metric Cards (4 cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
         {/* Total Expected */}
-        <div className="glass rounded-3xl p-4 sm:p-5 border border-white/70 dark:border-sky-800/40 shadow-lg min-w-0 flex flex-col justify-between h-full">
+        <div className="bg-white/75 backdrop-blur-[20px] rounded-3xl p-4 sm:p-5 border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.08)] min-w-0 flex flex-col justify-between h-full">
           <div>
-            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider truncate">
+            <p className="text-[11px] text-[#647C95] font-bold uppercase tracking-wider truncate">
               {t('totalExpectedDues')}
             </p>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1 tabular-nums whitespace-nowrap">
+            <p className="text-2xl sm:text-3xl font-black text-[#183653] mt-1 tabular-nums whitespace-nowrap">
               {formatCurrency(summary.totalExpected)}
             </p>
           </div>
-          <p className="text-[11px] text-slate-500 mt-2 truncate">
+          <p className="text-[11px] text-[#647C95] mt-2 truncate">
             {expectedList.length} total installments scheduled
           </p>
         </div>
 
         {/* Collected Today */}
-        <div className="glass rounded-3xl p-4 sm:p-5 border border-emerald-200/80 dark:border-emerald-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full">
+        <div className="bg-white/75 backdrop-blur-[20px] rounded-3xl p-4 sm:p-5 border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.08)] min-w-0 flex flex-col justify-between h-full">
           <div>
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider truncate">
+            <p className="text-[11px] text-[#18A879] font-bold uppercase tracking-wider truncate">
               {t('collectedToday')}
             </p>
-            <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums whitespace-nowrap">
+            <p className="text-2xl sm:text-3xl font-black text-[#18A879] mt-1 tabular-nums whitespace-nowrap">
               {formatCurrency(summary.totalCollected)}
             </p>
           </div>
-          <p className="text-[11px] text-slate-500 mt-2 truncate">
+          <p className="text-[11px] text-[#647C95] mt-2 truncate">
             {summary.totalReceiptsCount} receipts issued today
           </p>
         </div>
 
         {/* Pending Shortfall */}
-        <div className="glass rounded-3xl p-4 sm:p-5 border border-amber-200/80 dark:border-amber-900/60 shadow-lg min-w-0 flex flex-col justify-between h-full">
+        <div className="bg-white/75 backdrop-blur-[20px] rounded-3xl p-4 sm:p-5 border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.08)] min-w-0 flex flex-col justify-between h-full">
           <div>
-            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider truncate">
+            <p className="text-[11px] text-[#0878D1] font-bold uppercase tracking-wider truncate">
               {t('netDeficit')}
             </p>
-            <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 mt-1 tabular-nums whitespace-nowrap">
+            <p className="text-2xl sm:text-3xl font-black text-[#0878D1] mt-1 tabular-nums whitespace-nowrap">
               {formatCurrency(summary.pendingAmount)}
             </p>
           </div>
-          <p className="text-[11px] text-slate-500 mt-2 truncate">Uncollected shortfall today</p>
+          <p className="text-[11px] text-[#647C95] mt-2 truncate">Uncollected shortfall today</p>
         </div>
 
         {/* Payment Breakdown (Cash & UPI) */}
-        <div className="glass rounded-3xl p-4 sm:p-5 border border-white/70 dark:border-sky-800/40 shadow-lg min-w-0 flex flex-col justify-between h-full">
-          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider truncate">Payment Breakdown</p>
+        <div className="bg-white/75 backdrop-blur-[20px] rounded-3xl p-4 sm:p-5 border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.08)] min-w-0 flex flex-col justify-between h-full">
+          <p className="text-[11px] text-[#647C95] font-bold uppercase tracking-wider truncate">Payment Breakdown</p>
           <div className="space-y-1.5 my-2">
             <div className="flex justify-between items-center text-xs">
-              <span className="flex items-center space-x-1.5 font-semibold text-slate-600 dark:text-slate-300">
-                <Banknote className="w-4 h-4 text-emerald-500 shrink-0" />
+              <span className="flex items-center space-x-1.5 font-semibold text-[#183653]">
+                <Banknote className="w-4 h-4 text-[#18A879] shrink-0" />
                 <span>Cash in Hand:</span>
               </span>
-              <span className="font-black text-emerald-600 tabular-nums">
+              <span className="font-black text-[#18A879] tabular-nums">
                 {formatCurrency(summary.cashCollected)}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="flex items-center space-x-1.5 font-semibold text-slate-600 dark:text-slate-300">
-                <QrCode className="w-4 h-4 text-sky-500 shrink-0" />
+              <span className="flex items-center space-x-1.5 font-semibold text-[#183653]">
+                <QrCode className="w-4 h-4 text-[#0878D1] shrink-0" />
                 <span>GPay / UPI:</span>
               </span>
-              <span className="font-black text-sky-600 tabular-nums">
+              <span className="font-black text-[#0878D1] tabular-nums">
                 {formatCurrency(summary.upiCollected)}
               </span>
             </div>

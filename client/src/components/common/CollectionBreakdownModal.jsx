@@ -109,7 +109,7 @@ export const CollectionBreakdownModal = ({
         <div className="flex items-start justify-between pb-3 border-b border-sky-100 dark:border-sky-900/40">
           <div>
             <div className="flex items-center space-x-2">
-              <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-sky-500/20">
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#0878D1] to-[#064B8E] text-white flex items-center justify-center shadow-md shadow-[#0878D1]/20">
                 <PieChartIcon className="w-5 h-5" />
               </div>
               <div>

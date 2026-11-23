@@ -289,9 +289,9 @@ VK Banker's & Finance, Coimbatore`;
 
           <button
             onClick={() => generateEMIAgreementPdf(loan, loan.customerId || {})}
-            className="h-9 px-3 rounded-xl bg-white/80 hover:bg-white border border-slate-200 text-slate-700 text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
+            className="h-9 px-3 rounded-xl bg-white/80 hover:bg-white border border-[#D5E9FA] text-[#183653] text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
           >
-            <FileText className="w-3.5 h-3.5 text-purple-600" />
+            <FileText className="w-3.5 h-3.5 text-[#0878D1]" />
             <span>EMI Agreement PDF</span>
           </button>
 

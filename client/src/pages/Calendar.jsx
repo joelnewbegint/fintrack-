@@ -129,9 +129,9 @@ export const Calendar = () => {
       {/* Calendar Grid & Selected Day Drawer */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Monthly Calendar Grid (2 Cols on desktop) */}
-        <div className="lg:col-span-2 glass-card rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800/80 shadow-md min-w-0">
+        <div className="lg:col-span-2 bg-white/75 backdrop-blur-[20px] rounded-3xl p-5 border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.08)] min-w-0">
           {/* Day of Week Headers */}
-          <div className="grid grid-cols-7 gap-1 text-center font-bold text-[11px] text-slate-400 mb-2">
+          <div className="grid grid-cols-7 gap-1 text-center font-bold text-[11px] text-[#647C95] mb-2">
             <span>Sun</span>
             <span>Mon</span>
             <span>Tue</span>
@@ -164,22 +164,22 @@ export const Calendar = () => {
                   onClick={() => handleDayClick(dayNum)}
                   className={`min-h-[70px] sm:min-h-[85px] p-1.5 sm:p-2 rounded-2xl border text-left flex flex-col justify-between transition-all duration-150 active:scale-95 ${
                     isSelected
-                      ? 'border-sky-500 bg-sky-50/80 dark:bg-sky-950/60 shadow-md ring-2 ring-sky-400/40'
-                      : 'border-slate-100 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/60 hover:border-sky-300'
+                      ? 'border-[#0878D1] bg-[#EAF5FF] shadow-md ring-2 ring-[#0878D1]/20'
+                      : 'border-[#D5E9FA] bg-white/70 hover:border-[#55B8F5]'
                   }`}
                 >
                   <div className="flex justify-between items-center w-full">
                     <span
                       className={`text-xs font-black ${
                         isToday
-                          ? 'w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center'
-                          : 'text-slate-800 dark:text-slate-200'
+                          ? 'w-5 h-5 rounded-full bg-[#0878D1] text-white flex items-center justify-center'
+                          : 'text-[#183653]'
                       }`}
                     >
                       {dayNum}
                     </span>
                     {dayData && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300">
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]">
                         {dayData.count}
                       </span>
                     )}
@@ -187,13 +187,13 @@ export const Calendar = () => {
 
                   {dayData ? (
                     <div className="mt-1">
-                      <p className="text-[10px] sm:text-xs font-black text-emerald-600 dark:text-emerald-400 truncate">
+                      <p className="text-[10px] sm:text-xs font-black text-[#18A879] truncate">
                         {formatShortCurrency(dayData.totalDue)}
                       </p>
-                      <p className="text-[9px] text-slate-400 hidden sm:block">due</p>
+                      <p className="text-[9px] text-[#647C95] hidden sm:block">due</p>
                     </div>
                   ) : (
-                    <span className="text-[10px] text-slate-300 dark:text-slate-700">-</span>
+                    <span className="text-[10px] text-[#D5E9FA]">-</span>
                   )}
                 </button>
               );
@@ -202,17 +202,17 @@ export const Calendar = () => {
         </div>
 
         {/* Selected Day Dues Drawer */}
-        <div className="glass-card rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800/80 shadow-md space-y-4 min-w-0">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="bg-white/75 backdrop-blur-[20px] rounded-3xl p-5 border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.08)] space-y-4 min-w-0">
+          <div className="flex items-center justify-between pb-3 border-b border-[#D5E9FA]">
             <div>
-              <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">
+              <h3 className="font-extrabold text-sm sm:text-base text-[#183653]">
                 Dues on {formatDate(selectedDayDate)}
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[#647C95]">
                 {selectedDayItems.length} installments scheduled
               </p>
             </div>
-            <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60 tabular-nums">
+            <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] tabular-nums">
               {formatCurrency(selectedDayItems.reduce((acc, i) => acc + i.amount, 0))}
             </span>
           </div>

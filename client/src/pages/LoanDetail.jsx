@@ -200,7 +200,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
           <button
             onClick={() => downloadRepaymentSchedulePDF(loan, customer, payments)}
-            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-indigo-500/20 active:scale-95 transition"
+            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1] text-white font-bold text-xs shadow-md shadow-[#0878D1]/20 active:scale-95 transition"
             title="Download Official Day-by-Day Repayment Schedule Statement PDF (தவணை அட்டவணை)"
           >
             <Calendar className="w-4 h-4" />

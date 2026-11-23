@@ -1083,7 +1083,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                 </div>
 
                 {/* Live Preview Card */}
-                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50/60 dark:from-sky-950/50 dark:to-indigo-950/50 border border-sky-200 dark:border-sky-800 space-y-2.5">
+                <div className="p-3.5 rounded-2xl bg-[#EAF5FF] border border-[#D5E9FA] space-y-2.5">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-sky-200 dark:border-sky-800/80 shadow-xs">
                       <span className="text-[10px] text-slate-500 uppercase font-black">
@@ -1178,7 +1178,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                 </div>
 
                 {/* Calculation Summary Card */}
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50 dark:from-sky-950/60 dark:to-indigo-950/60 border border-sky-200 dark:border-sky-800 space-y-3">
+                <div className="p-4 rounded-2xl bg-[#EAF5FF] border border-[#D5E9FA] space-y-3">
                   <div className="grid grid-cols-2 gap-2.5 text-xs">
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase font-bold">Repayment Scheme</span>
@@ -1277,7 +1277,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                 </div>
 
                 {/* Created Loan Summary Badge */}
-                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50/70 dark:from-sky-950/50 dark:to-indigo-950/50 border border-sky-200 dark:border-sky-800 text-left space-y-2">
+                <div className="p-3.5 rounded-2xl bg-[#EAF5FF] border border-[#D5E9FA] text-left space-y-2">
                   <div className="flex items-center justify-between border-b border-sky-200/60 dark:border-sky-800/60 pb-2">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
                       Official Loan ID
@@ -1346,7 +1346,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                   <button
                     type="button"
                     onClick={handleDownloadSchedule}
-                    className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs shadow-md shadow-indigo-500/25 active:scale-98 transition"
+                    className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1] text-white font-black text-xs shadow-md shadow-[#0878D1]/25 active:scale-98 transition"
                   >
                     <div className="flex items-center space-x-2.5">
                       <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
@@ -1354,17 +1354,17 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                       </div>
                       <div>
                         <p className="leading-tight">2. Download Repayment Schedule PDF</p>
-                        <p className="text-[10px] text-indigo-100 font-medium">
+                        <p className="text-[10px] text-white/80 font-medium">
                           தவணை அட்டவணை PDF பதிவிறக்கம் (Daily Ledger Schedule)
                         </p>
                       </div>
                     </div>
                     {scheduleDownloadedSuccess ? (
-                      <span className="text-[10px] bg-white text-indigo-700 font-black px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] bg-white text-[#0878D1] font-black px-2 py-0.5 rounded-full">
                         Saved ✓
                       </span>
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-indigo-200" />
+                      <ChevronRight className="w-4 h-4 text-white/80" />
                     )}
                   </button>
 
@@ -1395,7 +1395,7 @@ export const LoanModal = ({ customers = [], initialCustomerId = '', onClose, onS
                     className="w-full flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-black text-xs shadow-xs active:scale-98 transition"
                   >
                     <div className="flex items-center space-x-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                      <div className="w-8 h-8 rounded-xl bg-[#EAF5FF] flex items-center justify-center text-[#0878D1]">
                         <Printer className="w-4 h-4" />
                       </div>
                       <div>

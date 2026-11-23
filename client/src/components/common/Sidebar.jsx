@@ -205,31 +205,31 @@ export const Sidebar = ({
 
   return (
     <aside
-      className={`min-h-[calc(100vh-4rem)] bg-white/75 backdrop-blur-md text-ink transition-all duration-300 flex flex-col shrink-0 select-none shadow-ocean border-r border-white/85 sticky top-16 self-start max-h-[calc(100vh-4rem)] z-30 ${
+      className={`min-h-[calc(100vh-4rem)] bg-white/75 backdrop-blur-[20px] text-[#183653] transition-all duration-300 flex flex-col shrink-0 select-none shadow-[0_8px_30px_rgba(8,120,209,0.08)] border-r border-[#D5E9FA] sticky top-16 self-start max-h-[calc(100vh-4rem)] z-30 ${
         isCollapsed ? 'w-16 sm:w-20 p-2 sm:p-2.5 items-center' : 'w-64 p-3.5 sm:p-4'
       }`}
     >
       {/* Header or Collapse Toggle */}
-      <div className="flex items-center justify-between pb-2 px-1">
+      <div className="flex items-center justify-between pb-2.5 px-1 border-b border-[#D5E9FA]/60">
         {!isCollapsed && (
-          <span className="text-[10px] uppercase font-black tracking-widest text-[#1F6FC8]">
+          <span className="text-[10.5px] uppercase font-black tracking-widest text-[#0878D1]">
             {isEmiAgent ? 'EMI NAVIGATION' : isLoanAgent ? 'LOAN NAVIGATION' : 'LOANS NAVIGATION'}
           </span>
         )}
         {onToggleCollapsed && (
           <button
             onClick={onToggleCollapsed}
-            className="p-1 rounded-xl text-muted hover:text-ink hover:bg-[#BFE3FA]/50 transition mx-auto"
+            className="p-1 rounded-xl text-[#647C95] hover:text-[#183653] hover:bg-[#EAF5FF] transition mx-auto"
             title={isCollapsed ? 'Expand Navigation (M)' : 'Collapse Navigation (M)'}
             aria-label={isCollapsed ? 'Expand Navigation' : 'Collapse Navigation'}
           >
-            {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+            {isCollapsed ? <PanelLeftOpen className="w-4 h-4 text-[#0878D1]" /> : <PanelLeftClose className="w-4 h-4 text-[#647C95]" />}
           </button>
         )}
       </div>
 
       {/* Navigation Items List */}
-      <div className="space-y-1 mt-1 flex-1 w-full overflow-y-auto no-scrollbar">
+      <div className="space-y-1 mt-2 flex-1 w-full overflow-y-auto no-scrollbar">
         <nav className="space-y-1 w-full">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -249,15 +249,15 @@ export const Sidebar = ({
                     }}
                     className={`w-full flex items-center justify-center p-3 rounded-2xl transition-all duration-150 group font-bold relative ${
                       isGroupActive
-                        ? 'btn-accent text-ink shadow-md shadow-[#1F6FC8]/25'
-                        : 'text-muted hover:bg-white/60 hover:text-ink'
+                        ? 'bg-gradient-to-r from-[#0878D1] to-[#064B8E] text-white shadow-md shadow-[#0878D1]/25'
+                        : 'text-[#647C95] hover:bg-[#EAF5FF] hover:text-[#0878D1]'
                     }`}
                     title={lang === 'ta' ? item.ta : item.en}
                     aria-label={lang === 'ta' ? item.ta : item.en}
                   >
-                    <Icon className={`w-5 h-5 shrink-0 ${isGroupActive ? 'text-ink' : 'text-muted group-hover:text-ink'}`} />
+                    <Icon className={`w-5 h-5 shrink-0 ${isGroupActive ? 'text-white' : 'text-[#647C95] group-hover:text-[#0878D1]'}`} />
                     {loanCounts.all > 0 && (
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#1F6FC8]" />
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#0878D1]" />
                     )}
                   </button>
                 );
@@ -269,13 +269,13 @@ export const Sidebar = ({
                   <div
                     className={`w-full flex items-center justify-between rounded-2xl transition-all duration-150 group font-bold px-3 py-2.5 cursor-pointer ${
                       isGroupActive
-                        ? 'bg-[#BFE3FA]/60 text-ink border border-[#6FB4F2]/60'
-                        : 'text-muted hover:bg-white/60 hover:text-ink'
+                        ? 'bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]'
+                        : 'text-[#647C95] hover:bg-[#EAF5FF]/70 hover:text-[#183653]'
                     }`}
                     onClick={() => setIsLoansExpanded(!isLoansExpanded)}
                   >
                     <div className="flex items-center space-x-2.5 min-w-0">
-                      <Icon className={`w-4 h-4 shrink-0 ${isGroupActive ? 'text-[#1F6FC8]' : 'text-muted group-hover:text-ink'}`} />
+                      <Icon className={`w-4 h-4 shrink-0 ${isGroupActive ? 'text-[#0878D1]' : 'text-[#647C95] group-hover:text-[#0878D1]'}`} />
                       <span className="text-xs font-bold tracking-wide truncate">
                         {lang === 'ta' ? item.ta : item.en}
                       </span>
@@ -288,8 +288,8 @@ export const Sidebar = ({
                         </span>
                       )}
                       <ChevronDown
-                        className={`w-3.5 h-3.5 text-muted transition-transform duration-200 ${
-                          isLoansExpanded ? 'rotate-180 text-[#1F6FC8]' : ''
+                        className={`w-3.5 h-3.5 text-[#647C95] transition-transform duration-200 ${
+                          isLoansExpanded ? 'rotate-180 text-[#0878D1]' : ''
                         }`}
                       />
                     </div>
@@ -309,14 +309,14 @@ export const Sidebar = ({
                           onClick={() => handleSubItemClick(sub.id)}
                           className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all duration-150 group font-bold ${
                             sub.isActive
-                              ? 'btn-accent text-ink shadow-sm translate-x-0.5 font-bold'
-                              : 'text-muted hover:bg-white/70 hover:text-ink hover:translate-x-0.5'
+                              ? 'bg-gradient-to-r from-[#0878D1] to-[#064B8E] text-white shadow-sm translate-x-0.5 font-bold'
+                              : 'text-[#647C95] hover:bg-[#EAF5FF] hover:text-[#0878D1] hover:translate-x-0.5'
                           }`}
                         >
                           <div className="flex items-center space-x-2 min-w-0">
                             <SubIcon
                               className={`w-3.5 h-3.5 shrink-0 ${
-                                sub.isActive ? 'text-ink stroke-[2.5]' : 'text-muted group-hover:text-ink'
+                                sub.isActive ? 'text-white stroke-[2.5]' : 'text-[#647C95] group-hover:text-[#0878D1]'
                               }`}
                             />
                             <span className="text-[11px] truncate tracking-tight">
@@ -328,10 +328,10 @@ export const Sidebar = ({
                             <span
                               className={`text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 ${
                                 sub.isActive
-                                  ? 'bg-white/40 text-ink'
+                                  ? 'bg-white/30 text-white'
                                   : sub.id === 'closed'
                                   ? 'bg-[#FFD6D2]/60 text-[#9B2C2C]'
-                                  : 'bg-[#BFE3FA] text-[#1F6FC8]'
+                                  : 'bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]'
                               }`}
                             >
                               {sub.count}
@@ -355,15 +355,15 @@ export const Sidebar = ({
                   isCollapsed ? 'justify-center p-3' : 'px-3.5 py-2.5 space-x-3 text-left'
                 } ${
                   isActive
-                    ? 'btn-accent text-ink shadow-md shadow-[#1F6FC8]/20 font-bold'
-                    : 'text-muted hover:bg-white/60 hover:text-ink'
+                    ? 'bg-gradient-to-r from-[#0878D1] to-[#064B8E] text-white shadow-md shadow-[#0878D1]/25 font-bold'
+                    : 'text-[#647C95] hover:bg-[#EAF5FF] hover:text-[#0878D1]'
                 }`}
                 title={isCollapsed ? (lang === 'ta' ? item.ta : item.en) : undefined}
                 aria-label={lang === 'ta' ? item.ta : item.en}
               >
                 <Icon
                   className={`shrink-0 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'} ${
-                    isActive ? 'text-ink stroke-[2.5]' : 'text-muted group-hover:text-ink'
+                    isActive ? 'text-white stroke-[2.5]' : 'text-[#647C95] group-hover:text-[#0878D1]'
                   }`}
                 />
                 {!isCollapsed && (
@@ -378,17 +378,21 @@ export const Sidebar = ({
       </div>
 
       {/* WhatsApp Web shortcut in sidebar */}
-      {!isCollapsed && onOpenWhatsAppHub && (
-        <div className="pt-3 border-t border-[#BFE3FA]/70 mt-auto">
+      {!isCollapsed && (
+        <div className="pt-3 border-t border-[#D5E9FA] mt-auto">
           <button
-            onClick={() => onOpenWhatsAppHub({})}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-[#1F6B4F] bg-[#CDEFE0]/80 border border-[#1F6B4F]/25 hover:bg-[#CDEFE0] transition shadow-xs"
+            onClick={() => {
+              if (onOpenWhatsAppHub) onOpenWhatsAppHub({});
+              else window.open('https://web.whatsapp.com', '_blank');
+            }}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-[#18A879] bg-[#18A879]/10 border border-[#18A879]/30 hover:bg-[#18A879]/20 transition shadow-xs"
+            title="Open WhatsApp Web & Reminders Hub"
           >
             <div className="flex items-center space-x-2">
-              <Smartphone className="w-4 h-4 text-[#1F6B4F]" />
+              <Smartphone className="w-4 h-4 text-[#18A879]" />
               <span>WhatsApp Web</span>
             </div>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#1F6B4F]/15 text-[#1F6B4F] font-black">
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#18A879]/20 text-[#18A879] font-black">
               Send
             </span>
           </button>

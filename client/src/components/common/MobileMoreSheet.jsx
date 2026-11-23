@@ -221,9 +221,9 @@ export const MobileMoreSheet = ({
                   }
                   onClose();
                 }}
-                className="p-3 rounded-2xl glass hover:bg-purple-50 dark:hover:bg-purple-950/40 border border-purple-100 dark:border-purple-900/40 flex items-center space-x-2 text-left active:scale-95 transition"
+                className="p-3 rounded-2xl bg-white/75 hover:bg-[#EAF5FF] border border-[#D5E9FA] flex items-center space-x-2 text-left active:scale-95 transition"
               >
-                <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-600 shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-[#EAF5FF] border border-[#D5E9FA] flex items-center justify-center text-[#18A879] shrink-0">
                   <CalendarDays className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
@@ -380,10 +380,10 @@ export const MobileMoreSheet = ({
 
           <button
             onClick={() => handleNav('calendar')}
-            className="w-full min-h-[48px] p-3 rounded-2xl glass hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-sky-100 dark:border-sky-900/40 flex items-center justify-between text-left active:scale-98 transition"
+            className="w-full min-h-[48px] p-3 rounded-2xl bg-white/75 hover:bg-[#EAF5FF] border border-[#D5E9FA] flex items-center justify-between text-left active:scale-98 transition"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-600">
+              <div className="w-8 h-8 rounded-xl bg-[#EAF5FF] border border-[#D5E9FA] flex items-center justify-center text-[#0878D1]">
                 <CalendarDays className="w-4 h-4" />
               </div>
               <div>
