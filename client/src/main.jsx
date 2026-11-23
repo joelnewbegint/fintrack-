@@ -60,28 +60,29 @@ class ErrorBoundary extends Component {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-          color: '#ffffff',
+          background: 'linear-gradient(165deg, #F3F9FF 0%, #EAF5FF 48%, #D5E9FA 100%)',
+          color: '#183653',
           fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
           padding: '24px',
           textAlign: 'center',
         }}>
           <div style={{
-            background: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(16px)',
+            background: 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(20px)',
             borderRadius: '24px',
+            border: '1px solid #D5E9FA',
             padding: '36px',
             maxWidth: '480px',
             width: '100%',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+            boxShadow: '0 20px 50px -10px rgba(8, 120, 209, 0.15)',
           }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '8px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '8px', color: '#183653' }}>
               VK BANKER'S & FINANCE
             </h2>
-            <p style={{ fontSize: '13px', color: '#38bdf8', marginBottom: '16px', fontWeight: '600' }}>
+            <p style={{ fontSize: '13px', color: '#0878D1', marginBottom: '16px', fontWeight: '700' }}>
               தவணை நிதி மேலாண்மை - System Recovery
             </p>
-            <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: '1.6', marginBottom: '24px' }}>
+            <p style={{ fontSize: '12px', color: '#647C95', lineHeight: '1.6', marginBottom: '24px' }}>
               Your financial data and customer records are safely stored. Click below to refresh the application.
             </p>
             <button
@@ -91,15 +92,35 @@ class ErrorBoundary extends Component {
                 padding: '14px',
                 borderRadius: '14px',
                 border: 'none',
-                background: '#0ea5e9',
+                background: 'linear-gradient(135deg, #0878D1 0%, #064B8E 100%)',
                 color: '#ffffff',
                 fontSize: '13px',
                 fontWeight: '800',
                 cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(8, 120, 209, 0.3)',
               }}
             >
               Reload Application / மீண்டும் தொடங்கு
             </button>
+            {this.state.error && (
+              <details style={{ marginTop: '16px', textAlign: 'left', fontSize: '11px', color: '#647C95' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: '600' }}>Technical Details</summary>
+                <pre style={{
+                  marginTop: '8px',
+                  padding: '10px',
+                  background: '#F3F9FF',
+                  borderRadius: '10px',
+                  border: '1px solid #D5E9FA',
+                  overflowX: 'auto',
+                  fontSize: '10px',
+                  color: '#9B2C2C',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}>
+                  {String(this.state.error.message || this.state.error)}
+                </pre>
+              </details>
+            )}
           </div>
         </div>
       );

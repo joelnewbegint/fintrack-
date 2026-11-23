@@ -34,6 +34,7 @@ import {
   Loader2,
   Trash2,
   FileSpreadsheet,
+  Sparkles,
 } from 'lucide-react';
 
 export const Settings = () => {

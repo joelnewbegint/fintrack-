@@ -23,6 +23,7 @@ import {
   MoreHorizontal,
   Sparkles,
   Wallet,
+  Coins,
   Check,
   MessageSquare,
   RotateCcw,
@@ -267,12 +268,13 @@ export const Navbar = ({
 
           {/* Loans Shortcut */}
           <button
-            onClick={onOpenLoanForm || onOpenLoans || (() => {
-              if (typeof window !== 'undefined') {
+            onClick={() => {
+              if (onOpenLoanForm) onOpenLoanForm();
+              else if (typeof window !== 'undefined') {
                 window.history.pushState({}, '', '/loans');
                 window.dispatchEvent(new PopStateEvent('popstate'));
               }
-            })}
+            }}
             className="hidden xl:inline-flex items-center space-x-1.5 h-9 px-3 rounded-full bg-white/80 border border-[#D5E9FA] hover:bg-[#EAF5FF] hover:border-[#55B8F5] text-xs font-bold text-[#183653] transition shadow-xs shrink-0"
             title="View Loans"
           >
