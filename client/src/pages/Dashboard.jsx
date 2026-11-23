@@ -99,6 +99,39 @@ export const Dashboard = ({
   const [trendDays, setTrendDays] = useState(30);
   const [trendChartType, setTrendChartType] = useState('area');
 
+  // Real-time Live Clock for Hero Banner
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getGreeting = () => {
+    const hour = currentDateTime.getHours();
+    if (hour < 12) return lang === 'ta' ? 'காலை வணக்கம்' : 'Good morning';
+    if (hour < 17) return lang === 'ta' ? 'மதிய வணக்கம்' : 'Good afternoon';
+    return lang === 'ta' ? 'மாலை வணக்கம்' : 'Good evening';
+  };
+
+  const hoursRaw = currentDateTime.getHours();
+  const hours12 = (hoursRaw % 12 || 12).toString().padStart(2, '0');
+  const minutes = currentDateTime.getMinutes().toString().padStart(2, '0');
+  const seconds = currentDateTime.getSeconds().toString().padStart(2, '0');
+  const ampm = hoursRaw >= 12 ? 'PM' : 'AM';
+
+  const formattedDate = currentDateTime.toLocaleDateString(lang === 'ta' ? 'ta-IN' : 'en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const displayName = user?.name || 'Vasantha Kumar K';
+  const roleLabel = user?.role === 'owner' ? (lang === 'ta' ? 'உரிமையாளர்' : 'Owner') : (user?.role || 'Staff');
+
   useEffect(() => {
     if (isOwner) {
       api.getAgents().then((res) => {
@@ -1181,50 +1214,95 @@ export const Dashboard = ({
                MOBILE DASHBOARD (Top to Bottom: Section F, E, A)
             ======================================================== */
             <div className="space-y-4">
-              {/* 1. Mobile Ocean Blue Welcome Banner with Quick Actions */}
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0878D1] via-[#0764AF] to-[#064B8E] text-white p-5 shadow-[0_10px_30px_rgba(8,120,209,0.22)] border border-white/20">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/20 text-white backdrop-blur-xs mb-1">
-                      <Sparkles className="w-2.5 h-2.5 text-[#55B8F5]" />
-                      <span>{lang === 'ta' ? 'வி.கே. பேங்கர்ஸ்' : "VK Banker's"}</span>
+              {/* 1. Mobile Ocean Blue Welcome Banner with Live Clock & Quick Actions */}
+              <div className="p-2.5 sm:p-3 rounded-[24px] bg-[#EAF5FF]/80 backdrop-blur-xl border border-[#D5E9FA] shadow-[0_6px_20px_rgba(8,120,209,0.06)]">
+                <div className="relative overflow-hidden rounded-[20px] bg-[#0878D1] text-white p-4 sm:p-5 shadow-[0_10px_28px_rgba(8,120,209,0.20)] space-y-3">
+                  {/* Subtle ambient glow */}
+                  <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white/10 blur-xl pointer-events-none" />
+
+                  <div className="relative z-10 flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-white/15 text-white border border-white/20 backdrop-blur-md">
+                      <Sparkles className="w-3 h-3 text-[#55B8F5]" />
+                      <span>{lang === 'ta' ? 'வி.கே. பேங்கர்ஸ்' : "VK Banker's Fintech"}</span>
                     </span>
-                    <h2 className="font-black text-lg text-white tracking-tight leading-tight">
-                      {lang === 'ta' ? 'வணக்கம்' : 'Welcome'}, {user?.name?.split(' ')[0] || 'Sir'}
+                    <span className="px-3 py-0.5 rounded-full text-[10px] font-semibold bg-white/15 text-white border border-white/20">
+                      {roleLabel}
+                    </span>
+                  </div>
+
+                  <div className="relative z-10">
+                    <p className="text-xs font-medium text-white/90">
+                      {getGreeting()}
+                    </p>
+                    <h2 className="text-xl font-extrabold text-white tracking-tight mt-0.5 mb-1 leading-tight">
+                      {displayName}
                     </h2>
-                    <p className="text-[11px] text-white/80 capitalize">
-                      {new Date().toLocaleDateString(lang === 'ta' ? 'ta-IN' : 'en-IN', {
-                        weekday: 'short',
-                        day: 'numeric',
-                        month: 'short',
-                      })}
+                    <p className="text-[11px] text-white/80 leading-snug">
+                      {lang === 'ta'
+                        ? 'நிதி மேலாண்மை மற்றும் நேரலை வசூல் பதிவேடு'
+                        : 'Financial portfolio overview and real-time collection ledger'}
                     </p>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/20 text-white border border-white/30 shrink-0">
-                    {user?.role === 'owner' ? 'Owner' : user?.role === 'client' ? 'Client' : 'Agent'}
-                  </span>
-                </div>
 
-                {/* Mobile Quick Action Buttons */}
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/20">
-                  <button
-                    onClick={onOpenNewLoan}
-                    className="flex-1 py-1.5 px-2.5 rounded-xl bg-white text-[#0878D1] font-black text-xs shadow-sm active:scale-95 transition text-center"
-                  >
-                    + Loan
-                  </button>
-                  <button
-                    onClick={onOpenNewCustomer}
-                    className="flex-1 py-1.5 px-2.5 rounded-xl bg-white/20 text-white font-black text-xs border border-white/30 backdrop-blur-xs active:scale-95 transition text-center"
-                  >
-                    + Customer
-                  </button>
-                  <button
-                    onClick={onOpenPayment}
-                    className="flex-1 py-1.5 px-2.5 rounded-xl bg-[#55B8F5] text-[#064B8E] font-black text-xs shadow-sm active:scale-95 transition text-center"
-                  >
-                    Collect
-                  </button>
+                  {/* Mobile Live Time IST Compact Widget */}
+                  <div className="relative z-10 bg-white/15 backdrop-blur-md border border-white/20 rounded-xl p-3 text-white flex items-center justify-between shadow-inner">
+                    <div>
+                      <div className="flex items-center space-x-1 text-[10px] text-white/80 font-medium">
+                        <Clock className="w-3 h-3 text-[#55B8F5]" />
+                        <span>Live time · IST</span>
+                      </div>
+                      <p className="text-[11px] font-medium text-white/90 mt-0.5">
+                        {formattedDate}
+                      </p>
+                    </div>
+                    <div className="flex items-baseline">
+                      <span className="text-xl font-black text-white tabular-nums tracking-tight">
+                        {hours12}:{minutes}
+                      </span>
+                      <span className="text-xs font-bold text-white/85 tabular-nums ml-1">
+                        {seconds}
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded bg-white/20 border border-white/30 text-[9px] font-black text-white ml-1.5 uppercase">
+                        {ampm}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Mobile Quick Action Buttons: 2x2 Grid */}
+                  <div className="relative z-10 grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={onOpenNewLoan}
+                      className="h-9 px-3 rounded-full bg-white text-[#0878D1] font-bold text-xs shadow-sm active:scale-95 transition flex items-center justify-center space-x-1.5"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5 text-[#0878D1]" />
+                      <span>{lang === 'ta' ? 'புதிய கடன்' : 'New loan'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onOpenNewCustomer}
+                      className="h-9 px-3 rounded-full bg-white/15 text-white font-semibold text-xs border border-white/20 active:scale-95 transition flex items-center justify-center space-x-1.5"
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      <span>{lang === 'ta' ? 'வாடிக்கையாளர்' : 'Customer'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onOpenPayment}
+                      className="h-9 px-3 rounded-full bg-[#55B8F5] text-white font-bold text-xs shadow-sm active:scale-95 transition flex items-center justify-center space-x-1.5"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>{lang === 'ta' ? 'தவணை வசூல்' : 'Collect EMI'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onOpenInvestment || (() => onNavigateTab && onNavigateTab('settings'))}
+                      className="h-9 px-3 rounded-full bg-white/15 text-white font-semibold text-xs border border-white/20 active:scale-95 transition flex items-center justify-center space-x-1.5"
+                    >
+                      <Landmark className="w-3.5 h-3.5 text-[#55B8F5]" />
+                      <span>{lang === 'ta' ? 'முதலீடு' : 'Investment'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1847,94 +1925,109 @@ export const Dashboard = ({
                DESKTOP & TABLET DASHBOARD (Rich Multi-pane Layout)
             ======================================================== */
             <div className="space-y-6">
-              {/* 1. Ocean Blue Welcome Banner with Modern Fintech Styling */}
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0878D1] via-[#0764AF] to-[#064B8E] text-white p-6 sm:p-7 shadow-[0_14px_40px_rgba(8,120,209,0.25)] border border-white/20">
-                {/* Modern Fintech Background Glow and Geometrics */}
-                <div className="absolute -right-12 -top-12 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-                <div className="absolute right-32 -bottom-16 w-48 h-48 rounded-full bg-[#55B8F5]/20 blur-xl pointer-events-none" />
-                <svg
-                  className="absolute right-0 top-0 bottom-0 h-full w-1/2 opacity-10 pointer-events-none hidden md:block"
-                  viewBox="0 0 400 200"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M0 100 C 100 20, 200 180, 400 60"
-                    stroke="white"
-                    strokeWidth="3"
-                    fill="none"
-                  />
-                  <path
-                    d="M0 130 C 120 50, 220 200, 400 90"
-                    stroke="white"
-                    strokeWidth="2"
-                    fill="none"
-                  />
-                </svg>
+              {/* 1. Ocean Blue Welcome Banner with Modern Fintech Styling & Live IST Clock */}
+              <div className="p-3 sm:p-4 rounded-[32px] bg-[#EAF5FF]/80 backdrop-blur-xl border border-[#D5E9FA] shadow-[0_8px_30px_rgba(8,120,209,0.06)]">
+                <div className="relative overflow-hidden rounded-[24px] sm:rounded-[28px] bg-[#0878D1] text-white p-6 sm:p-7 shadow-[0_12px_36px_rgba(8,120,209,0.22)]">
+                  {/* Subtle ambient glow */}
+                  <div className="absolute -right-12 -top-12 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+                  <div className="absolute left-1/3 -bottom-16 w-48 h-48 rounded-full bg-[#55B8F5]/20 blur-xl pointer-events-none" />
 
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-                  {/* Greeting and Status */}
-                  <div className="space-y-1.5 max-w-xl">
-                    <div className="flex items-center space-x-2">
-                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/15 text-white border border-white/25 backdrop-blur-xs">
-                        <Sparkles className="w-3 h-3 text-[#55B8F5]" />
-                        <span>{lang === 'ta' ? 'வி.கே. பேங்கர்ஸ் ஃபின்டெக்' : "VK Banker's Fintech"}</span>
-                      </span>
-                      <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#18A879]/90 text-white shadow-xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        <span>{lang === 'ta' ? 'நேரலை இணைப்பு' : 'DB Online'}</span>
-                      </span>
+                  <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    {/* Left: Badges, Greeting, Name, Tagline & Action Buttons */}
+                    <div className="space-y-4 max-w-2xl">
+                      {/* Top Badges */}
+                      <div className="flex items-center space-x-2.5">
+                        <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 hover:bg-white/20 text-white border border-white/25 backdrop-blur-md transition-colors">
+                          <Sparkles className="w-3.5 h-3.5 text-[#55B8F5]" />
+                          <span>{lang === 'ta' ? 'வி.கே. பேங்கர்ஸ் ஃபின்டெக்' : "VK Banker's Fintech"}</span>
+                        </span>
+                        <span className="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-semibold bg-white/15 hover:bg-white/20 text-white border border-white/25 backdrop-blur-md transition-colors">
+                          {roleLabel}
+                        </span>
+                      </div>
+
+                      {/* Greeting & Name */}
+                      <div>
+                        <p className="text-sm sm:text-base font-medium text-white/90">
+                          {getGreeting()}
+                        </p>
+                        <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mt-0.5 mb-1.5">
+                          {displayName}
+                        </h1>
+                        <p className="text-xs sm:text-sm font-normal text-white/85 leading-relaxed">
+                          {lang === 'ta'
+                            ? 'நிதி மேலாண்மை மற்றும் நேரலை வசூல் பதிவேடு'
+                            : 'Financial portfolio overview and real-time collection ledger'}
+                        </p>
+                      </div>
+
+                      {/* Bottom Action Buttons Row */}
+                      <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                        {/* New Loan - White Pill */}
+                        <button
+                          type="button"
+                          onClick={onOpenNewLoan}
+                          className="h-10 px-5 rounded-full bg-white hover:bg-white/95 text-[#0878D1] font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center space-x-2 cursor-pointer"
+                        >
+                          <PlusCircle className="w-4 h-4 text-[#0878D1]" />
+                          <span>{lang === 'ta' ? 'புதிய கடன்' : 'New loan'}</span>
+                        </button>
+
+                        {/* Customer - Translucent Glass Pill */}
+                        <button
+                          type="button"
+                          onClick={onOpenNewCustomer}
+                          className="h-10 px-5 rounded-full bg-white/15 hover:bg-white/25 text-white font-semibold text-xs sm:text-sm border border-white/25 backdrop-blur-md transition-all active:scale-95 flex items-center space-x-2 cursor-pointer"
+                        >
+                          <Users className="w-4 h-4" />
+                          <span>{lang === 'ta' ? 'வாடிக்கையாளர்' : 'Customer'}</span>
+                        </button>
+
+                        {/* Collect EMI - Sky Blue Pill */}
+                        <button
+                          type="button"
+                          onClick={onOpenPayment}
+                          className="h-10 px-5 rounded-full bg-[#55B8F5] hover:bg-[#41aaf0] text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 flex items-center space-x-2 cursor-pointer"
+                        >
+                          <CreditCard className="w-4 h-4" />
+                          <span>{lang === 'ta' ? 'தவணை வசூல்' : 'Collect EMI'}</span>
+                        </button>
+
+                        {/* Investment - Translucent Glass Pill */}
+                        {(isOwner || onOpenInvestment) && (
+                          <button
+                            type="button"
+                            onClick={onOpenInvestment || (() => onNavigateTab && onNavigateTab('settings'))}
+                            className="h-10 px-5 rounded-full bg-white/15 hover:bg-white/25 text-white font-semibold text-xs sm:text-sm border border-white/25 backdrop-blur-md transition-all active:scale-95 flex items-center space-x-2 cursor-pointer"
+                          >
+                            <Landmark className="w-4 h-4 text-[#55B8F5]" />
+                            <span>{lang === 'ta' ? 'முதலீடு' : 'Investment'}</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-xs">
-                      {lang === 'ta' ? 'வணக்கம்' : 'Welcome back'}, {user?.name || 'Administrator'}
-                    </h1>
-
-                    <p className="text-xs sm:text-sm text-white/85 font-medium leading-relaxed">
-                      {new Date().toLocaleDateString(lang === 'ta' ? 'ta-IN' : 'en-IN', {
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })} • {lang === 'ta' ? 'வங்கி செயல்பாடுகள் மற்றும் வசூல் பதிவேடு' : 'Financial portfolio overview & real-time collection ledger'}
-                    </p>
-                  </div>
-
-                  {/* Quick Action Buttons */}
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <button
-                      onClick={onOpenNewLoan}
-                      className="px-4 py-2.5 rounded-xl bg-white text-[#0878D1] font-black text-xs hover:bg-[#EAF5FF] transition-all shadow-md active:scale-95 flex items-center space-x-1.5"
-                    >
-                      <PlusCircle className="w-4 h-4 text-[#0878D1]" />
-                      <span>{lang === 'ta' ? '+ புதிய கடன்' : '+ New Loan'}</span>
-                    </button>
-
-                    <button
-                      onClick={onOpenNewCustomer}
-                      className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-black text-xs border border-white/30 backdrop-blur-xs transition-all active:scale-95 flex items-center space-x-1.5"
-                    >
-                      <Users className="w-4 h-4" />
-                      <span>{lang === 'ta' ? '+ வாடிக்கையாளர்' : '+ Customer'}</span>
-                    </button>
-
-                    <button
-                      onClick={onOpenPayment}
-                      className="px-4 py-2.5 rounded-xl bg-[#55B8F5] hover:bg-[#43a9e8] text-[#064B8E] font-black text-xs transition-all shadow-md active:scale-95 flex items-center space-x-1.5"
-                    >
-                      <CreditCard className="w-4 h-4 text-[#064B8E]" />
-                      <span>{lang === 'ta' ? 'வசூல் பதிவு' : 'Collect EMI'}</span>
-                    </button>
-
-                    {isOwner && onOpenInvestment && (
-                      <button
-                        onClick={onOpenInvestment}
-                        className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black text-xs border border-white/25 backdrop-blur-xs transition-all active:scale-95 flex items-center space-x-1.5"
-                      >
-                        <Landmark className="w-4 h-4 text-[#55B8F5]" />
-                        <span>{lang === 'ta' ? 'முதலீடு' : 'Investment'}</span>
-                      </button>
-                    )}
+                    {/* Right: Live Time IST Glass Card */}
+                    <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-2xl p-4 sm:p-5 text-white shadow-inner min-w-[260px] sm:min-w-[290px] shrink-0 self-start lg:self-center">
+                      <div className="flex items-center space-x-1.5 text-xs text-white/80 font-medium mb-1.5">
+                        <Clock className="w-3.5 h-3.5 text-[#55B8F5]" />
+                        <span>Live time · IST</span>
+                      </div>
+                      <div className="flex items-baseline mb-2">
+                        <span className="text-3xl sm:text-4xl font-black tracking-tight text-white tabular-nums">
+                          {hours12}:{minutes}
+                        </span>
+                        <span className="text-base sm:text-lg font-bold text-white/85 tabular-nums ml-2">
+                          {seconds}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-lg bg-white/20 border border-white/30 text-xs font-black text-white ml-2.5 uppercase">
+                          {ampm}
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm font-medium text-white/90">
+                        {formattedDate}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
