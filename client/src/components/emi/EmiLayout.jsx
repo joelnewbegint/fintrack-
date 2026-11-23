@@ -75,16 +75,13 @@ export const EmiLayout = ({
 
             <div className="flex flex-col justify-center min-w-0">
               <div className="flex items-center space-x-2">
-                <span className="font-black text-sm sm:text-base text-ink tracking-tight leading-tight">
+                <span className="font-black text-sm sm:text-base text-ink tracking-tight leading-tight whitespace-nowrap">
                   {lang === 'ta' ? 'வி.கே. பேங்கர்ஸ்' : "VK BANKER'S"}
                 </span>
                 <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#BFE3FA] text-[#1F6FC8] border border-[#6FB4F2]/60 tracking-wide">
                   {lang === 'ta' ? 'மாத தவணை (EMI)' : 'EMI PANEL'}
                 </span>
               </div>
-              <span className="text-[10px] text-muted font-medium tracking-normal leading-tight mt-0.5">
-                Monthly EMI Financing & Ledger System
-              </span>
             </div>
           </div>
 
