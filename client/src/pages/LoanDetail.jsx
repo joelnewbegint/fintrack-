@@ -11,6 +11,7 @@ import WhatsAppPaymentHistoryModal from '../components/common/WhatsAppPaymentHis
 import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 import LoanApplicationFormModal from '../components/common/LoanApplicationFormModal';
 import EditLoanModal from '../components/common/EditLoanModal';
+import LoanActionBar from '../components/common/LoanActionBar';
 import { downloadLoanAgreementPDF, downloadRepaymentSchedulePDF } from '../utils/loanAgreementPdf';
 import {
   ArrowLeft,
@@ -67,6 +68,16 @@ export const LoanDetail = ({ loanId, onBack }) => {
     }
   }, [loanId]);
 
+  const handleDeleteLoan = async () => {
+    try {
+      await api.deleteLoan(loan._id);
+      alert(`Loan ${loan.loanNo} successfully deleted.`);
+      onBack();
+    } catch (err) {
+      alert(err.message || 'Failed to delete loan');
+    }
+  };
+
   if (loading && !loan) {
     return (
       <div className="p-8 text-center text-xs text-slate-400 animate-pulse">
@@ -101,122 +112,55 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
   return (
     <div className="space-y-6">
-      {/* Top Bar with Back Button */}
+      {/* Top Bar with Back Button & Direct Record Payment */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <button
           onClick={onBack}
-          className="flex items-center space-x-2 h-11 px-4 rounded-xl border border-sky-200/80 dark:border-sky-800/60 glass text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition active:scale-95"
+          className="flex items-center space-x-2 h-11 px-4 rounded-xl border border-[#D5E9FA] bg-white/75 backdrop-blur-[20px] text-xs font-bold text-[#183653] hover:bg-[#EAF5FF] transition active:scale-95 shadow-xs"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Loans</span>
+          <ArrowLeft className="w-4 h-4 text-[#0878D1]" />
+          <span>Back to Loans / கடன்கள்</span>
         </button>
 
-        <div className="flex items-center gap-2">
-          {loan.remainingBalance > 0 && (
-            <button
-              onClick={() =>
-                setPayModalItem({
-                  loanId: loan._id,
-                  _id: loan._id,
-                  loanNo: loan.loanNo,
-                  customerName: customer.name,
-                  customerPhone: customer.phone,
-                  customerArea: customer.area,
-                  principal: loan.principal,
-                  totalPayable: loan.totalPayable,
-                  totalCollected: loan.totalCollected || 0,
-                  remainingBalance: loan.remainingBalance,
-                  installmentAmount: loan.installmentAmount,
-                  dueAmount: loan.installmentAmount,
-                  financeType: loan.financeType,
-                  duration: loan.duration,
-                })
-              }
-              className="btn-sky-primary flex items-center space-x-1.5 h-11 px-4 rounded-xl text-xs font-black shadow-lg shadow-sky-500/25 active:scale-95 transition"
-            >
-              <CreditCard className="w-4 h-4" />
-              <span>Record Payment</span>
-            </button>
-          )}
-
+        {loan.remainingBalance > 0 && (
           <button
-            onClick={() => setShowWhatsAppHub(true)}
-            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition"
-            title={lang === 'ta' ? 'வாட்ஸ்அப் செய்தி அனுப்ப' : 'Send WhatsApp Message'}
+            onClick={() =>
+              setPayModalItem({
+                loanId: loan._id,
+                _id: loan._id,
+                loanNo: loan.loanNo,
+                customerName: customer.name,
+                customerPhone: customer.phone,
+                customerArea: customer.area,
+                principal: loan.principal,
+                totalPayable: loan.totalPayable,
+                totalCollected: loan.totalCollected || 0,
+                remainingBalance: loan.remainingBalance,
+                installmentAmount: loan.installmentAmount,
+                dueAmount: loan.installmentAmount,
+                financeType: loan.financeType,
+                duration: loan.duration,
+              })
+            }
+            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:opacity-95 text-white text-xs font-black shadow-md shadow-[#0878D1]/20 active:scale-95 transition"
           >
-            <Smartphone className="w-4 h-4" />
-            <span>WhatsApp Hub</span>
+            <CreditCard className="w-4 h-4" />
+            <span>Record Payment / வசூல் பதிவு</span>
           </button>
-
-          <button
-            onClick={() => setShowPaymentHistoryModal(true)}
-            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition"
-            title="Send full payment history statement to customer via WhatsApp"
-          >
-            <Share2 className="w-4 h-4" />
-            <span>Payment History (வாட்ஸ்அப்)</span>
-          </button>
-
-          <button
-            onClick={() => setShowEditModal(true)}
-            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-md shadow-amber-500/20 active:scale-95 transition"
-            title="Edit Loan Terms, Principal, Duration & Details"
-          >
-            <Pencil className="w-4 h-4" />
-            <span>Edit Loan / திருத்து</span>
-          </button>
-
-          <button
-            onClick={async () => {
-              if (
-                window.confirm(
-                  `Are you sure you want to permanently delete Loan ${loan.loanNo}? This will remove the loan and its transaction records.`
-                )
-              ) {
-                try {
-                  await api.deleteLoan(loan._id);
-                  alert(`Loan ${loan.loanNo} successfully deleted.`);
-                  onBack();
-                } catch (err) {
-                  alert(err.message || 'Failed to delete loan');
-                }
-              }
-            }}
-            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold text-xs shadow-md shadow-red-500/20 active:scale-95 transition"
-            title="Permanently Delete This Loan Account"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>Delete Loan / நீக்கு</span>
-          </button>
-
-          <button
-            onClick={() => downloadLoanAgreementPDF(loan, customer)}
-            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-sky-500/20 active:scale-95 transition"
-            title="Download Official Loan Application & Agreement PDF with Borrower Photo"
-          >
-            <Download className="w-4 h-4" />
-            <span>Download Form PDF</span>
-          </button>
-
-          <button
-            onClick={() => downloadRepaymentSchedulePDF(loan, customer, payments)}
-            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1] text-white font-bold text-xs shadow-md shadow-[#0878D1]/20 active:scale-95 transition"
-            title="Download Official Day-by-Day Repayment Schedule Statement PDF (தவணை அட்டவணை)"
-          >
-            <Calendar className="w-4 h-4" />
-            <span>Repayment Schedule PDF</span>
-          </button>
-
-          <button
-            onClick={() => setShowLoanFormModal(true)}
-            className="flex items-center space-x-1.5 h-11 px-4 rounded-xl glass border border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300 font-bold text-xs hover:bg-sky-50 dark:hover:bg-sky-950/40 active:scale-95 transition"
-            title="Print Official Loan Application & Promissory Form"
-          >
-            <Printer className="w-4 h-4 text-sky-500" />
-            <span>Print Form</span>
-          </button>
-        </div>
+        )}
       </div>
+
+      {/* Redesigned Clean Action Bar (WhatsApp, Payment History, Edit, Documents, Delete) */}
+      <LoanActionBar
+        loan={loan}
+        onOpenWhatsAppHub={() => setShowWhatsAppHub(true)}
+        onOpenPaymentHistory={() => setShowPaymentHistoryModal(true)}
+        onOpenEditLoan={() => setShowEditModal(true)}
+        onDeleteLoan={handleDeleteLoan}
+        onDownloadFormPDF={() => downloadLoanAgreementPDF(loan, customer)}
+        onDownloadRepaymentSchedulePDF={() => downloadRepaymentSchedulePDF(loan, customer, payments)}
+        onPrintForm={() => setShowLoanFormModal(true)}
+      />
 
       {/* Hero Overview Card */}
       <div className="glass-card rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800/80 shadow-lg space-y-6">
