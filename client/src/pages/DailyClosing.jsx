@@ -35,8 +35,9 @@ export const DailyClosing = () => {
   const fetchClosingReport = async () => {
     try {
       setLoading(true);
-      const res = await api.getDailyClosing(selectedDate);
-      if (res.success) {
+      const getter = api.getDailyClosing || api.getDailyClosingReport;
+      const res = await getter(selectedDate);
+      if (res && res.success) {
         setReport(res);
       }
     } catch (err) {

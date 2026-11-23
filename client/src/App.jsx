@@ -51,6 +51,19 @@ export function App() {
   // Role-based activeTab default
   const [activeTab, setActiveTab] = useState(() => {
     try {
+      const path = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '';
+      if (path === '/dailyclosing' || path === '/daily-closing') return 'dailyClosing';
+      if (path === '/customers') return 'customers';
+      if (path === '/payments') return 'payments';
+      if (path === '/investments') return 'investments';
+      if (path === '/expenses') return 'expenses';
+      if (path === '/calendar') return 'calendar';
+      if (path === '/settings') return 'settings';
+      if (path === '/agents') return 'agents';
+      if (path === '/loans/closed') return 'closed-loans';
+      if (path === '/loans/daily' || path === '/loans/weekly' || path === '/loans/monthly') return 'scheme-loans';
+      if (path === '/loans') return 'loans';
+
       const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
       const stored = isRemembered
         ? localStorage.getItem('fintrack_user')
@@ -169,6 +182,41 @@ export function App() {
             return;
           }
           setActiveTab('loans');
+          setOwnerMode('loans');
+        } else if (path === '/dailyclosing' || path === '/daily-closing') {
+          if (isEmiAgent) {
+            window.history.replaceState({}, '', '/emi');
+            setOwnerMode('emi');
+            setActiveEmiTab('dashboard');
+            return;
+          }
+          setActiveTab('dailyClosing');
+          setOwnerMode('loans');
+        } else if (path === '/customers') {
+          if (isEmiAgent) return;
+          setActiveTab('customers');
+          setOwnerMode('loans');
+        } else if (path === '/payments') {
+          if (isEmiAgent) return;
+          setActiveTab('payments');
+          setOwnerMode('loans');
+        } else if (path === '/investments') {
+          if (isEmiAgent || isLoanAgent) return;
+          setActiveTab('investments');
+          setOwnerMode('loans');
+        } else if (path === '/expenses') {
+          if (isEmiAgent || isLoanAgent) return;
+          setActiveTab('expenses');
+          setOwnerMode('loans');
+        } else if (path === '/calendar') {
+          setActiveTab('calendar');
+          setOwnerMode('loans');
+        } else if (path === '/settings') {
+          setActiveTab('settings');
+          setOwnerMode('loans');
+        } else if (path === '/agents') {
+          if (isEmiAgent || isLoanAgent) return;
+          setActiveTab('agents');
           setOwnerMode('loans');
         } else if (path === '/overview' || path === '/' || path === '/dashboard' || path === '') {
           if (isEmiAgent) {
@@ -354,6 +402,10 @@ export function App() {
       setOwnerMode('loans');
       setActiveTab('closed-loans');
       try { window.history.pushState({}, '', '/loans/closed'); } catch (e) {}
+    } else if (tab === 'dailyClosing') {
+      setOwnerMode('loans');
+      setActiveTab('dailyClosing');
+      try { window.history.pushState({}, '', '/dailyClosing'); } catch (e) {}
     } else {
       setOwnerMode('loans');
       setActiveTab(tab === 'overview' ? 'dashboard' : tab);

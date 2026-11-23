@@ -1427,24 +1427,108 @@ export const api = {
     return { success: true };
   },
 
-  // Reports
-  getDailyClosingReport: async (date) => {
+  // Reports & Daily Closing Register
+  getDailyClosing: async function (date) {
     const query = date ? `?date=${date}` : '';
     const result = await safeFetchJson(`/api/reports/daily-closing${query}`, { headers: getHeaders() });
-    if (result.ok) return result.data;
+    if (result.ok && result.data && result.data.success) return result.data;
 
+    // Robust offline / cached local storage calculation
     const payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments);
-    const totalCollected = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+    let targetDate;
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const [y, m, d] = date.split('-').map(Number);
+      targetDate = new Date(y, m - 1, d);
+    } else {
+      targetDate = date ? new Date(date) : new Date();
+    }
+    const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999);
+
+    const dayPayments = payments.filter((p) => {
+      const d = new Date(p.date || p.createdAt);
+      return d >= startOfDay && d <= endOfDay;
+    });
+
+    const totalCollected = dayPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const cashCollected = dayPayments
+      .filter((p) => p.mode === 'cash')
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const upiCollected = dayPayments
+      .filter((p) => p.mode === 'upi')
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+    const byFinanceType = {
+      daily: { expected: 0, collected: 0, pending: 0, cash: 0, upi: 0, receiptsCount: 0, expectedCount: 0 },
+      weekly: { expected: 0, collected: 0, pending: 0, cash: 0, upi: 0, receiptsCount: 0, expectedCount: 0 },
+      monthly: { expected: 0, collected: 0, pending: 0, cash: 0, upi: 0, receiptsCount: 0, expectedCount: 0 },
+    };
+
+    dayPayments.forEach((p) => {
+      const type = (p.loanId?.financeType || p.financeType || 'daily').toLowerCase();
+      if (byFinanceType[type]) {
+        byFinanceType[type].collected += Number(p.amount) || 0;
+        byFinanceType[type].receiptsCount += 1;
+        if (p.mode === 'cash') byFinanceType[type].cash += Number(p.amount) || 0;
+        if (p.mode === 'upi') byFinanceType[type].upi += Number(p.amount) || 0;
+      }
+    });
+
+    let totalExpected = 0;
+    const expectedList = [];
+    loans.forEach((loan) => {
+      if (loan.status === 'active' || loan.status === 'overdue') {
+        (loan.schedule || []).forEach((inst) => {
+          const d = new Date(inst.dueDate);
+          if (d >= startOfDay && d <= endOfDay) {
+            const amt = Number(inst.amount) || 0;
+            totalExpected += amt;
+            const type = (loan.financeType || 'daily').toLowerCase();
+            if (byFinanceType[type]) {
+              byFinanceType[type].expected += amt;
+              byFinanceType[type].expectedCount += 1;
+            }
+            expectedList.push({
+              loanId: loan._id || loan.id,
+              loanNo: loan.loanNo,
+              customerName: loan.customerId?.name || loan.customerName,
+              customerPhone: loan.customerId?.phone || loan.customerPhone,
+              area: loan.customerId?.area || loan.customerArea,
+              financeType: loan.financeType,
+              installmentNo: inst.installmentNo,
+              expectedAmount: amt,
+              paidAmount: Number(inst.paidAmount) || 0,
+              status: inst.status,
+            });
+          }
+        });
+      }
+    });
+
+    Object.keys(byFinanceType).forEach((k) => {
+      byFinanceType[k].pending = Math.max(0, byFinanceType[k].expected - byFinanceType[k].collected);
+    });
+
     return {
       success: true,
-      report: {
-        date: date || new Date().toISOString().slice(0, 10),
-        totalCollections: totalCollected,
-        totalDisbursed: 0,
-        netCash: totalCollected,
-        payments,
+      reportDate: date || targetDate.toISOString().split('T')[0],
+      summary: {
+        totalExpected,
+        totalCollected,
+        pendingAmount: Math.max(0, totalExpected - totalCollected),
+        cashCollected,
+        upiCollected,
+        totalReceiptsCount: dayPayments.length,
+        byFinanceType,
       },
+      payments: dayPayments,
+      expectedList,
     };
+  },
+
+  getDailyClosingReport: async function (date) {
+    return this.getDailyClosing(date);
   },
 
   downloadDatabaseBackup: async () => {

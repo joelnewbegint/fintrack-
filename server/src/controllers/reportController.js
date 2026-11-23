@@ -6,52 +6,68 @@ import Settings from '../models/Settings.js';
 export const getDailyClosingReport = async (req, res, next) => {
   try {
     const { date } = req.query;
-    const targetDate = date ? new Date(date) : new Date();
+    let targetDate;
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const [y, m, d] = date.split('-').map(Number);
+      targetDate = new Date(y, m - 1, d);
+    } else {
+      targetDate = date ? new Date(date) : new Date();
+    }
 
     const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
     const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999);
 
-    // 1. Payments collected on this date
-    const payments = await Payment.find({
+    // 1. Payments collected on this date with role isolation
+    const paymentQuery = {
       date: { $gte: startOfDay, $lte: endOfDay },
-    })
+    };
+    if (req.user?.role === 'loan_agent' && req.user.assignedAreas?.length > 0) {
+      paymentQuery.collectedBy = req.user._id;
+    }
+
+    const payments = await Payment.find(paymentQuery)
       .populate('customerId', 'name phone area')
       .populate('loanId', 'loanNo financeType')
       .populate('collectedBy', 'name role')
       .sort({ date: -1 });
 
-    const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
+    const totalCollected = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     const cashCollected = payments
       .filter((p) => p.mode === 'cash')
-      .reduce((sum, p) => sum + p.amount, 0);
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     const upiCollected = payments
       .filter((p) => p.mode === 'upi')
-      .reduce((sum, p) => sum + p.amount, 0);
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-    // 2. Installments scheduled for this date across active loans
-    const loans = await Loan.find({
+    // 2. Installments scheduled for this date across active loans with role isolation
+    const loanQuery = {
       status: { $in: ['active', 'overdue'] },
-    }).populate('customerId', 'name phone area');
+    };
+    if (req.user?.role === 'loan_agent' && req.user.assignedAreas?.length > 0) {
+      loanQuery.customerArea = { $in: req.user.assignedAreas };
+    }
+    const loans = await Loan.find(loanQuery).populate('customerId', 'name phone area');
 
     let totalExpected = 0;
     const expectedList = [];
 
     loans.forEach((loan) => {
-      loan.schedule.forEach((inst) => {
+      (loan.schedule || []).forEach((inst) => {
         const d = new Date(inst.dueDate);
         if (d >= startOfDay && d <= endOfDay) {
-          totalExpected += inst.amount;
+          const amt = Number(inst.amount) || 0;
+          totalExpected += amt;
           expectedList.push({
             loanId: loan._id,
             loanNo: loan.loanNo,
             customerId: loan.customerId?._id,
-            customerName: loan.customerId?.name,
-            customerPhone: loan.customerId?.phone,
-            area: loan.customerId?.area,
+            customerName: loan.customerId?.name || loan.customerName,
+            customerPhone: loan.customerId?.phone || loan.customerPhone,
+            area: loan.customerId?.area || loan.customerArea,
             financeType: loan.financeType,
             installmentNo: inst.installmentNo,
-            expectedAmount: inst.amount,
-            paidAmount: inst.paidAmount || 0,
+            expectedAmount: amt,
+            paidAmount: Number(inst.paidAmount) || 0,
             status: inst.status,
           });
         }
