@@ -2,7 +2,7 @@ import React from 'react';
 import { Sparkles } from 'lucide-react';
 
 /**
- * Reusable Golden Cream EmptyState Component
+ * Reusable Ocean Blue EmptyState Component
  * - Friendly message
  * - One clear action button (accent pill)
  */
@@ -18,7 +18,7 @@ export const EmptyState = ({
     <div
       className={`glass-card p-8 sm:p-12 text-center rounded-[24px] border border-white/90 space-y-4 max-w-lg mx-auto ${className}`}
     >
-      <div className="w-16 h-16 rounded-full bg-[#FFE7A8] border border-[#FFC94D]/60 flex items-center justify-center mx-auto text-[#C88A00] shadow-sm">
+      <div className="w-16 h-16 rounded-full bg-[#BFE3FA] border border-[#6FB4F2]/60 flex items-center justify-center mx-auto text-[#1F6FC8] shadow-sm">
         <Icon className="w-8 h-8 stroke-[2.2]" />
       </div>
 
@@ -32,7 +32,7 @@ export const EmptyState = ({
           <button
             type="button"
             onClick={onAction}
-            className="btn-accent px-6 py-2.5 text-xs font-black shadow-md active:scale-95 transition"
+            className="btn-accent px-6 py-2.5 text-xs font-bold shadow-md active:scale-95 transition"
           >
             {actionLabel}
           </button>
@@ -43,4 +43,3 @@ export const EmptyState = ({
 };
 
 export default EmptyState;
-

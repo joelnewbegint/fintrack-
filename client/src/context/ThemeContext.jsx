@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect } from 'react';
 
 const ThemeContext = createContext({
-  theme: 'golden-cream',
+  theme: 'ocean-blue',
   setTheme: () => {},
   toggleTheme: () => {},
 });
@@ -9,12 +9,12 @@ const ThemeContext = createContext({
 export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     const root = document.documentElement;
-    root.setAttribute('data-theme', 'golden-cream');
+    root.setAttribute('data-theme', 'ocean-blue');
     root.classList.remove('dark');
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme: 'golden-cream', setTheme: () => {}, toggleTheme: () => {} }}>
+    <ThemeContext.Provider value={{ theme: 'ocean-blue', setTheme: () => {}, toggleTheme: () => {} }}>
       {children}
     </ThemeContext.Provider>
   );

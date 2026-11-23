@@ -1,9 +1,9 @@
 import React from 'react';
 
 /**
- * Circular Collection Progress Ring for Golden Cream Theme
- * - Accent-deep stroke (#C88A00)
- * - Pure white track (#FFFFFF) with subtle soft gold glow
+ * Circular Collection Progress Ring for Ocean Blue Theme
+ * - Accent-deep stroke (#1F6FC8)
+ * - Pure white track (#FFFFFF) with subtle soft sky glow
  * - Center display with percentage and tabular figures
  */
 export const ProgressRing = ({
@@ -32,9 +32,9 @@ export const ProgressRing = ({
           cx={radius}
           cy={radius}
         />
-        {/* Active Progress Stroke (Accent-Deep: #C88A00) */}
+        {/* Active Progress Stroke (Accent-Deep: #1F6FC8) */}
         <circle
-          stroke="#C88A00"
+          stroke="#1F6FC8"
           fill="transparent"
           strokeWidth={stroke}
           strokeDasharray={`${circumference} ${circumference}`}
@@ -65,4 +65,3 @@ export const ProgressRing = ({
 };
 
 export default ProgressRing;
-

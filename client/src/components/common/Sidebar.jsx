@@ -205,21 +205,21 @@ export const Sidebar = ({
 
   return (
     <aside
-      className={`min-h-[calc(100vh-4rem)] bg-white/75 backdrop-blur-md text-ink transition-all duration-300 flex flex-col shrink-0 select-none shadow-golden border-r border-white/85 sticky top-16 self-start max-h-[calc(100vh-4rem)] z-30 ${
+      className={`min-h-[calc(100vh-4rem)] bg-white/75 backdrop-blur-md text-ink transition-all duration-300 flex flex-col shrink-0 select-none shadow-ocean border-r border-white/85 sticky top-16 self-start max-h-[calc(100vh-4rem)] z-30 ${
         isCollapsed ? 'w-16 sm:w-20 p-2 sm:p-2.5 items-center' : 'w-64 p-3.5 sm:p-4'
       }`}
     >
       {/* Header or Collapse Toggle */}
       <div className="flex items-center justify-between pb-2 px-1">
         {!isCollapsed && (
-          <span className="text-[10px] uppercase font-black tracking-widest text-[#C88A00]">
+          <span className="text-[10px] uppercase font-black tracking-widest text-[#1F6FC8]">
             {isEmiAgent ? 'EMI NAVIGATION' : isLoanAgent ? 'LOAN NAVIGATION' : 'LOANS NAVIGATION'}
           </span>
         )}
         {onToggleCollapsed && (
           <button
             onClick={onToggleCollapsed}
-            className="p-1 rounded-xl text-muted hover:text-ink hover:bg-[#FFE7A8]/50 transition mx-auto"
+            className="p-1 rounded-xl text-muted hover:text-ink hover:bg-[#BFE3FA]/50 transition mx-auto"
             title={isCollapsed ? 'Expand Navigation (M)' : 'Collapse Navigation (M)'}
             aria-label={isCollapsed ? 'Expand Navigation' : 'Collapse Navigation'}
           >
@@ -249,7 +249,7 @@ export const Sidebar = ({
                     }}
                     className={`w-full flex items-center justify-center p-3 rounded-2xl transition-all duration-150 group font-bold relative ${
                       isGroupActive
-                        ? 'btn-accent text-ink shadow-md shadow-[#C88A00]/25'
+                        ? 'btn-accent text-ink shadow-md shadow-[#1F6FC8]/25'
                         : 'text-muted hover:bg-white/60 hover:text-ink'
                     }`}
                     title={lang === 'ta' ? item.ta : item.en}
@@ -257,7 +257,7 @@ export const Sidebar = ({
                   >
                     <Icon className={`w-5 h-5 shrink-0 ${isGroupActive ? 'text-ink' : 'text-muted group-hover:text-ink'}`} />
                     {loanCounts.all > 0 && (
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#C88A00]" />
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#1F6FC8]" />
                     )}
                   </button>
                 );
@@ -269,27 +269,27 @@ export const Sidebar = ({
                   <div
                     className={`w-full flex items-center justify-between rounded-2xl transition-all duration-150 group font-bold px-3 py-2.5 cursor-pointer ${
                       isGroupActive
-                        ? 'bg-[#FFE7A8]/60 text-ink border border-[#FFC94D]/60'
+                        ? 'bg-[#BFE3FA]/60 text-ink border border-[#6FB4F2]/60'
                         : 'text-muted hover:bg-white/60 hover:text-ink'
                     }`}
                     onClick={() => setIsLoansExpanded(!isLoansExpanded)}
                   >
                     <div className="flex items-center space-x-2.5 min-w-0">
-                      <Icon className={`w-4 h-4 shrink-0 ${isGroupActive ? 'text-[#C88A00]' : 'text-muted group-hover:text-ink'}`} />
-                      <span className="text-xs font-black tracking-wide truncate">
+                      <Icon className={`w-4 h-4 shrink-0 ${isGroupActive ? 'text-[#1F6FC8]' : 'text-muted group-hover:text-ink'}`} />
+                      <span className="text-xs font-bold tracking-wide truncate">
                         {lang === 'ta' ? item.ta : item.en}
                       </span>
                     </div>
 
                     <div className="flex items-center space-x-1.5">
                       {loanCounts.all > 0 && (
-                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-[#FFE7A8] text-[#8A4A1F] border border-[#FFC94D]/40">
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-[#FFE3CF] text-[#8A4A1F] border border-[#8A4A1F]/30">
                           {loanCounts.all}
                         </span>
                       )}
                       <ChevronDown
                         className={`w-3.5 h-3.5 text-muted transition-transform duration-200 ${
-                          isLoansExpanded ? 'rotate-180 text-[#C88A00]' : ''
+                          isLoansExpanded ? 'rotate-180 text-[#1F6FC8]' : ''
                         }`}
                       />
                     </div>
@@ -309,7 +309,7 @@ export const Sidebar = ({
                           onClick={() => handleSubItemClick(sub.id)}
                           className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all duration-150 group font-bold ${
                             sub.isActive
-                              ? 'btn-accent text-ink shadow-sm translate-x-0.5 font-black'
+                              ? 'btn-accent text-ink shadow-sm translate-x-0.5 font-bold'
                               : 'text-muted hover:bg-white/70 hover:text-ink hover:translate-x-0.5'
                           }`}
                         >
@@ -331,7 +331,7 @@ export const Sidebar = ({
                                   ? 'bg-white/40 text-ink'
                                   : sub.id === 'closed'
                                   ? 'bg-[#FFD6D2]/60 text-[#9B2C2C]'
-                                  : 'bg-[#FFE7A8] text-[#8A4A1F]'
+                                  : 'bg-[#BFE3FA] text-[#1F6FC8]'
                               }`}
                             >
                               {sub.count}
@@ -355,7 +355,7 @@ export const Sidebar = ({
                   isCollapsed ? 'justify-center p-3' : 'px-3.5 py-2.5 space-x-3 text-left'
                 } ${
                   isActive
-                    ? 'btn-accent text-ink shadow-md shadow-[#C88A00]/20 font-black'
+                    ? 'btn-accent text-ink shadow-md shadow-[#1F6FC8]/20 font-bold'
                     : 'text-muted hover:bg-white/60 hover:text-ink'
                 }`}
                 title={isCollapsed ? (lang === 'ta' ? item.ta : item.en) : undefined}
@@ -379,7 +379,7 @@ export const Sidebar = ({
 
       {/* WhatsApp Web shortcut in sidebar */}
       {!isCollapsed && onOpenWhatsAppHub && (
-        <div className="pt-3 border-t border-[#FFE7A8]/70 mt-auto">
+        <div className="pt-3 border-t border-[#BFE3FA]/70 mt-auto">
           <button
             onClick={() => onOpenWhatsAppHub({})}
             className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-[#1F6B4F] bg-[#CDEFE0]/80 border border-[#1F6B4F]/25 hover:bg-[#CDEFE0] transition shadow-xs"

@@ -137,11 +137,11 @@ export const Navbar = ({
   // -------------------------------------------------------------------------
   if (isMobile) {
     return (
-      <header className="sticky top-0 z-40 w-full bg-white/85 backdrop-blur-md border-b border-white/90 shadow-golden transition-colors pt-safe">
+      <header className="sticky top-0 z-40 w-full bg-white/85 backdrop-blur-md border-b border-white/90 shadow-ocean transition-colors pt-safe">
         <div className="px-3 h-14 flex items-center justify-between gap-2 max-w-full">
           {/* Left: Brand Icon + Title */}
           <div className="flex items-center space-x-2 shrink-0 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#FFC94D] to-[#FFC9A0] text-ink flex items-center justify-center shadow-xs border border-white shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#6FB4F2] to-[#8EC5F5] text-ink flex items-center justify-center shadow-xs border border-white shrink-0">
               <Wallet className="w-4 h-4" />
             </div>
             <div className="flex flex-col min-w-0">
@@ -159,7 +159,7 @@ export const Navbar = ({
             {/* Search */}
             <button
               onClick={onOpenSearch}
-              className="w-8 h-8 rounded-full bg-white/80 border border-[#FFE7A8] text-muted hover:text-ink flex items-center justify-center transition active:scale-95 shadow-xs"
+              className="w-8 h-8 rounded-full bg-white/80 border border-[#BFE3FA] text-muted hover:text-ink flex items-center justify-center transition active:scale-95 shadow-xs"
               aria-label="Search"
             >
               <Search className="w-3.5 h-3.5" />
@@ -168,17 +168,17 @@ export const Navbar = ({
             {/* Language Toggle */}
             <button
               onClick={toggleLanguage}
-              className="h-8 px-2 rounded-full bg-white/80 border border-[#FFE7A8] text-[10px] font-black text-ink flex items-center space-x-0.5 active:scale-95 shadow-xs"
+              className="h-8 px-2 rounded-full bg-white/80 border border-[#BFE3FA] text-[10px] font-black text-ink flex items-center space-x-0.5 active:scale-95 shadow-xs"
               title="Toggle Language"
             >
-              <Globe className="w-3 h-3 text-[#C88A00]" />
+              <Globe className="w-3 h-3 text-[#1F6FC8]" />
               <span>{lang === 'ta' ? 'தமிழ்' : 'EN'}</span>
             </button>
 
             {/* Notifications */}
             <button
               onClick={onOpenNotifications}
-              className="relative w-8 h-8 rounded-full bg-white/80 border border-[#FFE7A8] text-ink flex items-center justify-center transition active:scale-95 shadow-xs"
+              className="relative w-8 h-8 rounded-full bg-white/80 border border-[#BFE3FA] text-ink flex items-center justify-center transition active:scale-95 shadow-xs"
               aria-label="Notifications"
             >
               <Bell className="w-3.5 h-3.5 text-ink" />
@@ -192,7 +192,7 @@ export const Navbar = ({
             {/* Profile Avatar */}
             <button
               onClick={onOpenMoreSheet || logout}
-              className="w-8 h-8 rounded-full bg-[#FFC94D] text-ink font-black text-xs flex items-center justify-center shadow-xs border border-white"
+              className="w-8 h-8 rounded-full bg-[#6FB4F2] text-ink font-black text-xs flex items-center justify-center shadow-xs border border-white"
             >
               {user?.name ? user.name[0].toUpperCase() : 'V'}
             </button>
@@ -201,7 +201,7 @@ export const Navbar = ({
 
         {/* Mobile (Owner Only): Single Swap Chip Toggle */}
         {isOwner && (
-          <div className="flex items-center justify-center pb-2 px-3 pt-1 border-t border-[#FFE7A8]/50">
+          <div className="flex items-center justify-center pb-2 px-3 pt-1 border-t border-[#BFE3FA]/50">
             <SingleSwapChip activeMode="loans" onToggle={handleSwitchToEmi} />
           </div>
         )}
@@ -213,14 +213,14 @@ export const Navbar = ({
   // DESKTOP & TABLET TOP BAR
   // -------------------------------------------------------------------------
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-white/90 shadow-golden transition-colors">
+    <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-white/90 shadow-ocean transition-colors">
       <div className="w-full px-3 sm:px-5 h-16 flex items-center justify-between gap-2.5">
         {/* Left: Sidebar Toggle + Luxury Wallet Monogram + VK BANKER'S */}
         <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
           {onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-muted hover:text-ink hover:bg-[#FFE7A8]/40 transition active:scale-95"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-muted hover:text-ink hover:bg-[#BFE3FA]/40 transition active:scale-95"
               title="Toggle Sidebar (M)"
               aria-label="Toggle Navigation Sidebar"
             >
@@ -228,8 +228,8 @@ export const Navbar = ({
             </button>
           )}
 
-          {/* Premium Golden Brand Icon */}
-          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFC94D] to-[#FFC9A0] text-ink flex items-center justify-center shadow-md shadow-[#C88A00]/20 shrink-0 border border-white">
+          {/* Premium Ocean Brand Icon */}
+          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-[#6FB4F2] to-[#8EC5F5] text-ink flex items-center justify-center shadow-md shadow-[#1F6FC8]/20 shrink-0 border border-white">
             <Wallet className="w-5 h-5 drop-shadow-xs" />
             <span
               className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#1F6B4F] ring-2 ring-white"
@@ -243,7 +243,7 @@ export const Navbar = ({
               <span className="font-black text-sm sm:text-base text-ink tracking-tight leading-tight">
                 {lang === 'ta' ? 'வி.கே. பேங்கர்ஸ் & பைனான்ஸ்' : "VK BANKER'S & FINANCE"}
               </span>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#FFE7A8] text-[#8A4A1F] border border-[#FFC94D]/60 tracking-wide hidden md:inline-flex items-center">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#BFE3FA] text-[#1F6FC8] border border-[#6FB4F2]/60 tracking-wide hidden md:inline-flex items-center">
                 {lang === 'ta' ? "VK Banker's" : 'வி.கே.'}
               </span>
             </div>
@@ -257,13 +257,13 @@ export const Navbar = ({
         <div className="flex-1 max-w-xs sm:max-w-sm mx-1 sm:mx-2">
           <button
             onClick={onOpenSearch}
-            className="w-full h-9 flex items-center justify-between px-3.5 rounded-full bg-white/70 border border-[#FFE7A8] text-xs text-muted hover:border-[#FFC94D] hover:text-ink transition shadow-xs"
+            className="w-full h-9 flex items-center justify-between px-3.5 rounded-full bg-white/70 border border-[#BFE3FA] text-xs text-muted hover:border-[#6FB4F2] hover:text-ink transition shadow-xs"
           >
             <div className="flex items-center space-x-2 min-w-0">
               <Search className="w-3.5 h-3.5 text-muted shrink-0" />
               <span className="truncate text-[11px] font-medium">{lang === 'ta' ? 'தேடல் / Search...' : 'Search...'}</span>
             </div>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#FFE7A8]/50 text-muted font-bold shrink-0">
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#BFE3FA]/50 text-muted font-bold shrink-0">
               /
             </span>
           </button>
@@ -281,11 +281,11 @@ export const Navbar = ({
           {/* Synced Pill */}
           <button
             onClick={handleSyncClick}
-            className="h-9 px-3 rounded-full bg-white/80 border border-[#FFE7A8] text-xs font-bold text-ink hover:bg-[#FFE7A8]/50 flex items-center space-x-1.5 transition active:scale-95 shadow-xs"
+            className="h-9 px-3 rounded-full bg-white/80 border border-[#BFE3FA] text-xs font-bold text-ink hover:bg-[#BFE3FA]/50 flex items-center space-x-1.5 transition active:scale-95 shadow-xs"
             title="Cloud Sync Status"
           >
             {isManualSyncing || syncState.status === 'syncing' ? (
-              <RefreshCw className="w-3 h-3 text-[#C88A00] animate-spin" />
+              <RefreshCw className="w-3 h-3 text-[#1F6FC8] animate-spin" />
             ) : syncState.status === 'synced' ? (
               <span className="w-2 h-2 rounded-full bg-[#1F6B4F] shrink-0" />
             ) : (
@@ -297,7 +297,7 @@ export const Navbar = ({
           {/* Notification Bell */}
           <button
             onClick={onOpenNotifications}
-            className="relative h-9 w-9 rounded-full bg-white/80 border border-[#FFE7A8] hover:bg-[#FFE7A8]/50 text-ink flex items-center justify-center transition active:scale-95 shadow-xs"
+            className="relative h-9 w-9 rounded-full bg-white/80 border border-[#BFE3FA] hover:bg-[#BFE3FA]/50 text-ink flex items-center justify-center transition active:scale-95 shadow-xs"
             aria-label="Notifications"
           >
             <Bell className="w-4 h-4 text-ink" />
@@ -311,15 +311,15 @@ export const Navbar = ({
           {/* Quick Language Toggle */}
           <button
             onClick={toggleLanguage}
-            className="h-9 px-3 rounded-full bg-white/80 border border-[#FFE7A8] hover:bg-[#FFE7A8]/50 text-xs font-black text-ink flex items-center space-x-1 transition active:scale-95 shadow-xs"
+            className="h-9 px-3 rounded-full bg-white/80 border border-[#BFE3FA] hover:bg-[#BFE3FA]/50 text-xs font-black text-ink flex items-center space-x-1 transition active:scale-95 shadow-xs"
             title="Toggle Language / மொழி மாற்றம்"
           >
-            <Globe className="w-3.5 h-3.5 text-[#C88A00]" />
+            <Globe className="w-3.5 h-3.5 text-[#1F6FC8]" />
             <span className="text-[11px] font-black">{lang === 'ta' ? 'தமிழ்' : 'EN'}</span>
           </button>
 
           {/* Role Badge */}
-          <div className="hidden lg:flex items-center space-x-1 px-2.5 py-1 rounded-full bg-[#FFE7A8] text-[#8A4A1F] border border-[#FFC94D]/60 text-[10.5px] font-black">
+          <div className="hidden lg:flex items-center space-x-1 px-2.5 py-1 rounded-full bg-[#BFE3FA] text-[#1F6FC8] border border-[#6FB4F2]/60 text-[10.5px] font-black">
             <ShieldCheck className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>{isOwner ? 'OWNER' : isLoanAgent ? 'LOAN AGENT' : isEmiAgent ? 'EMI AGENT' : 'STAFF'}</span>
           </div>
@@ -334,8 +334,8 @@ export const Navbar = ({
               }}
               className={`h-9 px-3 rounded-full border text-xs font-bold flex items-center space-x-1.5 transition active:scale-95 shadow-xs ${
                 showMoreMenu
-                  ? 'bg-[#FFE7A8] border-[#FFC94D] text-ink ring-2 ring-[#FFC94D]/30'
-                  : 'bg-white/80 border-[#FFE7A8] text-ink hover:bg-[#FFE7A8]/50'
+                  ? 'bg-[#BFE3FA] border-[#6FB4F2] text-ink ring-2 ring-[#6FB4F2]/30'
+                  : 'bg-white/80 border-[#BFE3FA] text-ink hover:bg-[#BFE3FA]/50'
               }`}
               title="More Options & Utilities"
               aria-label="More options"
@@ -360,14 +360,14 @@ export const Navbar = ({
                 />
 
                 <div
-                  className="fixed inset-x-0 bottom-0 z-50 w-full max-w-md mx-auto rounded-t-[24px] sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2.5 sm:w-[340px] sm:max-w-none sm:rounded-[20px] bg-white/95 backdrop-blur-md shadow-golden-lg border border-[#FFE7A8] p-3 text-xs space-y-2.5 animate-in fade-in zoom-in-95 duration-150 origin-top-right text-ink"
+                  className="fixed inset-x-0 bottom-0 z-50 w-full max-w-md mx-auto rounded-t-[24px] sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2.5 sm:w-[340px] sm:max-w-none sm:rounded-[20px] bg-white/95 backdrop-blur-md shadow-ocean-lg border border-[#BFE3FA] p-3 text-xs space-y-2.5 animate-in fade-in zoom-in-95 duration-150 origin-top-right text-ink"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Mobile Drag Handle */}
-                  <div className="sm:hidden flex flex-col items-center pb-2 border-b border-[#FFE7A8]">
-                    <div className="w-12 h-1.5 rounded-full bg-[#FFE7A8] mx-auto mb-2 shrink-0" />
+                  <div className="sm:hidden flex flex-col items-center pb-2 border-b border-[#BFE3FA]">
+                    <div className="w-12 h-1.5 rounded-full bg-[#BFE3FA] mx-auto mb-2 shrink-0" />
                     <div className="w-full flex items-center justify-between px-1">
-                      <span className="font-black text-xs text-ink">
+                      <span className="font-bold text-xs text-ink">
                         {lang === 'ta' ? 'கூடுதல் விருப்பங்கள்' : 'More Options & Utilities'}
                       </span>
                       <button
@@ -391,7 +391,7 @@ export const Navbar = ({
                         <button
                           type="button"
                           onClick={resetToAuto}
-                          className="text-[10px] font-bold text-[#C88A00] hover:underline flex items-center space-x-1"
+                          className="text-[10px] font-bold text-[#1F6FC8] hover:underline flex items-center space-x-1"
                         >
                           <RotateCcw className="w-2.5 h-2.5" />
                           <span>Reset</span>
@@ -399,13 +399,13 @@ export const Navbar = ({
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 rounded-2xl bg-[#FFFBEF] border border-[#FFE7A8]">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 rounded-2xl bg-[#F4FAFF] border border-[#BFE3FA]">
                       <button
                         type="button"
                         onClick={() => setMode('mobile')}
                         className={`min-h-[44px] py-2 px-1 flex flex-col items-center justify-center rounded-xl text-center transition-all duration-150 active:scale-95 ${
                           mode === 'mobile'
-                            ? 'bg-[#FFC94D] text-ink shadow-sm font-black'
+                            ? 'bg-[#6FB4F2] text-ink shadow-sm font-bold'
                             : 'text-muted hover:bg-white font-semibold'
                         }`}
                       >
@@ -418,7 +418,7 @@ export const Navbar = ({
                         onClick={() => setMode('tablet')}
                         className={`min-h-[44px] py-2 px-1 flex flex-col items-center justify-center rounded-xl text-center transition-all duration-150 active:scale-95 ${
                           mode === 'tablet'
-                            ? 'bg-[#FFC94D] text-ink shadow-sm font-black'
+                            ? 'bg-[#6FB4F2] text-ink shadow-sm font-bold'
                             : 'text-muted hover:bg-white font-semibold'
                         }`}
                       >
@@ -431,7 +431,7 @@ export const Navbar = ({
                         onClick={() => setMode('laptop')}
                         className={`min-h-[44px] py-2 px-1 flex flex-col items-center justify-center rounded-xl text-center transition-all duration-150 active:scale-95 ${
                           mode === 'laptop'
-                            ? 'bg-[#FFC94D] text-ink shadow-sm font-black'
+                            ? 'bg-[#6FB4F2] text-ink shadow-sm font-bold'
                             : 'text-muted hover:bg-white font-semibold'
                         }`}
                       >
@@ -444,18 +444,18 @@ export const Navbar = ({
                         onClick={() => setMode('auto')}
                         className={`min-h-[44px] py-2 px-1 flex flex-col items-center justify-center rounded-xl text-center transition-all duration-150 active:scale-95 ${
                           mode === 'auto'
-                            ? 'bg-ink text-white shadow-sm font-black'
+                            ? 'bg-ink text-white shadow-sm font-bold'
                             : 'text-muted hover:bg-white font-semibold'
                         }`}
                       >
-                        <Sparkles className="w-4 h-4 mb-1 text-[#FFC94D] shrink-0" />
+                        <Sparkles className="w-4 h-4 mb-1 text-[#6FB4F2] shrink-0" />
                         <span className="text-[11px] leading-tight">Auto</span>
                       </button>
                     </div>
                   </div>
 
                   {/* Section Divider */}
-                  <div className="my-2 border-t border-[#FFE7A8]" />
+                  <div className="my-2 border-t border-[#BFE3FA]" />
 
                   {/* SECTION 2: Menu Rows */}
                   <div className="space-y-2">
@@ -466,14 +466,14 @@ export const Navbar = ({
                           setShowMoreMenu(false);
                           onOpenWhatsAppHub();
                         }}
-                        className="w-full min-h-[54px] p-2.5 rounded-2xl bg-white/80 hover:bg-[#FFFBEF] border border-[#FFE7A8] flex items-center justify-between text-left transition-all duration-150 active:scale-[0.98] group"
+                        className="w-full min-h-[54px] p-2.5 rounded-2xl bg-white/80 hover:bg-[#F4FAFF] border border-[#BFE3FA] flex items-center justify-between text-left transition-all duration-150 active:scale-[0.98] group"
                       >
                         <div className="flex items-center space-x-3 min-w-0">
                           <div className="w-9 h-9 rounded-xl bg-[#CDEFE0] text-[#1F6B4F] flex items-center justify-center shrink-0">
                             <MessageSquare className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
-                            <p className="font-black text-xs text-ink truncate">WhatsApp Hub</p>
+                            <p className="font-bold text-xs text-ink truncate">WhatsApp Hub</p>
                             <p className="text-[11px] text-muted truncate">
                               {lang === 'ta' ? 'அறிவிப்புகள் & ரசீதுகள் அனுப்ப' : 'Share notices & receipts'}
                             </p>
@@ -492,20 +492,20 @@ export const Navbar = ({
                           setShowMoreMenu(false);
                           onOpenLoanForm();
                         }}
-                        className="w-full min-h-[54px] p-2.5 rounded-2xl bg-white/80 hover:bg-[#FFFBEF] border border-[#FFE7A8] flex items-center justify-between text-left transition-all duration-150 active:scale-[0.98] group"
+                        className="w-full min-h-[54px] p-2.5 rounded-2xl bg-white/80 hover:bg-[#F4FAFF] border border-[#BFE3FA] flex items-center justify-between text-left transition-all duration-150 active:scale-[0.98] group"
                       >
                         <div className="flex items-center space-x-3 min-w-0">
-                          <div className="w-9 h-9 rounded-xl bg-[#FFE7A8] text-[#8A4A1F] flex items-center justify-center shrink-0">
+                          <div className="w-9 h-9 rounded-xl bg-[#BFE3FA] text-[#1F6FC8] flex items-center justify-center shrink-0">
                             <FileText className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
-                            <p className="font-black text-xs text-ink truncate">Loan Application Form</p>
+                            <p className="font-bold text-xs text-ink truncate">Loan Application Form</p>
                             <p className="text-[11px] text-muted truncate">
                               {lang === 'ta' ? 'கடன் விண்ணப்ப படிவம்' : 'Print blank borrower form'}
                             </p>
                           </div>
                         </div>
-                        <div className="w-7 h-7 rounded-full bg-[#FFFBEF] text-muted flex items-center justify-center shrink-0 group-hover:text-ink transition-all">
+                        <div className="w-7 h-7 rounded-full bg-[#F4FAFF] text-muted flex items-center justify-center shrink-0 group-hover:text-ink transition-all">
                           <ChevronRight className="w-4 h-4" />
                         </div>
                       </button>
@@ -518,20 +518,20 @@ export const Navbar = ({
                           setShowMoreMenu(false);
                           promptInstall();
                         }}
-                        className="w-full min-h-[54px] p-2.5 rounded-2xl bg-white/80 hover:bg-[#FFFBEF] border border-[#FFE7A8] flex items-center justify-between text-left transition-all duration-150 active:scale-[0.98] group"
+                        className="w-full min-h-[54px] p-2.5 rounded-2xl bg-white/80 hover:bg-[#F4FAFF] border border-[#BFE3FA] flex items-center justify-between text-left transition-all duration-150 active:scale-[0.98] group"
                       >
                         <div className="flex items-center space-x-3 min-w-0">
-                          <div className="w-9 h-9 rounded-xl bg-[#FFC94D]/30 text-[#C88A00] flex items-center justify-center shrink-0">
+                          <div className="w-9 h-9 rounded-xl bg-[#6FB4F2]/30 text-[#1F6FC8] flex items-center justify-center shrink-0">
                             <Download className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
-                            <p className="font-black text-xs text-ink truncate">Install Web App</p>
+                            <p className="font-bold text-xs text-ink truncate">Install Web App</p>
                             <p className="text-[11px] text-muted truncate">
                               {lang === 'ta' ? 'செயலியை நிறுவுக' : 'Add to home screen'}
                             </p>
                           </div>
                         </div>
-                        <div className="w-7 h-7 rounded-full bg-[#FFFBEF] text-muted flex items-center justify-center shrink-0 group-hover:text-ink transition-all">
+                        <div className="w-7 h-7 rounded-full bg-[#F4FAFF] text-muted flex items-center justify-center shrink-0 group-hover:text-ink transition-all">
                           <ChevronRight className="w-4 h-4" />
                         </div>
                       </button>
@@ -541,8 +541,8 @@ export const Navbar = ({
                   {/* Agent Filter for Owner */}
                   {isOwner && agentList.length > 0 && (
                     <>
-                      <div className="my-2 border-t border-[#FFE7A8]" />
-                      <div className="p-2.5 rounded-2xl bg-[#FFFBEF] border border-[#FFE7A8] space-y-1.5">
+                      <div className="my-2 border-t border-[#BFE3FA]" />
+                      <div className="p-2.5 rounded-2xl bg-[#F4FAFF] border border-[#BFE3FA] space-y-1.5">
                         <p className="text-[10px] font-bold text-muted uppercase tracking-wider px-0.5">
                           Filter Agent / கள முகவர்
                         </p>
@@ -552,7 +552,7 @@ export const Navbar = ({
                             setSelectedAgent(e.target.value);
                             window.dispatchEvent(new CustomEvent('fintrack:filter-agent', { detail: e.target.value }));
                           }}
-                          className="w-full h-8 px-2 rounded-lg bg-white text-xs font-bold text-ink border border-[#FFE7A8] outline-none cursor-pointer"
+                          className="w-full h-8 px-2 rounded-lg bg-white text-xs font-bold text-ink border border-[#BFE3FA] outline-none cursor-pointer"
                         >
                           <option value="all">All Agents / அனைத்து முகவர்கள்</option>
                           {agentList.map((a) => (
@@ -576,26 +576,26 @@ export const Navbar = ({
                 e.stopPropagation();
                 setShowUserMenu((prev) => !prev);
               }}
-              className="flex items-center space-x-2 pl-1.5 pr-3 py-1 rounded-full border border-[#FFE7A8] bg-white/80 shadow-xs cursor-pointer active:scale-95 transition"
+              className="flex items-center space-x-2 pl-1.5 pr-3 py-1 rounded-full border border-[#BFE3FA] bg-white/80 shadow-xs cursor-pointer active:scale-95 transition"
               title="User Profile & Settings"
             >
-              <div className="w-7 h-7 rounded-full bg-[#FFC94D] text-ink flex items-center justify-center font-black text-xs shadow-xs border border-white">
+              <div className="w-7 h-7 rounded-full bg-[#6FB4F2] text-ink flex items-center justify-center font-bold text-xs shadow-xs border border-white">
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
               </div>
               <div className="text-left hidden sm:block leading-tight">
-                <span className="text-xs font-black text-ink block">
+                <span className="text-xs font-bold text-ink block">
                   {user?.name || 'Vasantha'}
                 </span>
-                <span className="text-[9.5px] text-[#C88A00] font-bold block capitalize">
+                <span className="text-[9.5px] text-[#1F6FC8] font-bold block capitalize">
                   {user?.role === 'owner' ? 'Owner' : user?.role === 'emi_agent' ? 'EMI Agent' : user?.role === 'loan_agent' || user?.role === 'agent' ? 'Loan Agent' : user?.role === 'client' ? 'Client' : 'Staff'}
                 </span>
               </div>
             </div>
 
             {showUserMenu && (
-              <div className="absolute right-0 top-full mt-1.5 w-56 rounded-2xl bg-white/95 backdrop-blur-md shadow-golden-lg border border-[#FFE7A8] p-3 z-50 text-xs space-y-2 text-ink">
-                <div className="border-b border-[#FFE7A8] pb-2">
-                  <p className="font-black text-sm text-ink truncate">
+              <div className="absolute right-0 top-full mt-1.5 w-56 rounded-2xl bg-white/95 backdrop-blur-md shadow-ocean-lg border border-[#BFE3FA] p-3 z-50 text-xs space-y-2 text-ink">
+                <div className="border-b border-[#BFE3FA] pb-2">
+                  <p className="font-bold text-sm text-ink truncate">
                     {user?.name || 'Administrator'}
                   </p>
                   <p className="text-[11px] text-muted truncate">{user?.phone || user?.role}</p>
@@ -607,7 +607,7 @@ export const Navbar = ({
                       setShowUserMenu(false);
                       onOpenMoreSheet();
                     }}
-                    className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl text-ink hover:bg-[#FFFBEF] font-bold transition text-left"
+                    className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl text-ink hover:bg-[#F4FAFF] font-bold transition text-left"
                   >
                     <MoreHorizontal className="w-4 h-4 text-muted" />
                     <span>Settings & Utilities</span>

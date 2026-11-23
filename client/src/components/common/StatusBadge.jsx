@@ -3,12 +3,12 @@ import { CheckCircle2, Clock, AlertTriangle, Calendar } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 /**
- * Standard StatusBadge Component for Golden Cream Design System
+ * Standard StatusBadge Component for Ocean Blue Design System
  * Status colors (same everywhere, always show a text label too):
  *   Due:      bg #FFE3CF  text #8A4A1F
  *   Overdue:  bg #FFD6D2  text #9B2C2C
  *   Paid:     bg #CDEFE0  text #1F6B4F
- *   Upcoming: white with ink text and #FFE7A8 border
+ *   Upcoming: white with ink text and #BFE3FA border
  */
 export const StatusBadge = ({ status, customLabel, size = 'md', className = '' }) => {
   const { lang } = useLanguage ? useLanguage() : { lang: 'en' };
@@ -17,7 +17,7 @@ export const StatusBadge = ({ status, customLabel, size = 'md', className = '' }
   let config = {
     bg: 'bg-white',
     text: 'text-ink',
-    border: 'border border-[#FFE7A8]',
+    border: 'border border-[#BFE3FA]',
     icon: Calendar,
     labelEn: 'Upcoming',
     labelTa: 'வரவிருக்கும்',

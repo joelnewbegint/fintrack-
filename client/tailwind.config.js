@@ -4,28 +4,28 @@ export default {
   theme: {
     extend: {
       colors: {
-        cream: {
-          DEFAULT: '#FFFBEF',
+        ice: {
+          DEFAULT: '#F4FAFF',
           50: '#FFFFFF',
-          100: '#FFFBEF',
-          200: '#FFF5D6',
-          300: '#FFEDB8',
+          100: '#F4FAFF',
+          200: '#E6F4FE',
+          300: '#D5EDFD',
         },
-        'gold-soft': {
-          DEFAULT: '#FFE7A8',
-          light: '#FFF0C7',
-          dark: '#F5D382',
+        sky: {
+          DEFAULT: '#BFE3FA',
+          light: '#D7EEFC',
+          dark: '#A6D7F8',
         },
-        apricot: {
-          DEFAULT: '#FFC9A0',
-          light: '#FFD7B8',
-          dark: '#F5B07E',
+        'ocean-soft': {
+          DEFAULT: '#8EC5F5',
+          light: '#A6D2F7',
+          dark: '#73B4F1',
         },
         accent: {
-          DEFAULT: '#FFC94D',
-          hover: '#FFBE2E',
-          active: '#F5B119',
-          deep: '#C88A00',
+          DEFAULT: '#6FB4F2',
+          hover: '#5EA7E8',
+          active: '#4A98DE',
+          deep: '#1F6FC8',
         },
         ink: {
           DEFAULT: '#2B3A4A',
@@ -61,9 +61,9 @@ export default {
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       boxShadow: {
-        golden: '0 8px 24px rgba(43, 58, 74, 0.12)',
-        'golden-lg': '0 16px 36px rgba(43, 58, 74, 0.16)',
-        'golden-sm': '0 4px 12px rgba(43, 58, 74, 0.08)',
+        ocean: '0 8px 24px rgba(43, 58, 74, 0.12)',
+        'ocean-lg': '0 16px 36px rgba(43, 58, 74, 0.16)',
+        'ocean-sm': '0 4px 12px rgba(43, 58, 74, 0.08)',
         glass: '0 8px 24px rgba(43, 58, 74, 0.12)',
         'glass-hover': '0 16px 36px rgba(43, 58, 74, 0.16)',
       },

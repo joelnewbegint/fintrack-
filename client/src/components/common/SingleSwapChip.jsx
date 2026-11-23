@@ -47,9 +47,9 @@ export const SingleSwapChip = ({
       title={isEmi ? 'Switch to Loans / கடன்' : 'Switch to EMI / மாத தவணை'}
       className={`group inline-flex items-center gap-2 rounded-full cursor-pointer select-none transition-all duration-300 shadow-xs hover:shadow-sm active:scale-95 ${className}`}
       style={{
-        backgroundColor: '#FBF6EC',
-        border: '1px solid #D9E8F2',
-        color: '#0C3B5C',
+        backgroundColor: 'rgba(255, 255, 255, 0.85)',
+        border: '1px solid #BFE3FA',
+        color: '#2B3A4A',
         height: '40px',
         paddingLeft: '14px',
         paddingRight: '14px',
@@ -62,22 +62,22 @@ export const SingleSwapChip = ({
           width: '26px',
           height: '26px',
           borderRadius: '50%',
-          backgroundColor: isEmi ? '#BDEBDD' : '#BFE3F7',
+          backgroundColor: isEmi ? '#CDEFE0' : '#BFE3FA',
           transform: `rotate(${isEmi ? 360 : 0}deg)`,
           transition: 'transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1), background-color 0.35s ease',
         }}
       >
         {isEmi ? (
-          <BarChart3 className="w-[14px] h-[14px] text-[#0C3B5C] transition-opacity duration-300" strokeWidth={2.2} />
+          <BarChart3 className="w-[14px] h-[14px] text-[#2B3A4A] transition-opacity duration-300" strokeWidth={2.2} />
         ) : (
-          <Briefcase className="w-[14px] h-[14px] text-[#0C3B5C] transition-opacity duration-300" strokeWidth={2.2} />
+          <Briefcase className="w-[14px] h-[14px] text-[#2B3A4A] transition-opacity duration-300" strokeWidth={2.2} />
         )}
       </span>
 
       {/* Active Text Label */}
       <span
-        className="font-medium text-[14px] tracking-tight whitespace-nowrap"
-        style={{ color: '#0C3B5C' }}
+        className="font-bold text-[13px] tracking-tight whitespace-nowrap"
+        style={{ color: '#2B3A4A' }}
       >
         {isEmi ? 'EMI' : 'Loans'}
       </span>

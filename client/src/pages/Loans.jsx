@@ -44,23 +44,12 @@ import {
   BarChart2,
 } from 'lucide-react';
 
-// Colorful avatar helper matching the mockup (letter M in blue, R in purple, S in emerald, K in rose, A in sky blue)
+// Initials avatar helper for Ocean Blue Theme
 const getAvatarStyle = (name = '') => {
   const char = (name || 'B').trim().charAt(0).toUpperCase();
-  const palette = [
-    { bg: 'bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 ring-1 ring-blue-300/40' },
-    { bg: 'bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 ring-1 ring-purple-300/40' },
-    { bg: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 ring-1 ring-emerald-300/40' },
-    { bg: 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 ring-1 ring-rose-300/40' },
-    { bg: 'bg-sky-100 text-sky-700 dark:bg-sky-950/70 dark:text-sky-300 ring-1 ring-sky-300/40' },
-    { bg: 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 ring-1 ring-amber-300/40' },
-    { bg: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 ring-1 ring-indigo-300/40' },
-    { bg: 'bg-teal-100 text-teal-700 dark:bg-teal-950/70 dark:text-teal-300 ring-1 ring-teal-300/40' },
-  ];
-  const code = char.charCodeAt(0) || 0;
   return {
     char,
-    classes: palette[code % palette.length].bg,
+    classes: 'bg-[#BFE3FA] text-[#1F6FC8] border border-[#6FB4F2]/50 shadow-xs',
   };
 };
 
@@ -1126,7 +1115,7 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
               return (
                 <div
                   key={loan._id}
-                  className="bg-white/90 dark:bg-slate-900/90 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm space-y-3"
+                  className="glass-card glass-hover rounded-[20px] p-4 bg-white/62 border border-white/85 shadow-ocean space-y-3"
                 >
                   {/* Top: Customer Avatar + Name + Loan # */}
                   <div className="flex items-start justify-between gap-2">
@@ -1135,20 +1124,19 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
                         {avatar.char}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                        <p className="font-bold text-sm text-ink truncate">
                           {parsed.primary}
                         </p>
-                        <p className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                        <p className="font-mono text-xs text-muted">
                           {loan.loanNo}
                         </p>
                       </div>
                     </div>
 
                     <div className="text-right">
-                      <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        isOverdue ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+                      <span className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        isOverdue ? 'badge-overdue' : 'badge-paid'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${isOverdue ? 'bg-rose-500' : 'bg-emerald-500'}`} />
                         <span>{isOverdue ? `Overdue • ${daysOverdue}d` : 'Active'}</span>
                       </span>
                     </div>
@@ -1157,33 +1145,33 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
                   {/* Principal & Installment */}
                   <div className="flex items-center justify-between text-xs pt-1">
                     <div>
-                      <p className="text-base font-black text-slate-900 dark:text-white tabular-nums">
+                      <p className="text-base font-black text-ink tabular-nums">
                         {formatCurrency(loan.principal)}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      <p className="text-xs font-bold text-ink">
                         {formatCurrency(loan.installmentAmount)}{' '}
-                        <span className="text-[10px] text-slate-400 font-normal">/ day</span>
+                        <span className="text-[10px] text-muted font-normal">/ day</span>
                       </p>
                     </div>
                   </div>
 
                   {/* Progress Bar & Balance */}
                   <div className="space-y-1">
-                    <div className="flex justify-between items-center text-[10px] text-slate-500 tabular-nums">
+                    <div className="flex justify-between items-center text-[10px] text-muted tabular-nums">
                       <span>{formatCurrency(loan.totalCollected || 0)} of {formatCurrency(loan.totalPayable)} ({recoveryPct}%)</span>
                       {Number(loan.remainingBalance) > 0 ? (
-                        <span className="font-bold text-rose-500 dark:text-rose-400">
+                        <span className="font-bold text-[#8A4A1F]">
                           Bal: {formatCurrency(loan.remainingBalance)}
                         </span>
                       ) : (
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">Paid</span>
+                        <span className="font-bold text-[#1F6B4F]">Paid</span>
                       )}
                     </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div className="w-full bg-white/80 border border-white/90 rounded-full h-2 overflow-hidden">
                       <div
-                        className="bg-emerald-500 h-1.5 rounded-full"
+                        className="bg-[#1F6FC8] h-2 rounded-full transition-all"
                         style={{ width: `${Math.min(100, Math.max(0, recoveryPct))}%` }}
                       />
                     </div>

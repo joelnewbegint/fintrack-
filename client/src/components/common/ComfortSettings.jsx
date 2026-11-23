@@ -106,37 +106,20 @@ export const ComfortSettings = () => {
               </div>
             </div>
 
-            {/* 3. Theme Mode */}
+            {/* 3. Theme Display */}
             <div className="space-y-2">
-              <label className="flex items-center space-x-2 text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                <Sun className="w-4 h-4 text-sky-500" />
-                <span>Theme Mode / வண்ண தீம்</span>
+              <label className="flex items-center space-x-2 text-xs font-bold text-ink uppercase tracking-wider">
+                <Sparkles className="w-4 h-4 text-[#1F6FC8]" />
+                <span>Theme / வண்ண தீம்</span>
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {[
-                  { id: 'lavender-glass', label: 'Lavender Glass', icon: Sparkles, tamil: 'லாவெண்டர்' },
-                  { id: 'glass', label: 'Classic Glass', icon: Layers, tamil: 'கிளாஸ்' },
-                  { id: 'light', label: 'Light', icon: Sun, tamil: 'பகல்' },
-                  { id: 'dark', label: 'Dark', icon: Moon, tamil: 'இரவு' },
-                  { id: 'auto', label: 'Auto', icon: RotateCcw, tamil: 'தானியங்கி' },
-                ].map((th) => {
-                  const Icon = th.icon;
-                  return (
-                    <button
-                      key={th.id}
-                      onClick={() => setThemeMode(th.id)}
-                      className={`min-h-[48px] p-2.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
-                        themeMode === th.id
-                          ? 'bg-gradient-to-r from-sky-400 to-sky-500 text-white font-black shadow-md shadow-sky-500/30 ring-2 ring-sky-300'
-                          : 'glass text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 mb-0.5" />
-                      <span className="text-xs font-bold">{th.label}</span>
-                      <span className="text-[10px] opacity-80">{th.tamil}</span>
-                    </button>
-                  );
-                })}
+              <div className="p-3.5 rounded-2xl bg-white/70 border border-[#BFE3FA] flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-ink">Ocean Blue</span>
+                  <span className="text-[10px] text-muted block">அமைப்பின் நிலையான தீம் (Standard System Theme)</span>
+                </div>
+                <span className="badge-paid px-3 py-1 rounded-full text-xs font-bold">
+                  Active
+                </span>
               </div>
             </div>
 

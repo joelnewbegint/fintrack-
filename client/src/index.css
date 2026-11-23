@@ -3,23 +3,23 @@
 @tailwind utilities;
 
 :root {
-  /* Golden Cream Design System Tokens */
-  --cream:        #FFFBEF;   /* page start */
-  --gold-soft:    #FFE7A8;   /* page middle */
-  --apricot:      #FFC9A0;   /* page end */
-  --accent:       #FFC94D;   /* buttons, active nav, highlights */
-  --accent-deep:  #C88A00;   /* progress rings/bars, icons, links */
+  /* Ocean Blue Design System Tokens */
+  --ice:          #F4FAFF;   /* page start */
+  --sky:          #BFE3FA;   /* page middle */
+  --ocean-soft:   #8EC5F5;   /* page end */
+  --accent:       #6FB4F2;   /* buttons, active nav, highlights */
+  --accent-deep:  #1F6FC8;   /* progress rings/bars, icons, links, focus */
   --ink:          #2B3A4A;   /* main text */
   --muted:        #3F4D5B;   /* secondary text */
   --glass:        rgba(255, 255, 255, 0.62);
   --glass-border: rgba(255, 255, 255, 0.85);
-  --card-bg:      rgba(255, 255, 255, 0.72);
-  --card-border:  rgba(255, 255, 255, 0.90);
+  --card-bg:      rgba(255, 255, 255, 0.62);
+  --card-border:  rgba(255, 255, 255, 0.85);
   --shadow:       0 8px 24px rgba(43, 58, 74, 0.12);
   --shadow-lg:    0 16px 36px rgba(43, 58, 74, 0.16);
   --shadow-sm:    0 4px 12px rgba(43, 58, 74, 0.08);
 
-  /* Status Colors */
+  /* Status Colors (same everywhere, always with text label) */
   --status-due-bg:       #FFE3CF;
   --status-due-text:     #8A4A1F;
   --status-overdue-bg:   #FFD6D2;
@@ -30,6 +30,7 @@
   --status-upcoming-text:#2B3A4A;
 
   /* Standard Radii */
+  --radius:      20px;
   --radius-card: 20px;
   --radius-hero: 24px;
   --radius-nav:  28px;
@@ -45,11 +46,11 @@
   }
 
   body {
-    background-color: #FFFBEF;
+    background-color: #F4FAFF;
     background-image: 
-      radial-gradient(circle at 92% 8%, rgba(255, 201, 77, 0.42) 0%, transparent 45%),
-      radial-gradient(circle at 8% 85%, rgba(255, 201, 160, 0.35) 0%, transparent 50%),
-      linear-gradient(165deg, #FFFBEF 0%, #FFE7A8 48%, #FFC9A0 100%);
+      radial-gradient(circle at 92% 8%, rgba(111, 180, 242, 0.38) 0%, transparent 45%),
+      radial-gradient(circle at 8% 85%, rgba(142, 197, 245, 0.32) 0%, transparent 50%),
+      linear-gradient(165deg, #F4FAFF 0%, #BFE3FA 48%, #8EC5F5 100%);
     background-attachment: fixed;
     color: #2B3A4A;
     min-height: 100vh;
@@ -63,7 +64,7 @@
 }
 
 /* ========================================================
-   GOLDEN CREAM GLASS SURFACES
+   OCEAN BLUE SURFACES & LARGE GLASS SURFACES
    Glass blur (8-12px max) ONLY on large surfaces:
    sidebar, top bar, bottom nav, modals.
    Normal cards use translucent white background without blur.
@@ -85,20 +86,24 @@
   border-radius: 28px;
 }
 
-/* Normal Cards (Clean translucent surface without expensive blur) */
+/* Normal Cards (Clean translucent surface without expensive blur: radius 20, soft shadow, 16px padding) */
 .glass-card,
 .glass {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.90);
-  box-shadow: 0 8px 24px rgba(43, 58, 74, 0.10);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 24px rgba(43, 58, 74, 0.12);
   border-radius: 20px;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-hover:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: 0 14px 32px rgba(43, 58, 74, 0.16);
-  border-color: rgba(255, 201, 77, 0.65);
+  border-color: rgba(111, 180, 242, 0.75);
+}
+
+.glass-hover:active {
+  transform: scale(0.99);
 }
 
 /* Fallback for low-end devices */
@@ -107,29 +112,31 @@
   .glass-nav,
   .glass-card,
   .glass {
-    background: rgba(255, 255, 255, 0.94);
+    background: rgba(255, 255, 255, 0.95);
   }
 }
 
 /* Hero Cards (Collection Summary) */
 .card-hero {
-  background: linear-gradient(135deg, #FFC94D 0%, #FFC9A0 100%);
+  background: linear-gradient(135deg, #6FB4F2 0%, #8EC5F5 100%);
   color: #2B3A4A;
   border-radius: 24px;
-  box-shadow: 0 12px 28px rgba(200, 138, 0, 0.18);
+  box-shadow: 0 12px 28px rgba(31, 111, 200, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.85);
 }
 
 /* ========================================================
-   GOLDEN CREAM BUTTONS & CONTROLS
+   OCEAN BLUE BUTTONS & CONTROLS
 ======================================================== */
 .btn-accent,
 .btn-sky-primary {
-  background: #FFC94D;
+  background: #6FB4F2;
   color: #2B3A4A;
-  font-weight: 800;
+  font-weight: 700;
   border-radius: 9999px;
-  box-shadow: 0 4px 14px rgba(200, 138, 0, 0.22);
+  min-height: 44px;
+  padding: 0 20px;
+  box-shadow: 0 4px 14px rgba(31, 111, 200, 0.20);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   display: inline-flex;
   align-items: center;
@@ -138,8 +145,8 @@
 }
 .btn-accent:hover,
 .btn-sky-primary:hover {
-  background: #FFBE2E;
-  box-shadow: 0 8px 20px rgba(200, 138, 0, 0.32);
+  background: #5EA7E8;
+  box-shadow: 0 8px 20px rgba(31, 111, 200, 0.30);
   transform: translateY(-2px);
 }
 .btn-accent:active,
@@ -149,11 +156,13 @@
 
 .btn-secondary,
 .btn-sky-secondary {
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.75);
   color: #2B3A4A;
-  font-weight: 700;
+  font-weight: 600;
   border-radius: 9999px;
-  border: 1px solid rgba(255, 231, 168, 0.9);
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
   box-shadow: 0 4px 12px rgba(43, 58, 74, 0.06);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   display: inline-flex;
@@ -162,8 +171,8 @@
 }
 .btn-secondary:hover,
 .btn-sky-secondary:hover {
-  background: #FFFBEF;
-  border-color: #FFC94D;
+  background: rgba(255, 255, 255, 0.92);
+  border-color: #6FB4F2;
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(43, 58, 74, 0.10);
 }
@@ -172,12 +181,33 @@
   transform: scale(0.97);
 }
 
-/* Golden Form Input */
+.btn-danger {
+  background-color: #FFD6D2;
+  color: #9B2C2C;
+  font-weight: 700;
+  border-radius: 9999px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid rgba(155, 44, 44, 0.20);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-danger:hover {
+  background-color: #FFC2BC;
+  transform: translateY(-2px);
+}
+.btn-danger:active {
+  transform: scale(0.97);
+}
+
+/* Ocean Form Input (white glass, 14px radius, accent-deep focus ring) */
 .input-glass,
-.input-golden {
+.input-ocean {
   height: 46px;
   background: rgba(255, 255, 255, 0.85);
-  border: 1.5px solid rgba(255, 231, 168, 0.95);
+  border: 1.5px solid rgba(191, 227, 250, 0.95);
   border-radius: 14px;
   color: #2B3A4A;
   padding: 0 16px;
@@ -186,13 +216,13 @@
   transition: all 0.2s ease;
 }
 .input-glass:focus,
-.input-golden:focus {
+.input-ocean:focus {
   outline: none;
-  border-color: #C88A00;
-  box-shadow: 0 0 0 3px rgba(255, 201, 77, 0.35);
+  border-color: #1F6FC8;
+  box-shadow: 0 0 0 3px rgba(111, 180, 242, 0.35);
 }
 .input-glass::placeholder,
-.input-golden::placeholder {
+.input-ocean::placeholder {
   color: #7A8896;
 }
 
@@ -221,13 +251,13 @@
 .badge-upcoming {
   background-color: #FFFFFF;
   color: #2B3A4A;
-  border: 1px solid #FFE7A8;
+  border: 1px solid #BFE3FA;
 }
 
 /* ========================================================
-   GOLDEN SHIMMER SKELETON
+   OCEAN SHIMMER SKELETON
 ======================================================== */
-@keyframes goldShimmer {
+@keyframes oceanShimmer {
   0% {
     background-position: -200% 0;
   }
@@ -235,15 +265,15 @@
     background-position: 200% 0;
   }
 }
-.skeleton-gold {
+.skeleton-ocean {
   background: linear-gradient(
     90deg,
-    rgba(255, 251, 239, 0.7) 25%,
-    rgba(255, 231, 168, 0.9) 50%,
-    rgba(255, 251, 239, 0.7) 75%
+    rgba(244, 250, 255, 0.7) 25%,
+    rgba(191, 227, 250, 0.85) 50%,
+    rgba(244, 250, 255, 0.7) 75%
   );
   background-size: 200% 100%;
-  animation: goldShimmer 1.8s infinite;
+  animation: oceanShimmer 1.8s infinite;
   border-radius: 12px;
 }
 
@@ -263,7 +293,7 @@
   padding-top: max(0.5rem, env(safe-area-inset-top, 0.5rem));
 }
 
-/* Custom Golden Scrollbar */
+/* Custom Ocean Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -272,11 +302,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(200, 138, 0, 0.28);
+  background: rgba(31, 111, 200, 0.28);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(200, 138, 0, 0.55);
+  background: rgba(31, 111, 200, 0.55);
 }
 
 /* Prefers-reduced-motion compliance */

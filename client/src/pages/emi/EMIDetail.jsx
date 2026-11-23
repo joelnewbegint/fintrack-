@@ -308,12 +308,9 @@ VK Banker's & Finance, Coimbatore`;
           {loan.status !== 'completed' && loan.status !== 'foreclosed' && (
             <button
               onClick={() => onOpenCollectModal && onOpenCollectModal({ loanId: loan._id, ...loan })}
-              className="h-9 px-4 rounded-xl font-bold text-xs text-white shadow transition flex items-center space-x-1.5 active:scale-95"
-              style={{
-                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-              }}
+              className="btn-accent h-10 px-5 rounded-full font-bold text-xs text-ink shadow-ocean transition flex items-center space-x-1.5 active:scale-95"
             >
-              <Wallet className="w-3.5 h-3.5" />
+              <Wallet className="w-3.5 h-3.5 text-ink" />
               <span>Collect ₹{Number(loan.installmentAmount).toLocaleString('en-IN')}</span>
             </button>
           )}
@@ -322,34 +319,28 @@ VK Banker's & Finance, Coimbatore`;
 
       {/* Hero Overview Card: Outstanding Balance, Tenure Line, Progress Bar */}
       <div
-        className="rounded-3xl p-6 border space-y-4"
-        style={{
-          background: 'rgba(255, 255, 255, 0.88)',
-          backdropFilter: 'blur(18px)',
-          borderColor: 'rgba(255, 255, 255, 0.95)',
-          boxShadow: '0 12px 30px -8px rgba(249, 115, 22, 0.12)',
-        }}
+        className="glass-card rounded-[24px] p-6 border border-white/95 shadow-ocean space-y-4 bg-white/75"
       >
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+            <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">
               Outstanding Amount / மீதமுள்ள தொகை
             </span>
-            <div className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mt-0.5">
+            <div className="text-3xl sm:text-4xl font-black text-ink tracking-tight mt-0.5 tabular-nums">
               ₹{(loan.remainingBalance || 0).toLocaleString('en-IN')}
             </div>
             {/* Required user line: "total, months, interest % reducing" */}
-            <p className="text-xs text-slate-600 font-medium mt-1">
+            <p className="text-xs text-muted font-medium mt-1">
               Total ₹{(loan.totalPayable || 0).toLocaleString('en-IN')} • {loan.tenureMonths} Months • {loan.interestRatePercent}% ({loan.interestCalculationType || 'reducing'}) interest
             </p>
           </div>
 
           <div className="text-left sm:text-right">
-            <span className="text-xs font-bold text-slate-500">Repayment Status</span>
-            <div className="text-lg font-black text-slate-800">
+            <span className="text-xs font-bold text-muted">Repayment Status</span>
+            <div className="text-lg font-black text-ink tabular-nums">
               {paidCount} of {totalCount} Installments Paid
             </div>
-            <span className="text-[11px] text-slate-500">
+            <span className="text-[11px] text-muted">
               Collected ₹{(loan.totalCollected || 0).toLocaleString('en-IN')} so far
             </span>
           </div>
@@ -357,18 +348,15 @@ VK Banker's & Finance, Coimbatore`;
 
         {/* Progress Bar */}
         <div className="space-y-1 pt-2">
-          <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden">
+          <div className="w-full h-3 rounded-full bg-white/80 border border-white/90 overflow-hidden">
             <div
-              className="h-full rounded-full transition-all duration-500"
+              className="h-full rounded-full transition-all duration-500 bg-[#1F6FC8]"
               style={{
                 width: `${progressPercent}%`,
-                background: loan.status === 'completed'
-                  ? '#10B981'
-                  : 'linear-gradient(90deg, #F97316 0%, #EA580C 100%)',
               }}
             />
           </div>
-          <div className="flex justify-between text-[11px] font-bold text-slate-500">
+          <div className="flex justify-between text-[11px] font-bold text-muted">
             <span>Started: {new Date(loan.startDate).toLocaleDateString()}</span>
             <span>{progressPercent}% Complete</span>
             <span>Matures: {new Date(loan.endDate).toLocaleDateString()}</span>
@@ -413,20 +401,20 @@ VK Banker's & Finance, Coimbatore`;
                     key={inst.installmentNo}
                     className={`flex items-center justify-between p-3.5 rounded-xl border transition ${
                       isPaid
-                        ? 'bg-emerald-50/50 border-emerald-200/60'
+                        ? 'bg-[#CDEFE0]/50 border-[#1F6B4F]/30'
                         : isOverdue
-                        ? 'bg-rose-50/60 border-rose-200/80'
-                        : 'bg-white/80 border-slate-200/70 hover:bg-white'
+                        ? 'bg-[#FFD6D2]/60 border-[#9B2C2C]/30'
+                        : 'bg-white/80 border-[#BFE3FA]/70 hover:bg-white'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
                           isPaid
-                            ? 'bg-emerald-500 text-white'
+                            ? 'bg-[#1F6B4F] text-white'
                             : isOverdue
-                            ? 'bg-rose-500 text-white'
-                            : 'bg-slate-200 text-slate-700'
+                            ? 'bg-[#9B2C2C] text-white'
+                            : 'bg-[#BFE3FA] text-[#1F6FC8]'
                         }`}
                       >
                         #{inst.installmentNo}
@@ -434,24 +422,22 @@ VK Banker's & Finance, Coimbatore`;
 
                       <div>
                         <div className="flex items-center space-x-2">
-                          <span className="text-xs font-black text-slate-900">
+                          <span className="text-xs font-bold text-ink tabular-nums">
                             ₹{Number(inst.amount).toLocaleString('en-IN')}
                           </span>
                           <span
-                            className={`text-[10px] px-2 py-0.2 rounded-full font-bold uppercase ${
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
                               isPaid
-                                ? 'bg-emerald-100 text-emerald-800'
+                                ? 'badge-paid'
                                 : isOverdue
-                                ? 'bg-rose-100 text-rose-800'
-                                : isRescheduled
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-slate-100 text-slate-600'
+                                ? 'badge-overdue'
+                                : 'badge-due'
                             }`}
                           >
-                            {inst.status}
+                            {inst.status === 'paid' ? 'Paid' : isOverdue ? 'Overdue' : 'Due'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-[11px] text-muted">
                           Due: {new Date(inst.dueDate).toLocaleDateString()}
                           {inst.paidDate && ` • Paid on ${new Date(inst.paidDate).toLocaleDateString()}`}
                         </p>
@@ -468,7 +454,7 @@ VK Banker's & Finance, Coimbatore`;
                                 setNewDueDate(new Date(inst.dueDate).toISOString().split('T')[0]);
                                 setShowRescheduleModal(true);
                               }}
-                              className="text-[11px] font-bold text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg border border-slate-200 bg-white"
+                              className="text-[11px] font-bold text-muted hover:text-ink px-2 py-1 rounded-lg border border-[#BFE3FA] bg-white"
                               title="Reschedule installment date"
                             >
                               Postpone
@@ -482,7 +468,7 @@ VK Banker's & Finance, Coimbatore`;
                               amount: inst.amount,
                               ...loan,
                             })}
-                            className="px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold shadow-sm transition active:scale-95"
+                            className="btn-accent px-3 py-1.5 rounded-full text-ink text-xs font-bold shadow-xs transition active:scale-95"
                           >
                             Collect
                           </button>
@@ -490,7 +476,7 @@ VK Banker's & Finance, Coimbatore`;
                       )}
 
                       {isPaid && inst.receiptNo && (
-                        <span className="text-[11px] font-mono text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-lg border border-emerald-200">
+                        <span className="text-[11px] font-mono text-[#1F6B4F] bg-[#CDEFE0] px-2 py-0.5 rounded-lg border border-[#1F6B4F]/30 font-bold">
                           {inst.receiptNo}
                         </span>
                       )}

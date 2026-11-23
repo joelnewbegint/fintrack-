@@ -95,7 +95,7 @@ export const BottomNav = ({ activeTab, setActiveTab, onOpenMoreSheet }) => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto z-40 pointer-events-none px-3 pb-safe mb-2">
-      <nav className="pointer-events-auto h-16 w-full bg-white/90 backdrop-blur-md rounded-[28px] border border-white/95 px-2 flex items-center justify-around shadow-golden-lg text-ink">
+      <nav className="pointer-events-auto h-16 w-full bg-white/90 backdrop-blur-md rounded-[28px] border border-white/95 px-2 flex items-center justify-around shadow-ocean-lg text-ink">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive =
@@ -112,7 +112,7 @@ export const BottomNav = ({ activeTab, setActiveTab, onOpenMoreSheet }) => {
             >
               <div
                 className={`p-1.5 rounded-full transition-all duration-200 ${
-                  isActive ? 'bg-[#FFC94D] text-ink shadow-xs scale-105' : 'hover:bg-white/50'
+                  isActive ? 'bg-[#6FB4F2] text-ink shadow-xs scale-105' : 'hover:bg-white/50'
                 }`}
               >
                 <Icon

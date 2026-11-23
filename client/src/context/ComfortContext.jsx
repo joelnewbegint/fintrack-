@@ -5,7 +5,6 @@ const ComfortContext = createContext();
 const TEXT_SIZE_KEY = 'fintrack_text_size';
 const DENSITY_KEY = 'fintrack_density';
 const REDUCED_MOTION_KEY = 'fintrack_reduced_motion';
-const THEME_MODE_KEY = 'fintrack_theme_mode'; // 'light' | 'dark' | 'auto'
 
 export const ComfortProvider = ({ children }) => {
   const [textSize, setTextSizeState] = useState(() => {
@@ -23,10 +22,6 @@ export const ComfortProvider = ({ children }) => {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
     return false;
-  });
-
-  const [themeMode, setThemeModeState] = useState(() => {
-    return localStorage.getItem(THEME_MODE_KEY) || localStorage.getItem('fintrack_theme') || 'lavender-glass'; // 'lavender-glass' | 'light' | 'dark' | 'auto'
   });
 
   // Apply attributes to <html>
@@ -48,44 +43,17 @@ export const ComfortProvider = ({ children }) => {
     localStorage.setItem(REDUCED_MOTION_KEY, reducedMotion.toString());
   }, [reducedMotion]);
 
-  // Apply theme based on themeMode
+  // Permanently lock to Ocean Blue and ignore old theme keys in localStorage
   useEffect(() => {
     const root = document.documentElement;
-    const applyTheme = (isDark) => {
-      if (isDark) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-    };
-
-    if (themeMode === 'lavender-glass') {
-      root.setAttribute('data-theme', 'lavender-glass');
-      root.classList.remove('dark');
-    } else if (themeMode === 'glass') {
-      root.setAttribute('data-theme', 'glass');
-      root.classList.remove('dark');
-    } else {
-      root.removeAttribute('data-theme');
-      if (themeMode === 'auto') {
-        const media = window.matchMedia('(prefers-color-scheme: dark)');
-        applyTheme(media.matches);
-        const listener = (e) => applyTheme(e.matches);
-        media.addEventListener('change', listener);
-        return () => media.removeEventListener('change', listener);
-      } else {
-        applyTheme(themeMode === 'dark');
-      }
-    }
-
-    localStorage.setItem(THEME_MODE_KEY, themeMode);
-    localStorage.setItem('fintrack_theme', themeMode);
-  }, [themeMode]);
+    root.setAttribute('data-theme', 'ocean-blue');
+    root.classList.remove('dark');
+  }, []);
 
   const setTextSize = useCallback((size) => setTextSizeState(size), []);
   const setDensity = useCallback((d) => setDensityState(d), []);
   const setReducedMotion = useCallback((rm) => setReducedMotionState(rm), []);
-  const setThemeMode = useCallback((tm) => setThemeModeState(tm), []);
+  const setThemeMode = useCallback(() => {}, []);
 
   return (
     <ComfortContext.Provider
@@ -96,7 +64,7 @@ export const ComfortProvider = ({ children }) => {
         setDensity,
         reducedMotion,
         setReducedMotion,
-        themeMode,
+        themeMode: 'ocean-blue',
         setThemeMode,
       }}
     >
@@ -108,7 +76,7 @@ export const ComfortProvider = ({ children }) => {
 export const useComfort = () => {
   const context = useContext(ComfortContext);
   if (!context) {
-    throw new Error('useComfort must be used within ComfortProvider');
+    throw new Error('useComfort must be used within a ComfortProvider');
   }
   return context;
 };

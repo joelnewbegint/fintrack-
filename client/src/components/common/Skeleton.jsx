@@ -1,17 +1,17 @@
 import React from 'react';
 
 /**
- * Reusable Golden Shimmer Skeleton Loader
+ * Reusable Ocean Blue Shimmer Skeleton Loader
  */
 export const Skeleton = ({ className = '', count = 1 }) => {
   if (count === 1) {
-    return <div className={`skeleton-gold ${className}`} aria-hidden="true" />;
+    return <div className={`skeleton-ocean ${className}`} aria-hidden="true" />;
   }
 
   return (
     <div className="space-y-2.5" aria-hidden="true">
       {Array.from({ length: count }).map((_, idx) => (
-        <div key={idx} className={`skeleton-gold ${className}`} />
+        <div key={idx} className={`skeleton-ocean ${className}`} />
       ))}
     </div>
   );
@@ -29,4 +29,3 @@ export const CardSkeleton = () => (
 );
 
 export default Skeleton;
-

@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 /**
- * Reusable Golden Cream GlassModal Component
+ * Reusable Ocean Blue GlassModal Component
  * - Centered dialog on desktop (max blur 12px)
  * - Responsive bottom sheet on mobile (<640px)
  * - Esc key, backdrop tap, and focus trapping
@@ -93,7 +93,7 @@ export const GlassModal = ({
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="golden-modal-title"
+      aria-labelledby="ocean-modal-title"
     >
       {/* Dimmed Backdrop */}
       <div
@@ -112,17 +112,17 @@ export const GlassModal = ({
         }}
       >
         {/* Mobile Pull Handle Indicator */}
-        <div className="w-12 h-1.5 bg-[#FFE7A8] rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+        <div className="w-12 h-1.5 bg-[#BFE3FA] rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
 
         {/* Modal Header */}
         {customHeader ? (
           customHeader
         ) : (
-          <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-[#FFE7A8]/70 flex items-start justify-between gap-3 shrink-0 bg-white/40">
+          <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-[#BFE3FA]/70 flex items-start justify-between gap-3 shrink-0 bg-white/40">
             <div className="min-w-0 pr-2">
               <h3
-                id="golden-modal-title"
-                className="text-base sm:text-lg font-black text-ink tracking-tight truncate flex items-center space-x-2"
+                id="ocean-modal-title"
+                className="text-base sm:text-lg font-bold text-ink tracking-tight truncate flex items-center space-x-2"
               >
                 <span>{title}</span>
               </h3>
@@ -138,7 +138,7 @@ export const GlassModal = ({
                 type="button"
                 onClick={onClose}
                 aria-label={lang === 'ta' ? 'மூடுக' : 'Close modal'}
-                className="p-1.5 rounded-full text-muted hover:text-ink hover:bg-[#FFE7A8]/60 transition active:scale-95 shrink-0"
+                className="p-1.5 rounded-full text-muted hover:text-ink hover:bg-[#BFE3FA]/60 transition active:scale-95 shrink-0"
               >
                 <X className="w-5 h-5 stroke-[2.5]" />
               </button>
@@ -153,7 +153,7 @@ export const GlassModal = ({
 
         {/* Modal Footer */}
         {footer && (
-          <div className="px-5 py-3.5 sm:px-6 sm:py-4 border-t border-[#FFE7A8]/70 bg-white/60 flex items-center justify-end gap-2.5 shrink-0">
+          <div className="px-5 py-3.5 sm:px-6 sm:py-4 border-t border-[#BFE3FA]/70 bg-white/60 flex items-center justify-end gap-2.5 shrink-0">
             {footer}
           </div>
         )}

@@ -101,45 +101,36 @@ export const MobileMoreSheet = ({
           </button>
         </div>
 
-        {/* Quick Preferences: Language & Theme Toggles */}
+        {/* Quick Preferences: Language & Theme Display */}
         <div className="grid grid-cols-2 gap-2.5">
           {/* Language Toggle */}
           <button
             onClick={toggleLanguage}
-            className="p-3 rounded-2xl glass border border-sky-200/60 dark:border-sky-800/60 flex items-center space-x-2.5 text-left active:scale-95 transition"
+            className="p-3 rounded-2xl glass border border-[#BFE3FA] flex items-center space-x-2.5 text-left active:scale-95 transition"
           >
-            <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-[#BFE3FA] flex items-center justify-center text-[#1F6FC8] shrink-0">
               <Globe className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] text-slate-400 uppercase font-black">Language</p>
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+              <p className="text-[10px] text-muted uppercase font-bold">Language</p>
+              <p className="text-xs font-bold text-ink">
                 {lang === 'ta' ? 'தமிழ்' : 'English'}
               </p>
             </div>
           </button>
 
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-3 rounded-2xl glass border border-sky-200/60 dark:border-sky-800/60 flex items-center space-x-2.5 text-left active:scale-95 transition"
-          >
-            <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-purple-600 shrink-0">
-              {theme === 'lavender-glass' ? (
-                <Sparkles className="w-4 h-4 text-[#8B7BD0]" />
-              ) : theme === 'dark' ? (
-                <Sun className="w-4 h-4 text-amber-500" />
-              ) : (
-                <Moon className="w-4 h-4 text-sky-600" />
-              )}
+          {/* Theme Display (Locked to Ocean Blue) */}
+          <div className="p-3 rounded-2xl glass border border-[#BFE3FA] flex items-center space-x-2.5 text-left">
+            <div className="w-8 h-8 rounded-xl bg-[#CDEFE0] flex items-center justify-center text-[#1F6B4F] shrink-0">
+              <Sparkles className="w-4 h-4 text-[#1F6B4F]" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] text-slate-400 uppercase font-black">Theme / தீம்</p>
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 capitalize">
-                {theme === 'lavender-glass' ? 'Lavender Glass' : `${theme} Mode`}
+              <p className="text-[10px] text-muted uppercase font-bold">Theme / தோற்றம்</p>
+              <p className="text-xs font-bold text-[#1F6B4F]">
+                Ocean Blue
               </p>
             </div>
-          </button>
+          </div>
         </div>
 
         {/* Preview Device Switcher (Desktop browsers only, hidden on real phones) */}

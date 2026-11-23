@@ -408,8 +408,8 @@ export const Dashboard = ({
               <BarChart data={activeTrendData} margin={{ top: 16, right: 10, left: -14, bottom: 0 }}>
                 <defs>
                   <linearGradient id="barTrendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0EA5E9" stopOpacity={0.95} />
-                    <stop offset="100%" stopColor="#0284C7" stopOpacity={0.8} />
+                    <stop offset="0%" stopColor="#6FB4F2" stopOpacity={0.95} />
+                    <stop offset="100%" stopColor="#BFE3FA" stopOpacity={0.85} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.12} />
@@ -452,8 +452,8 @@ export const Dashboard = ({
               <AreaChart data={activeTrendData} margin={{ top: 16, right: 10, left: -14, bottom: 0 }}>
                 <defs>
                   <linearGradient id="areaTrendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.42} />
-                    <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0.02} />
+                    <stop offset="5%" stopColor="#6FB4F2" stopOpacity={0.45} />
+                    <stop offset="95%" stopColor="#BFE3FA" stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.12} />

@@ -59,17 +59,17 @@ export const FloatingPaymentButton = ({
             aria-hidden="true"
           />
 
-          <div className="relative glass-panel rounded-t-3xl p-5 border-t border-white/80 dark:border-sky-700/60 shadow-2xl max-w-lg w-full mx-auto space-y-3 pb-safe">
+          <div className="relative glass-panel rounded-t-[28px] p-5 border-t border-white/90 shadow-ocean-lg max-w-lg w-full mx-auto space-y-3 pb-safe bg-white/95 backdrop-blur-md text-ink">
             {/* Drag Handle */}
-            <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-sky-800/80 mx-auto mb-2" />
+            <div className="w-12 h-1.5 rounded-full bg-[#BFE3FA] mx-auto mb-2" />
 
-            <div className="flex items-center justify-between pb-2 border-b border-sky-100 dark:border-sky-900/60">
-              <h3 className="font-black text-sm text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between pb-2 border-b border-[#BFE3FA]">
+              <h3 className="font-bold text-sm text-ink">
                 {lang === 'ta' ? 'விரைவு செயல்கள்' : 'Quick Actions'}
               </h3>
               <button
                 onClick={() => setShowSheet(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600"
+                className="p-1 rounded-full text-muted hover:text-ink"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -186,7 +186,7 @@ export const FloatingPaymentButton = ({
       <div className="fixed bottom-20 left-0 right-0 max-w-lg mx-auto pointer-events-none z-40">
         <button
           onClick={() => setShowSheet(true)}
-          className="pointer-events-auto absolute right-4 bottom-0 w-14 h-14 rounded-full bg-gradient-to-tr from-sky-400 via-sky-500 to-sky-600 text-white shadow-xl shadow-sky-500/40 border-2 border-white/80 flex items-center justify-center active:scale-95 hover:scale-105 transition-all"
+          className="pointer-events-auto absolute right-4 bottom-0 w-14 h-14 rounded-full bg-[#6FB4F2] text-ink shadow-ocean-lg border-2 border-white/90 flex items-center justify-center active:scale-95 hover:scale-105 transition-all font-bold"
           aria-label="Add or Record Action"
           title="Quick Actions (+)"
         >

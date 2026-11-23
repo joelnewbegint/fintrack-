@@ -728,30 +728,27 @@ export const Settings = () => {
                 App Preferences
               </h3>
 
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-white/70 border border-[#BFE3FA]">
                 <div className="flex items-center space-x-2">
-                  <Globe className="w-4 h-4 text-blue-600" />
-                  <span className="text-xs font-semibold">Language / மொழி</span>
+                  <Globe className="w-4 h-4 text-[#1F6FC8]" />
+                  <span className="text-xs font-semibold text-ink">Language / மொழி</span>
                 </div>
                 <button
                   onClick={toggleLanguage}
-                  className="btn-sky-primary py-1 px-3 text-xs font-bold active:scale-95"
+                  className="btn-accent py-1 px-3 text-xs font-bold active:scale-95"
                 >
                   {lang === 'ta' ? 'தமிழ் (Current)' : 'English (Current)'}
                 </button>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-white/70 border border-[#BFE3FA]">
                 <div className="flex items-center space-x-2">
-                  {theme === 'dark' ? <Moon className="w-4 h-4 text-amber-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
-                  <span className="text-xs font-semibold">Appearance / தோற்றம்</span>
+                  <Sparkles className="w-4 h-4 text-[#1F6FC8]" />
+                  <span className="text-xs font-semibold text-ink">Theme / தோற்றம்</span>
                 </div>
-                <button
-                  onClick={toggleTheme}
-                  className="py-1 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold capitalize active:scale-95"
-                >
-                  {theme} Mode
-                </button>
+                <span className="badge-paid py-1 px-3 rounded-full text-xs font-bold">
+                  Ocean Blue
+                </span>
               </div>
             </div>
           </div>
