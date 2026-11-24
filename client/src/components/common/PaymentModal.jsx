@@ -7,7 +7,6 @@ import { useDeviceMode } from '../../context/DeviceModeContext';
 import { useAuth } from '../../context/AuthContext';
 import { openWhatsApp, generateReceiptMessage } from '../../utils/whatsapp';
 import { getSyncQueue } from '../../services/offlineQueue';
-import SmartNameInput from './SmartNameInput';
 import { saveRecentName } from '../../utils/nameCorrection';
 import { saveRecentNumber } from '../../utils/numberCorrection';
 import {
@@ -56,6 +55,17 @@ const getInitialDate = (item) => {
   return formatDateForInput();
 };
 
+/**
+ * Live device date in Asia/Kolkata timezone
+ */
+const getKolkataDate = () => {
+  try {
+    return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+  } catch (e) {
+    return new Date();
+  }
+};
+
 export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
   const { isMobile } = useDeviceMode();
   const { user, isOwner, isLoanAgent } = useAuth();
@@ -66,7 +76,17 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
   const [activeLoansList, setActiveLoansList] = useState([]);
   const [loadingLoans, setLoadingLoans] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'daily' | 'weekly' | 'monthly' | 'pending_today'
+  const [activeFilter, setActiveFilter] = useState('pending_today'); // 'pending_today' default selected
+
+  // Live device date in Asia/Kolkata (updates automatically past midnight)
+  const [liveTime, setLiveTime] = useState(getKolkataDate);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveTime(getKolkataDate());
+    }, 20000); // 20s interval so it catches midnight automatically
+    return () => clearInterval(timer);
+  }, []);
 
   // Today's collections map: { [loanId]: { paymentId, amount, remainingBalance, collectedBy, isOffline } }
   const [todayCollections, setTodayCollections] = useState({});
@@ -92,7 +112,6 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
   const [entryMode, setEntryMode] = useState('payment'); // 'payment' | 'holiday'
   const [holidayType, setHolidayType] = useState('holiday'); // 'holiday' | 'missed'
   const [holidayReason, setHolidayReason] = useState('');
-  const [recordedPayment, setRecordedPayment] = useState(null);
 
   // Advance / Multi-date payment state in full form
   const [useMultiDate, setUseMultiDate] = useState(false);
@@ -373,7 +392,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
   };
 
   // ---------------------------------------------------------------------------
-  // 2) OPEN PENCIL (Full edit / advance payment / multi-date form)
+  // OPEN PENCIL (Full edit / advance payment / multi-date form)
   // ---------------------------------------------------------------------------
   const handleOpenPencil = (loan) => {
     setError('');
@@ -478,18 +497,8 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
   const payNum = Math.max(0, Number(amount) || 0);
   const balanceAfterPayment = Math.max(0, currentBalance - payNum);
 
-  const currentProgressPct =
-    totalPayable > 0 ? Math.min(100, Math.round((totalCollected / totalPayable) * 100)) : 0;
-  const newProgressPct =
-    totalPayable > 0
-      ? Math.min(100, Math.round(((totalCollected + payNum) / totalPayable) * 100))
-      : 0;
-
   const remainingDuesCount =
     installmentAmt > 0 ? Math.ceil(balanceAfterPayment / installmentAmt) : 0;
-
-  const isFullSettlement = payNum > 0 && payNum >= currentBalance && currentBalance > 0;
-  const isOverpaying = payNum > currentBalance && currentBalance > 0;
 
   const rawCustomerName =
     selectedLoan?.customerName ||
@@ -511,7 +520,33 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
     '';
 
   // ---------------------------------------------------------------------------
-  // Full Form Submission Handler (Advance / Multi-date supported)
+  // 2) TODAY SUMMARY METRICS (Calculated purely from existing data)
+  // ---------------------------------------------------------------------------
+  const todayMetrics = useMemo(() => {
+    let due = 0;
+    let collected = 0;
+
+    activeLoansList.forEach((l) => {
+      const loanId = l._id || l.loanId;
+      const instAmt = Number(l.installmentAmount) || Number(l.dueAmount) || 200;
+      const remBal = l.remainingBalance !== undefined ? Number(l.remainingBalance) : instAmt;
+      const capDue = Math.min(instAmt, remBal);
+
+      due += capDue;
+
+      const collectedInfo = todayCollections[String(loanId)];
+      if (collectedInfo) {
+        collected += Number(collectedInfo.amount) || 0;
+      }
+    });
+
+    const pending = Math.max(0, due - collected);
+    const pct = due > 0 ? Math.min(100, Math.round((collected / due) * 100)) : 0;
+    return { due, collected, pending, pct };
+  }, [activeLoansList, todayCollections]);
+
+  // ---------------------------------------------------------------------------
+  // Full Form Submission Handler
   // ---------------------------------------------------------------------------
   const handleFullFormSubmit = async (e) => {
     e.preventDefault();
@@ -538,7 +573,6 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
       let lastRecorded = null;
 
       if (useMultiDate && multiDates.length > 0) {
-        // Record each installment date sequentially
         for (const item of multiDates) {
           const itemAmt = Number(item.amount) || 0;
           if (itemAmt > 0) {
@@ -638,7 +672,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
     }
   };
 
-  // Holiday / Missed day submit
+  // Holiday submit
   const handleHolidaySubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -682,13 +716,13 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
         const loanId = l._id || l.loanId;
         const isCollectedToday = !!todayCollections[String(loanId)];
 
-        // 1. Type / Status Filter Chip
+        // Filter chips logic
         if (activeFilter === 'daily' && l.financeType !== 'daily') return false;
         if (activeFilter === 'weekly' && l.financeType !== 'weekly') return false;
         if (activeFilter === 'monthly' && l.financeType !== 'monthly') return false;
         if (activeFilter === 'pending_today' && isCollectedToday) return false;
 
-        // 2. Search Box Filter
+        // Search logic (Phone remains searchable!)
         if (!searchQuery) return true;
         const q = searchQuery.toLowerCase();
         const custName = (l.customerId?.name || l.customerName || '').toLowerCase();
@@ -711,6 +745,16 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
       });
   }, [activeLoansList, activeFilter, searchQuery, todayCollections]);
 
+  // Calendar tile calculations for current Asia/Kolkata date
+  const tamilWeekdays = ['ஞாயிறு', 'திங்கள்', 'செவ்வாய்', 'புதன்', 'வியாழன்', 'வெள்ளி', 'சனி'];
+  const dayNameEn = liveTime.toLocaleDateString('en-US', { weekday: 'long' });
+  const dayNum = liveTime.getDate();
+  const monthShortEn = liveTime.toLocaleDateString('en-US', { month: 'short' });
+  const monthUpper = monthShortEn.toUpperCase();
+  const yearNum = liveTime.getFullYear();
+  const dayNameTa = tamilWeekdays[liveTime.getDay()] || '';
+  const liveDateString = `${dayNameEn}, ${dayNum} ${monthShortEn} ${yearNum} · ${dayNameTa}`;
+
   return (
     <div
       className={`fixed inset-0 z-50 flex ${
@@ -721,36 +765,49 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
       }}
     >
       <div
-        className={`bg-white ${
+        className={`bg-white dark:bg-slate-900 ${
           isMobile
-            ? 'rounded-t-3xl max-w-lg w-full max-h-[94vh] flex flex-col p-4 pb-safe'
-            : 'rounded-3xl max-w-xl w-full p-5 sm:p-6 max-h-[92vh] flex flex-col'
-        } shadow-2xl border border-[#D5E9FA] overflow-hidden my-auto relative`}
+            ? 'rounded-t-2xl max-w-lg w-full max-h-[94vh] flex flex-col p-4 pb-safe'
+            : 'rounded-2xl max-w-xl w-full max-h-[92vh] flex flex-col p-4 sm:p-5'
+        } shadow-2xl border border-[#D5E9FA] dark:border-slate-800 overflow-hidden my-auto relative`}
       >
         {/* Mobile Drag Handle */}
         {isMobile && (
-          <div className="w-12 h-1.5 rounded-full bg-[#D5E9FA] mx-auto mb-2 shrink-0" />
+          <div className="w-12 h-1.5 rounded-full bg-[#D5E9FA] dark:bg-slate-700 mx-auto mb-2 shrink-0" />
         )}
 
         {/* =========================================================================
-            HEADER: TITLE + ONE-LINE HINT + CLOSE BUTTON
+            1) HEADER WITH TODAY'S DATE (ALWAYS VISIBLE AT TOP)
         ========================================================================= */}
-        <div className="flex justify-between items-start pb-3 border-b border-[#D5E9FA] shrink-0">
-          <div className="min-w-0 flex-1">
-            <h3 className="text-base sm:text-lg font-black text-[#183653] flex items-center space-x-2">
-              <CreditCard className="w-5 h-5 text-[#0878D1] shrink-0" />
-              <span>Record Collection / வசூல் பதிவு</span>
-            </h3>
-            <p className="text-xs text-[#647C95] truncate mt-0.5">
-              {selectedLoan
-                ? `${parsedName.primary} • ${selectedLoan.loanNo}`
-                : 'Tap Collect to save the installment instantly / உடனடியாக தவணையை வரவு வைக்க Collect-ஐ அழுத்தவும்'}
-            </p>
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-[#EAF5FF] dark:bg-slate-800/80 border border-[#D5E9FA] dark:border-slate-700 flex items-center justify-between gap-3 shrink-0 mb-2.5">
+          <div className="flex items-center space-x-3 min-w-0 flex-1">
+            {/* Small Calendar Tile: Month abbreviation on blue strip, big day below */}
+            <div className="w-11 h-12 rounded-xl bg-white dark:bg-slate-900 border border-[#BFE3FA] dark:border-slate-700 overflow-hidden flex flex-col shadow-xs shrink-0 text-center">
+              <div className="bg-[#0878D1] text-white text-[9px] font-black tracking-wider py-0.5 uppercase leading-none">
+                {monthUpper}
+              </div>
+              <div className="flex-1 flex items-center justify-center font-black text-base text-[#183653] dark:text-white leading-none">
+                {dayNum}
+              </div>
+            </div>
+
+            {/* Title & Live Asia/Kolkata Date */}
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm sm:text-base font-black text-[#183653] dark:text-white truncate">
+                {selectedLoan
+                  ? `${parsedName.primary} • ${selectedLoan.loanNo}`
+                  : 'Record Collection / வசூல் பதிவு'}
+              </h3>
+              <p className="text-[11px] sm:text-xs font-semibold text-[#0878D1] dark:text-[#55B8F5] truncate mt-0.5">
+                {liveDateString}
+              </p>
+            </div>
           </div>
 
+          {/* Round Close Button on the Right */}
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#F3F9FF] hover:bg-[#EAF5FF] text-[#647C95] hover:text-[#183653] border border-[#D5E9FA] transition flex items-center justify-center shrink-0 ml-2"
+            className="w-8 h-8 rounded-full bg-white dark:bg-slate-900 hover:bg-[#F3F9FF] text-[#647C95] hover:text-[#183653] dark:text-slate-400 dark:hover:text-white border border-[#D5E9FA] dark:border-slate-700 transition flex items-center justify-center shrink-0 shadow-2xs"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -758,75 +815,190 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
         </div>
 
         {error && (
-          <div className="mt-3 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold shrink-0 flex items-center space-x-2 animate-fade-in">
+          <div className="mb-2 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold shrink-0 flex items-center space-x-2 animate-fade-in">
             <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {/* =========================================================================
-            VIEW 1: REDESIGNED BORROWER SELECTION POPUP WITH DIRECT COLLECT & PENCIL
+            SELECTION VIEW (BORROWER LIST, TODAY SUMMARY, SEARCH & 2-LINE FILTERS)
         ========================================================================= */}
         {!selectedLoan ? (
-          <div className="mt-3 flex-1 overflow-hidden flex flex-col min-h-0">
-            {/* Sticky Search Box */}
-            <div className="shrink-0 mb-2">
-              <SmartNameInput
-                value={searchQuery}
-                onChange={setSearchQuery}
-                isSearch={true}
-                placeholder="Search borrower name, phone, loan #, area..."
-                existingCustomers={activeLoansList
-                  .map((l) => ({
-                    _id: l._id || l.loanId,
-                    name: l.customerId?.name || l.customerName,
-                    phone: l.customerId?.phone || l.customerPhone,
-                    area: l.customerId?.area || l.customerArea,
-                  }))
-                  .filter((c) => c.name)}
-                onSelectCustomer={(cust) => {
-                  setSearchQuery(cust.name);
-                }}
-                inputClassName="w-full pl-10 pr-9 h-11 rounded-2xl bg-[#F3F9FF] border border-[#D5E9FA] text-xs font-medium outline-none focus:ring-2 focus:ring-[#0878D1]/20 focus:border-[#0878D1]"
-              />
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+            {/* FIXED TOP SECTION: TODAY SUMMARY + SEARCH + 2-LINE FILTERS */}
+            <div className="shrink-0 space-y-2 mb-2">
+              {/* 2) Today Summary Strip: 3 Cards + Thin Green Progress Bar */}
+              <div className="p-2.5 rounded-2xl bg-[#F3F9FF] dark:bg-slate-800/40 border border-[#D5E9FA] dark:border-slate-800 space-y-2">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  {/* Due Today */}
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-[#D5E9FA] dark:border-slate-800 shadow-2xs">
+                    <span className="text-[10px] text-[#647C95] dark:text-slate-400 font-bold uppercase block truncate">
+                      Due Today / தேவை
+                    </span>
+                    <p className="text-xs sm:text-sm font-black text-[#183653] dark:text-white tabular-nums mt-0.5">
+                      {formatCurrency(todayMetrics.due)}
+                    </p>
+                  </div>
+
+                  {/* Collected */}
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-emerald-200/80 dark:border-emerald-800/60 shadow-2xs">
+                    <span className="text-[10px] text-[#18A879] font-bold uppercase block truncate">
+                      Collected / வரவு
+                    </span>
+                    <p className="text-xs sm:text-sm font-black text-[#18A879] tabular-nums mt-0.5">
+                      {formatCurrency(todayMetrics.collected)}
+                    </p>
+                  </div>
+
+                  {/* Pending */}
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-amber-200/80 dark:border-amber-800/60 shadow-2xs">
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase block truncate">
+                      Pending / நிலுவை
+                    </span>
+                    <p className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400 tabular-nums mt-0.5">
+                      {formatCurrency(todayMetrics.pending)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Thin Green Progress Bar */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-[#647C95] dark:text-slate-400 px-0.5">
+                    <span>Percent Collected / வசூல் சதவீதம்</span>
+                    <span className="text-[#18A879] font-mono font-bold">{todayMetrics.pct}%</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-[#EAF5FF] dark:bg-slate-700 overflow-hidden">
+                    <div
+                      className="h-full bg-[#18A879] transition-all duration-300 rounded-full"
+                      style={{ width: `${todayMetrics.pct}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 3) Clean Search Field */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-[#647C95] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search borrower name, phone, loan #, area..."
+                  className="w-full pl-9 pr-9 h-10 rounded-xl bg-white dark:bg-slate-900 border border-[#D5E9FA] dark:border-slate-800 text-xs font-medium text-[#183653] dark:text-white placeholder-[#647C95] outline-none focus:border-[#0878D1] focus:ring-2 focus:ring-[#0878D1]/20 transition shadow-2xs"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#647C95] hover:text-[#183653] p-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Chips: 2-line wrap without horizontal scroll */}
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {[
+                  { id: 'pending_today', label: 'Pending today / இன்றைய நிலுவை' },
+                  { id: 'all', label: 'All / அனைத்தும்' },
+                  { id: 'daily', label: 'Daily' },
+                  { id: 'weekly', label: 'Weekly' },
+                  { id: 'monthly', label: 'Monthly' },
+                ].map((chip) => {
+                  const isSelected = activeFilter === chip.id;
+                  return (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={() => setActiveFilter(chip.id)}
+                      className={`px-3 py-1.5 rounded-full text-xs transition border ${
+                        isSelected
+                          ? 'bg-[#0878D1] border-[#0878D1] text-white shadow-xs font-bold'
+                          : 'bg-white dark:bg-slate-800 border-[#D5E9FA] dark:border-slate-700 text-[#647C95] dark:text-slate-300 hover:bg-[#F3F9FF] dark:hover:bg-slate-700 font-medium'
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Filter Chips: All, Daily, Weekly, Monthly, Pending Today */}
-            <div className="flex items-center space-x-1.5 overflow-x-auto pb-2 shrink-0 scrollbar-none">
-              {[
-                { id: 'all', label: 'All / அனைத்தும்' },
-                { id: 'pending_today', label: '⚡ Pending Today / இன்றைய நிலுவை' },
-                { id: 'daily', label: 'Daily / தினசரி' },
-                { id: 'weekly', label: 'Weekly / வாராந்திர' },
-                { id: 'monthly', label: 'Monthly / மாதாந்திர' },
-              ].map((chip) => (
-                <button
-                  key={chip.id}
-                  type="button"
-                  onClick={() => setActiveFilter(chip.id)}
-                  className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition border ${
-                    activeFilter === chip.id
-                      ? 'bg-[#0878D1] border-[#0878D1] text-white shadow-xs'
-                      : 'bg-white border-[#D5E9FA] text-[#647C95] hover:bg-[#F3F9FF]'
-                  }`}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Scrollable Borrower List */}
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 pt-1 pb-2">
+            {/* SCROLLABLE BORROWER LIST */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 pt-0.5 pb-2">
               {loadingLoans ? (
                 <div className="p-8 text-center text-xs font-bold text-[#647C95]">
                   <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#0878D1]" />
                   Loading active loans / கடன்கள் ஏற்றப்படுகிறது...
                 </div>
               ) : filteredAndSortedLoans.length === 0 ? (
-                <div className="p-8 text-center text-xs font-bold text-[#647C95] bg-[#F3F9FF] rounded-2xl border border-[#D5E9FA]">
-                  No loans matching your filter or query.
+                /* 5) Friendly Empty State Card */
+                <div className="p-6 rounded-2xl border-2 border-dashed border-[#D5E9FA] dark:border-slate-800 bg-[#F3F9FF]/60 dark:bg-slate-800/40 text-center space-y-2.5 my-3 animate-fade-in">
+                  {searchQuery.trim().length > 0 ? (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-[#EAF5FF] dark:bg-slate-800 text-[#0878D1] flex items-center justify-center mx-auto">
+                        <Search className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-[#183653] dark:text-white">
+                          No match for "{searchQuery}"
+                        </h4>
+                        <p className="text-xs text-[#647C95] dark:text-slate-400 mt-0.5">
+                          Check the spelling or try searching by borrower name, phone, loan #, or area.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="px-4 py-2 rounded-xl bg-[#0878D1] hover:bg-[#064B8E] text-white font-bold text-xs shadow-xs transition active:scale-95 inline-flex items-center space-x-1.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Clear search / தேடலை நீக்கு</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-[#EAF5FF] dark:bg-slate-800 text-[#0878D1] flex items-center justify-center mx-auto">
+                        {activeFilter === 'pending_today' ? (
+                          <CheckCircle className="w-6 h-6 text-[#18A879]" />
+                        ) : (
+                          <CreditCard className="w-6 h-6 text-[#0878D1]" />
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-[#183653] dark:text-white">
+                          {activeFilter === 'pending_today'
+                            ? 'No pending loans due today / இன்று நிலுவை ஏதுமில்லை'
+                            : activeFilter === 'daily'
+                            ? 'No daily loans due today / தினசரி கடன்கள் ஏதுமில்லை'
+                            : activeFilter === 'weekly'
+                            ? 'No weekly loans due today / வாராந்திர கடன்கள் ஏதுமில்லை'
+                            : activeFilter === 'monthly'
+                            ? 'No monthly loans due today / மாதாந்திர கடன்கள் ஏதுமில்லை'
+                            : 'No active loans found / கடன்கள் ஏதுமில்லை'}
+                        </h4>
+                        <p className="text-xs text-[#647C95] dark:text-slate-400 mt-0.5">
+                          {activeFilter === 'pending_today'
+                            ? 'All scheduled installments for today have been collected or none are due.'
+                            : `There are currently no active ${activeFilter} loans found in this view.`}
+                        </p>
+                      </div>
+                      {activeFilter !== 'all' && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveFilter('all')}
+                          className="px-4 py-2 rounded-xl bg-[#0878D1] hover:bg-[#064B8E] text-white font-bold text-xs shadow-xs transition active:scale-95"
+                        >
+                          Show all loans / அனைத்து கடன்களையும் காட்டு
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
               ) : (
+                /* 4) Borrower Row Cards */
                 filteredAndSortedLoans.map((l) => {
                   const loanId = l._id || l.loanId;
                   const pName = parseCustomerName(l.customerId?.name || l.customerName);
@@ -844,7 +1016,6 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                     pendingSyncLoanIds.has(String(l.loanNo)) ||
                     collectedInfo?.isOffline;
 
-                  // Double collection blocking & Undo permissions
                   const canUndo =
                     isOwner ||
                     (user &&
@@ -858,82 +1029,92 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                   return (
                     <div
                       key={loanId}
-                      className={`p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                      className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
                         isCollected
-                          ? 'bg-emerald-50/80 border-emerald-300 shadow-xs'
-                          : 'bg-white hover:bg-[#F3F9FF] border-[#D5E9FA] shadow-xs'
+                          ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800'
+                          : 'bg-white dark:bg-slate-900 hover:bg-[#F3F9FF] dark:hover:bg-slate-850 border-[#D5E9FA] dark:border-slate-800 shadow-2xs'
                       }`}
                     >
-                      {/* Left: Borrower Identity & Loan Specs */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                          <span className="font-black text-xs sm:text-sm text-[#183653] truncate">
-                            {pName.primary}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] shrink-0">
-                            {l.financeType || 'daily'}
-                          </span>
-                          {isPendingSync && (
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center space-x-1 shrink-0">
-                              <Clock className="w-2.5 h-2.5 animate-spin" />
-                              <span>Pending sync</span>
-                            </span>
-                          )}
+                      {/* Left: Round Initial Avatar + Line 1 (Name, Tag, Loan #, Area) + Line 2 (Balance in Amber) */}
+                      <div className="flex items-center space-x-3 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0878D1] to-[#064B8E] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                          {pName.primary
+                            .split(' ')
+                            .map((n) => n[0])
+                            .slice(0, 2)
+                            .join('')
+                            .toUpperCase() || 'VK'}
                         </div>
 
-                        <p className="text-[11px] text-[#647C95] font-mono truncate mt-0.5">
-                          <span className="font-bold text-[#0878D1]">{l.loanNo}</span>
-                          {(l.customerId?.phone || l.customerPhone) && (
-                            <span> • 📞 {l.customerId?.phone || l.customerPhone}</span>
-                          )}
-                          {(l.customerId?.area || l.customerArea) && (
-                            <span> • 📍 {l.customerId?.area || l.customerArea}</span>
-                          )}
-                        </p>
+                        <div className="min-w-0 flex-1">
+                          {/* Line 1: Name, Tag, Loan #, Area (Phone hidden to avoid clutter) */}
+                          <div className="flex items-center space-x-2 flex-wrap gap-y-0.5">
+                            <span className="font-black text-sm text-[#183653] dark:text-white truncate">
+                              {pName.primary}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#EAF5FF] dark:bg-slate-800 text-[#0878D1] dark:text-[#55B8F5] border border-[#D5E9FA] dark:border-slate-700 shrink-0">
+                              {l.financeType || 'daily'}
+                            </span>
+                            <span className="font-bold text-xs text-[#0878D1] dark:text-[#55B8F5] font-mono shrink-0">
+                              {l.loanNo}
+                            </span>
+                            {(l.customerId?.area || l.customerArea) && (
+                              <span className="text-xs text-[#647C95] dark:text-slate-400 truncate">
+                                • {l.customerId?.area || l.customerArea}
+                              </span>
+                            )}
+                            {isPendingSync && (
+                              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center space-x-1 shrink-0">
+                                <Clock className="w-2.5 h-2.5 animate-spin" />
+                                <span>Syncing</span>
+                              </span>
+                            )}
+                          </div>
 
-                        {/* Status Message or Balance Info */}
-                        {isCollected ? (
-                          <div className="mt-1 flex items-center space-x-1.5 text-xs font-black text-[#18A879]">
-                            <CheckCircle className="w-3.5 h-3.5 shrink-0" />
-                            <span>
-                              Collected {formatCurrency(collectedInfo.amount)} today · Bal{' '}
-                              {formatCurrency(remBal)}
-                            </span>
+                          {/* Line 2: Balance in amber below (or Collected Today status) */}
+                          <div className="mt-0.5 flex items-center space-x-2 text-xs">
+                            {isCollected ? (
+                              <div className="flex items-center space-x-1.5 text-xs font-black text-[#18A879]">
+                                <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                                <span>
+                                  Collected {formatCurrency(collectedInfo.amount)} today · Bal{' '}
+                                  {formatCurrency(remBal)}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-2">
+                                <span className="font-bold text-amber-600 dark:text-amber-500">
+                                  Bal: {formatCurrency(remBal)}
+                                </span>
+                                <span className="text-[#647C95] dark:text-slate-400">
+                                  · {formatCurrency(instAmt)} / due
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        ) : (
-                          <div className="mt-1 flex items-center space-x-3 text-[11px]">
-                            <span className="font-bold text-[#064B8E]">
-                              Bal: {formatCurrency(remBal)}
-                            </span>
-                            <span className="text-[#647C95]">
-                              {formatCurrency(instAmt)} / due
-                            </span>
-                          </div>
-                        )}
+                        </div>
                       </div>
 
-                      {/* Right: Direct Collect Button & Square Pencil Button */}
-                      <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
+                      {/* Right: Actions (Collect & Square Pencil Button) */}
+                      <div className="flex items-center space-x-2 shrink-0">
                         {isCollected ? (
-                          // If already collected today: Block double collection, show Undo
                           canUndo && (
                             <button
                               type="button"
                               disabled={submitting}
                               onClick={() => handleUndo(loanId, collectedInfo?.paymentId)}
-                              className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 text-xs font-bold active:scale-95 transition flex items-center space-x-1"
+                              className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-rose-50 border border-rose-300 text-rose-700 text-xs font-bold active:scale-95 transition flex items-center space-x-1 shadow-2xs"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
-                              <span>Undo / ரத்து</span>
+                              <span>Undo</span>
                             </button>
                           )
                         ) : (
-                          // Direct 1-Tap Collect Button
                           <button
                             type="button"
                             disabled={isCollectingThis || collectAmount <= 0}
                             onClick={() => handleDirectCollect(l)}
-                            className="bg-[#18A879] hover:bg-[#138861] disabled:opacity-50 text-white min-h-[40px] px-3.5 py-1.5 rounded-xl text-xs font-black shadow-sm flex items-center space-x-1.5 active:scale-95 transition"
+                            className="bg-[#18A879] hover:bg-[#138861] disabled:opacity-50 text-white min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs font-black shadow-xs flex items-center space-x-1.5 active:scale-95 transition"
                           >
                             {isCollectingThis ? (
                               <>
@@ -949,12 +1130,12 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                           </button>
                         )}
 
-                        {/* Square Pencil Icon Button: Opens Full Form for Custom/Advance/Multi-Date */}
+                        {/* Square Pencil Button: Opens Full Form for Custom/Advance/Multi-Date */}
                         <button
                           type="button"
                           onClick={() => handleOpenPencil(l)}
-                          title="Edit amount / advance payment / பல தவணைகள்"
-                          className="w-10 h-10 rounded-xl border border-[#D5E9FA] bg-white hover:bg-[#EAF5FF] text-[#0878D1] hover:border-[#0878D1] flex items-center justify-center shrink-0 active:scale-95 transition shadow-2xs"
+                          title="Edit amount / advance payment"
+                          className="w-9 h-9 rounded-xl border border-[#D5E9FA] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-[#EAF5FF] dark:hover:bg-slate-700 text-[#0878D1] dark:text-[#55B8F5] flex items-center justify-center shrink-0 active:scale-95 transition shadow-2xs"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
@@ -971,9 +1152,9 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
           ========================================================================= */
           <form
             onSubmit={handleFullFormSubmit}
-            className="mt-3 flex-1 overflow-y-auto space-y-3 pr-1 pb-1 scroll-smooth"
+            className="flex-1 overflow-y-auto space-y-3 pr-1 pb-1 scroll-smooth"
           >
-            {/* Top Back to Selection Bar (when opened from selection popup) */}
+            {/* Top Back to Selection Bar */}
             {!loanItem && (
               <button
                 type="button"
@@ -981,7 +1162,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                   setSelectedLoan(null);
                   setFullLoanData(null);
                 }}
-                className="flex items-center space-x-1.5 text-xs font-bold text-[#0878D1] hover:text-[#064B8E] bg-[#EAF5FF] hover:bg-[#D5E9FA] px-3 py-1.5 rounded-xl transition w-fit mb-1"
+                className="flex items-center space-x-1.5 text-xs font-bold text-[#0878D1] hover:text-[#064B8E] bg-[#EAF5FF] dark:bg-slate-800 hover:bg-[#D5E9FA] px-3 py-1.5 rounded-xl transition w-fit mb-1"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Back to borrower list / கடன் பட்டியலுக்குத் திரும்பு</span>
@@ -989,7 +1170,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
             )}
 
             {/* Borrower Overview Strip */}
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-[#F3F9FF] via-white to-[#EAF5FF] border border-[#D5E9FA] shadow-xs space-y-2">
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-[#F3F9FF] via-white to-[#EAF5FF] dark:from-slate-850 dark:to-slate-800 border border-[#D5E9FA] dark:border-slate-800 shadow-xs space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2.5 min-w-0 flex-1">
                   <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#0878D1] to-[#064B8E] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm shadow-[#0878D1]/20">
@@ -1003,14 +1184,14 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center space-x-2">
-                      <p className="font-black text-xs sm:text-sm text-[#183653] truncate">
+                      <p className="font-black text-xs sm:text-sm text-[#183653] dark:text-white truncate">
                         {parsedName.primary}
                       </p>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] shrink-0">
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#EAF5FF] dark:bg-slate-800 text-[#0878D1] dark:text-[#55B8F5] border border-[#D5E9FA] dark:border-slate-700 shrink-0">
                         {financeType}
                       </span>
                     </div>
-                    <p className="text-[11px] text-[#647C95] font-mono truncate">
+                    <p className="text-[11px] text-[#647C95] dark:text-slate-400 font-mono truncate">
                       {selectedLoan.loanNo}
                       {customerPhone ? ` • 📞 ${customerPhone}` : ''}
                       {customerArea ? ` • 📍 ${customerArea}` : ''}
@@ -1021,15 +1202,15 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
 
               {/* 3 Metric Pills */}
               <div className="grid grid-cols-3 gap-2 text-center pt-0.5">
-                <div className="p-1 rounded-xl bg-white border border-[#D5E9FA]">
-                  <span className="text-[9px] text-[#647C95] font-bold block uppercase">
+                <div className="p-1 rounded-xl bg-white dark:bg-slate-900 border border-[#D5E9FA] dark:border-slate-800">
+                  <span className="text-[9px] text-[#647C95] dark:text-slate-400 font-bold block uppercase">
                     Total Due
                   </span>
-                  <span className="text-xs font-black text-[#183653] tabular-nums block">
+                  <span className="text-xs font-black text-[#183653] dark:text-white tabular-nums block">
                     {formatCurrency(totalPayable)}
                   </span>
                 </div>
-                <div className="p-1 rounded-xl bg-white border border-[#D5E9FA]">
+                <div className="p-1 rounded-xl bg-white dark:bg-slate-900 border border-[#D5E9FA] dark:border-slate-800">
                   <span className="text-[9px] text-[#18A879] font-bold block uppercase">
                     Paid / வரவு
                   </span>
@@ -1037,11 +1218,11 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                     {formatCurrency(totalCollected)}
                   </span>
                 </div>
-                <div className="p-1 rounded-xl bg-[#EAF5FF] border border-[#BFE3FA]">
-                  <span className="text-[9px] text-[#0878D1] font-bold block uppercase">
+                <div className="p-1 rounded-xl bg-[#EAF5FF] dark:bg-slate-800 border border-[#BFE3FA] dark:border-slate-700">
+                  <span className="text-[9px] text-[#0878D1] dark:text-[#55B8F5] font-bold block uppercase">
                     Balance / மீதி
                   </span>
-                  <span className="text-xs font-black text-[#064B8E] tabular-nums block">
+                  <span className="text-xs font-black text-[#064B8E] dark:text-white tabular-nums block">
                     {formatCurrency(currentBalance)}
                   </span>
                 </div>
@@ -1049,14 +1230,14 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
             </div>
 
             {/* Mode Switcher: Payment vs Holiday / Missed */}
-            <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[#F3F9FF] border border-[#D5E9FA] shrink-0">
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[#F3F9FF] dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 shrink-0">
               <button
                 type="button"
                 onClick={() => setEntryMode('payment')}
                 className={`py-1.5 px-3 rounded-xl font-black text-xs transition flex items-center justify-center space-x-1.5 ${
                   entryMode === 'payment'
                     ? 'bg-[#0878D1] text-white shadow-xs'
-                    : 'text-[#647C95] hover:text-[#183653]'
+                    : 'text-[#647C95] hover:text-[#183653] dark:text-slate-300'
                 }`}
               >
                 <Banknote className="w-3.5 h-3.5" />
@@ -1068,7 +1249,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                 className={`py-1.5 px-3 rounded-xl font-black text-xs transition flex items-center justify-center space-x-1.5 ${
                   entryMode === 'holiday'
                     ? 'bg-[#0878D1] text-white shadow-xs'
-                    : 'text-[#647C95] hover:text-[#183653]'
+                    : 'text-[#647C95] hover:text-[#183653] dark:text-slate-300'
                 }`}
               >
                 <Coffee className="w-3.5 h-3.5" />
