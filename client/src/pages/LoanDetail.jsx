@@ -14,39 +14,39 @@ import WhatsAppPaymentHistoryModal from '../components/common/WhatsAppPaymentHis
 import WhatsAppHubModal from '../components/common/WhatsAppHubModal';
 import LoanApplicationFormModal from '../components/common/LoanApplicationFormModal';
 import EditLoanModal from '../components/common/EditLoanModal';
-import LoanActionBar from '../components/common/LoanActionBar';
-import { downloadLoanAgreementPDF, downloadRepaymentSchedulePDF } from '../utils/loanAgreementPdf';
+import { downloadLoanAgreementPDF } from '../utils/loanAgreementPdf';
+import {
+  exportLoanHistoryPDF,
+  exportLoanHistoryExcel,
+  shareLoanHistoryWhatsApp,
+} from '../utils/loanStatementExport';
 import {
   ArrowLeft,
-  CreditCard,
-  Send,
-  Printer,
-  Shield,
   Clock,
-  CheckCircle,
   AlertTriangle,
   History,
   FileText,
-  Share2,
-  Smartphone,
   Download,
   Pencil,
   Trash2,
-  Calendar,
   Check,
   RotateCcw,
   Banknote,
   QrCode,
   X,
   RefreshCw,
-  Sparkles,
   CheckSquare,
   Square,
   Filter,
+  ChevronDown,
+  MoreVertical,
+  MessageCircle,
+  FileSpreadsheet,
+  Printer,
 } from 'lucide-react';
 
 export const LoanDetail = ({ loanId, onBack }) => {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { isMobile } = useDeviceMode();
   const { user, isOwner } = useAuth();
 
@@ -62,6 +62,19 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const [showPaymentHistoryModal, setShowPaymentHistoryModal] = useState(false);
   const [showLoanFormModal, setShowLoanFormModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // Download History Dropdown state
+  const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
+  const [downloadPeriod, setDownloadPeriod] = useState('all'); // 'all' | 'this_month' | 'custom'
+  const [downloadStartDate, setDownloadStartDate] = useState(formatDateForInput());
+  const [downloadEndDate, setDownloadEndDate] = useState(formatDateForInput());
+  const downloadDropdownRef = useRef(null);
+
+  // More Menu Dropdown & Delete Confirmation Modal state
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+  const moreMenuRef = useRef(null);
 
   // Pencil Modal state (for editing unpaid advance or correcting paid row)
   const [pencilInst, setPencilInst] = useState(null);
@@ -79,7 +92,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const [collectingInstNo, setCollectingInstNo] = useState(null);
 
   // 8-Second Floating Toast state
-  const [toast, setToast] = useState(null); // { type: 'single' | 'batch', message, amount, items: [{ paymentId, instNo, amount }] }
+  const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
 
   // Offline queue detection
@@ -105,6 +118,20 @@ export const LoanDetail = ({ loanId, onBack }) => {
       fetchLoanData();
     }
   }, [loanId]);
+
+  // Click outside listener for dropdowns
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (downloadDropdownRef.current && !downloadDropdownRef.current.contains(e.target)) {
+        setShowDownloadDropdown(false);
+      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
+        setShowMoreMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   // Monitor offline queue for pending sync badges
   useEffect(() => {
@@ -157,7 +184,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
     }
     toastTimerRef.current = setTimeout(() => {
       setToast(null);
-    }, 8000); // 8 seconds
+    }, 8000);
     setToast(toastData);
   };
 
@@ -202,7 +229,6 @@ export const LoanDetail = ({ loanId, onBack }) => {
       const paymentId = res?.payment?._id || res?.payment?.id || `pay_${Date.now()}`;
       const isOffline = !navigator.onLine || !!res?.isOffline;
 
-      // Optimistic update of schedule & balances
       const updatedSchedule = loan.schedule.map((item) => {
         if (item.installmentNo === instNo) {
           return {
@@ -229,12 +255,10 @@ export const LoanDetail = ({ loanId, onBack }) => {
         status: newStatus,
       }));
 
-      // Micro celebration
       try {
         confetti({ particleCount: 40, spread: 55, origin: { y: 0.8 } });
       } catch (e) {}
 
-      // Trigger 8-second toast with Undo
       showToast({
         type: 'single',
         message: `Installment ${instNo} collected · ${formatCurrency(payAmount)}`,
@@ -242,7 +266,6 @@ export const LoanDetail = ({ loanId, onBack }) => {
         items: [{ paymentId, instNo, amount: payAmount }],
       });
 
-      // Broadcast update across the app
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
       }
@@ -269,7 +292,6 @@ export const LoanDetail = ({ loanId, onBack }) => {
         }
       }
 
-      // Revert in memory
       setLoan((prev) => {
         const itemMap = new Map(itemsToUndo.map((i) => [i.instNo, i.amount]));
         let totalReverted = 0;
@@ -302,7 +324,6 @@ export const LoanDetail = ({ loanId, onBack }) => {
         };
       });
 
-      // Broadcast update across the app
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
       }
@@ -359,7 +380,6 @@ export const LoanDetail = ({ loanId, onBack }) => {
       setPencilInst(null);
       await fetchLoanData();
 
-      // Micro celebration
       try {
         confetti({ particleCount: 45, spread: 60, origin: { y: 0.7 } });
       } catch (e) {}
@@ -371,7 +391,6 @@ export const LoanDetail = ({ loanId, onBack }) => {
         items: [{ paymentId: res?.payment?._id, instNo: pencilInst.installmentNo, amount: payNum }],
       });
 
-      // Broadcast update across the app
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
       }
@@ -407,7 +426,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
   };
 
   // ---------------------------------------------------------------------------
-  // MASTER COLLECT BAR HELPERS
+  // FINANCIAL CALCULATIONS & MASTER COLLECT BAR HELPERS
   // ---------------------------------------------------------------------------
   const unpaidInstallments = useMemo(() => {
     return (loan?.schedule || []).filter((inst) => inst.status !== 'paid');
@@ -416,9 +435,32 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const overdueCount = useMemo(() => {
     const now = new Date();
     return unpaidInstallments.filter(
-      (inst) => inst.status === 'overdue' || new Date(inst.dueDate) < now
+      (inst) => inst.status === 'overdue' || (inst.status !== 'holiday' && new Date(inst.dueDate) < now)
     ).length;
   }, [unpaidInstallments]);
+
+  const { totalOverdueAmount, nextDueInst } = useMemo(() => {
+    let overdueAmt = 0;
+    let nextDue = null;
+    const now = new Date();
+
+    (loan?.schedule || []).forEach((inst) => {
+      const isPaid = inst.status === 'paid';
+      const isHoliday = inst.status === 'holiday' || inst.status === 'missed';
+      const instDue = Number(inst.amount) - (Number(inst.paidAmount) || 0);
+
+      if (!isPaid && !isHoliday) {
+        const d = new Date(inst.dueDate);
+        if (d < now || inst.status === 'overdue') {
+          overdueAmt += Math.max(0, instDue);
+        } else if (!nextDue && d >= now) {
+          nextDue = inst;
+        }
+      }
+    });
+
+    return { totalOverdueAmount: overdueAmt, nextDueInst: nextDue };
+  }, [loan?.schedule]);
 
   const handleToggleSelectInst = (instNo) => {
     setSelectedInstNos((prev) => {
@@ -433,7 +475,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
     const now = new Date();
     const set = new Set();
     unpaidInstallments.forEach((inst) => {
-      if (inst.status === 'overdue' || new Date(inst.dueDate) < now) {
+      if (inst.status === 'overdue' || (inst.status !== 'holiday' && new Date(inst.dueDate) < now)) {
         set.add(inst.installmentNo);
       }
     });
@@ -480,7 +522,6 @@ export const LoanDetail = ({ loanId, onBack }) => {
     }
   };
 
-  // Selected totals for Master Collect
   const selectedInstallmentsList = useMemo(() => {
     return (loan?.schedule || []).filter((inst) => selectedInstNos.has(inst.installmentNo));
   }, [loan?.schedule, selectedInstNos]);
@@ -492,7 +533,6 @@ export const LoanDetail = ({ loanId, onBack }) => {
     );
   }, [selectedInstallmentsList]);
 
-  // Master Collect execution (Atomic, saves each installment with its own due date)
   const handleMasterCollect = async () => {
     if (selectedInstallmentsList.length === 0) return;
     const remBal = Number(loan.remainingBalance) || 0;
@@ -525,7 +565,6 @@ export const LoanDetail = ({ loanId, onBack }) => {
         });
       }
 
-      // Optimistically update schedule & balance
       const createdMap = new Map(createdItems.map((c) => [c.instNo, c.amount]));
       const updatedSchedule = loan.schedule.map((item) => {
         if (createdMap.has(item.installmentNo)) {
@@ -552,12 +591,10 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
       setSelectedInstNos(new Set());
 
-      // Micro celebration
       try {
         confetti({ particleCount: 65, spread: 75, origin: { y: 0.75 } });
       } catch (e) {}
 
-      // One Toast with batch Undo
       showToast({
         type: 'batch',
         message: `${createdItems.length} installments collected · ${formatCurrency(totalSelectedAmount)}`,
@@ -565,7 +602,6 @@ export const LoanDetail = ({ loanId, onBack }) => {
         items: createdItems,
       });
 
-      // Broadcast update across the app
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
       }
@@ -610,200 +646,450 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const totalInstallmentsCount = loan.duration || loan.schedule?.length || 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3.5 sm:space-y-4 max-w-7xl mx-auto">
       {/* =========================================================================
-          1) SCHEDULE HERO HEADER (BORROWER NAME, LOAN #, INSTALLMENTS, PER DUE, BALANCE)
+          1) STICKY HEADER (STAYS FIXED WHILE SCROLLING, <= 25% SCREEN HEIGHT)
       ========================================================================= */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-[#F3F9FF] via-white to-[#EAF5FF] border border-[#D5E9FA] shadow-sm space-y-3">
-        {/* Top Action Row: Back Button & Loan Tag */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <button
-            onClick={onBack}
-            className="flex items-center space-x-2 h-10 px-3.5 rounded-xl border border-[#D5E9FA] bg-white text-xs font-bold text-[#183653] hover:bg-[#EAF5FF] transition active:scale-95 shadow-2xs"
-          >
-            <ArrowLeft className="w-4 h-4 text-[#0878D1]" />
-            <span>Back to Loans / கடன்கள்</span>
-          </button>
-
-          <div className="flex items-center space-x-2">
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]">
-              {loan.financeType} Scheme
-            </span>
-            <span
-              className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
-                loan.status === 'completed'
-                  ? 'bg-emerald-100 text-[#18A879] border border-emerald-300'
-                  : loan.status === 'overdue'
-                  ? 'bg-rose-100 text-rose-700 border border-rose-300'
-                  : 'bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]'
-              }`}
+      <div className="sticky top-0 z-30 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 px-3.5 sm:px-6 py-2.5 sm:py-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-[#D5E9FA] dark:border-slate-800 shadow-sm space-y-2">
+        {/* Row 1: Back, Initial Avatar, Name, Tags, Info Line, and Large Remaining Balance */}
+        <div className="flex items-center justify-between gap-2.5 sm:gap-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+            {/* Back Button */}
+            <button
+              type="button"
+              onClick={onBack}
+              className="h-9 px-2.5 sm:px-3 rounded-xl border border-[#D5E9FA] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-[#EAF5FF] dark:hover:bg-slate-700 text-xs font-bold text-[#183653] dark:text-white flex items-center space-x-1.5 shrink-0 transition active:scale-95 shadow-2xs"
+              title="Back to Loans / கடன்கள்"
             >
-              {loan.status}
-            </span>
-          </div>
-        </div>
+              <ArrowLeft className="w-4 h-4 text-[#0878D1]" />
+              <span className="hidden sm:inline">Back / கடன்கள்</span>
+            </button>
 
-        {/* Borrower & Key Figures Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1">
-          {/* Borrower Name */}
-          <div className="col-span-2 sm:col-span-1 p-2.5 rounded-2xl bg-white border border-[#D5E9FA]">
-            <span className="text-[10px] text-[#647C95] font-bold block uppercase truncate">
-              Borrower / பெயர்
-            </span>
-            <p className="text-sm font-black text-[#183653] truncate mt-0.5">
-              {parsedName.primary}
-            </p>
-            <p className="text-[10px] text-[#647C95] font-mono truncate">
-              {customer.phone ? `📞 ${customer.phone}` : customer.area || ''}
-            </p>
-          </div>
+            {/* Round Initial Avatar */}
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#0878D1] to-[#064B8E] text-white font-black text-xs sm:text-sm flex items-center justify-center shrink-0 shadow-xs">
+              {parsedName.primary
+                .split(' ')
+                .map((n) => n[0])
+                .slice(0, 2)
+                .join('')
+                .toUpperCase() || 'VK'}
+            </div>
 
-          {/* Loan Number */}
-          <div className="p-2.5 rounded-2xl bg-white border border-[#D5E9FA]">
-            <span className="text-[10px] text-[#647C95] font-bold block uppercase truncate">
-              Loan No / எண்
-            </span>
-            <p className="text-sm font-black text-[#0878D1] font-mono mt-0.5">
-              {loan.loanNo}
-            </p>
-          </div>
+            {/* Borrower Name, Scheme Tag, Overdue Badge & Compact Info */}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center space-x-2 flex-wrap gap-y-0.5">
+                <h2 className="font-black text-sm sm:text-base text-[#183653] dark:text-white truncate">
+                  {parsedName.primary}
+                </h2>
 
-          {/* Total Installments */}
-          <div className="p-2.5 rounded-2xl bg-white border border-[#D5E9FA]">
-            <span className="text-[10px] text-[#647C95] font-bold block uppercase truncate">
-              Total Installments
-            </span>
-            <p className="text-sm font-black text-[#183653] mt-0.5">
-              {totalInstallmentsCount} <span className="text-[10px] font-normal text-[#647C95]">dues</span>
-            </p>
-          </div>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#EAF5FF] dark:bg-slate-800 text-[#0878D1] dark:text-[#55B8F5] border border-[#D5E9FA] dark:border-slate-700 shrink-0">
+                  {loan.financeType}
+                </span>
 
-          {/* Per-Installment Amount */}
-          <div className="p-2.5 rounded-2xl bg-white border border-[#D5E9FA]">
-            <span className="text-[10px] text-[#647C95] font-bold block uppercase truncate">
-              Per Inst / தவணை
-            </span>
-            <p className="text-sm font-black text-[#0878D1] tabular-nums mt-0.5">
-              {formatCurrency(loan.installmentAmount)}
-            </p>
+                {overdueCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shrink-0">
+                    OVERDUE {overdueCount}
+                  </span>
+                )}
+              </div>
+
+              {/* Info Line: Loan #, Phone, Per Inst, Total Dues */}
+              <p className="text-[11px] text-[#647C95] dark:text-slate-400 font-mono truncate mt-0.5">
+                <span className="font-bold text-[#0878D1] dark:text-[#55B8F5]">{loan.loanNo}</span>
+                {customer.phone && <span> • 📞 {customer.phone}</span>}
+                <span> • {formatCurrency(loan.installmentAmount)} / due</span>
+                <span> • {totalInstallmentsCount} dues</span>
+              </p>
+            </div>
           </div>
 
-          {/* Remaining Balance */}
-          <div className="col-span-2 sm:col-span-1 p-2.5 rounded-2xl bg-[#EAF5FF] border border-[#BFE3FA]">
-            <span className="text-[10px] text-[#0878D1] font-bold block uppercase truncate">
+          {/* Right: Remaining Balance in Large Text */}
+          <div className="text-right shrink-0 pl-1.5 sm:pl-3">
+            <span className="text-[10px] text-[#647C95] dark:text-slate-400 font-bold uppercase block truncate">
               Remaining / மீதி
             </span>
-            <p className="text-base font-black text-[#064B8E] tabular-nums mt-0.5">
+            <p className="text-base sm:text-xl font-black text-[#064B8E] dark:text-[#55B8F5] tabular-nums leading-tight">
               {formatCurrency(loan.remainingBalance)}
             </p>
           </div>
         </div>
-      </div>
 
-      {/* Action Bar (WhatsApp, History, Edit, Documents, Delete) */}
-      <LoanActionBar
-        loan={loan}
-        onOpenWhatsAppHub={() => setShowWhatsAppHub(true)}
-        onOpenPaymentHistory={() => setShowPaymentHistoryModal(true)}
-        onOpenEditLoan={() => setShowEditModal(true)}
-        onDeleteLoan={handleDeleteLoan}
-        onDownloadFormPDF={() => downloadLoanAgreementPDF(loan, customer)}
-        onDownloadRepaymentSchedulePDF={() => downloadRepaymentSchedulePDF(loan, customer, payments)}
-        onPrintForm={() => setShowLoanFormModal(true)}
-      />
+        {/* Row 2: Action Row (Download History Dropdown + Square Icon Buttons + More Menu) */}
+        <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#EAF5FF] dark:border-slate-800/80">
+          {/* Left: Prominent Blue Download History Button with Dropdown */}
+          <div className="relative" ref={downloadDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
+              className="h-8 sm:h-9 px-3 rounded-xl bg-[#0878D1] hover:bg-[#064B8E] text-white text-xs font-black shadow-xs flex items-center space-x-1.5 transition active:scale-95"
+            >
+              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Download history / அறிக்கை</span>
+              <ChevronDown className="w-3 h-3 ml-0.5 opacity-80" />
+            </button>
 
-      {/* =========================================================================
-          4) MASTER COLLECT BAR (QUICK SELECTIONS + ATOMIC BATCH COLLECT BUTTON)
-      ========================================================================= */}
-      {unpaidInstallments.length > 0 && (
-        <div className="sticky top-2 z-20 p-3 sm:p-4 rounded-2xl bg-white/95 backdrop-blur-md border border-[#D5E9FA] shadow-md space-y-2.5 animate-fade-in">
-          {/* Quick Selection Chips */}
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none flex-1">
-              <span className="text-[11px] font-black uppercase text-[#647C95] shrink-0 mr-1 flex items-center space-x-1">
-                <Filter className="w-3 h-3 text-[#0878D1]" />
-                <span>Select:</span>
-              </span>
-
-              {overdueCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleSelectOverdue}
-                  className="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold whitespace-nowrap active:scale-95 transition"
-                >
-                  ⚡ All overdue ({overdueCount})
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={handleSelectNext7Days}
-                className="px-2.5 py-1 rounded-xl bg-[#EAF5FF] hover:bg-[#D5E9FA] text-[#0878D1] border border-[#BFE3FA] text-xs font-bold whitespace-nowrap active:scale-95 transition"
+            {/* Download Dropdown */}
+            {showDownloadDropdown && (
+              <div
+                className="absolute left-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-white dark:bg-slate-900 border border-[#D5E9FA] dark:border-slate-800 shadow-2xl p-3 z-50 space-y-3 animate-fade-in"
+                onClick={(e) => e.stopPropagation()}
               >
-                📅 Next 7 days
-              </button>
+                <div className="flex items-center justify-between pb-1.5 border-b border-[#EAF5FF] dark:border-slate-800">
+                  <span className="text-xs font-black text-[#183653] dark:text-white flex items-center space-x-1.5">
+                    <Download className="w-3.5 h-3.5 text-[#0878D1]" />
+                    <span>Export Statement / அறிக்கை</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowDownloadDropdown(false)}
+                    className="text-[#647C95] hover:text-[#183653] p-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
 
-              {/* Up to date picker */}
-              <div className="flex items-center space-x-1 bg-[#F3F9FF] border border-[#D5E9FA] rounded-xl px-2 py-0.5">
-                <span className="text-[10px] text-[#647C95] font-bold">Up to:</span>
-                <input
-                  type="date"
-                  value={upToDateFilter}
-                  onChange={(e) => handleSelectUpToDate(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-[#183653] outline-none"
-                />
-              </div>
+                {/* Period Choices: All, This month, Custom dates */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-[#647C95] dark:text-slate-400 mb-1">
+                    Select Period / காலம்
+                  </label>
+                  <div className="grid grid-cols-3 gap-1 p-0.5 rounded-xl bg-[#F3F9FF] dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700">
+                    {[
+                      { id: 'all', label: 'All', labelTa: 'முழுவதும்' },
+                      { id: 'this_month', label: 'This Month', labelTa: 'இந்த மாதம்' },
+                      { id: 'custom', label: 'Custom', labelTa: 'தேதிகள்' },
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setDownloadPeriod(tab.id)}
+                        className={`py-1 px-1.5 rounded-lg text-xs font-bold transition flex flex-col items-center justify-center ${
+                          downloadPeriod === tab.id
+                            ? 'bg-[#0878D1] text-white shadow-2xs'
+                            : 'text-[#647C95] hover:text-[#183653] dark:text-slate-300'
+                        }`}
+                      >
+                        <span>{tab.label}</span>
+                        <span className="text-[9px] opacity-75">{tab.labelTa}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                onClick={handleToggleAllUnpaid}
-                className="px-2 py-1 text-xs font-bold text-[#647C95] hover:text-[#183653] underline whitespace-nowrap"
-              >
-                {selectedInstNos.size === unpaidInstallments.length ? 'Clear all' : 'Select all unpaid'}
-              </button>
-            </div>
-
-            {/* Master Collect Action Button */}
-            {selectedInstNos.size > 0 && (
-              <button
-                type="button"
-                disabled={masterCollecting}
-                onClick={handleMasterCollect}
-                className="min-h-[42px] px-4 py-2 rounded-xl bg-[#18A879] hover:bg-[#138861] text-white font-black text-xs sm:text-sm shadow-md shadow-emerald-600/20 flex items-center space-x-2 active:scale-95 transition shrink-0 ml-auto"
-              >
-                {masterCollecting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Collecting {selectedInstNos.size} installments...</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 stroke-[3]" />
-                    <span>
-                      Collect selected · {selectedInstNos.size} · {formatCurrency(totalSelectedAmount)}
-                    </span>
-                  </>
+                {/* Custom dates input if selected */}
+                {downloadPeriod === 'custom' && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <span className="text-[10px] text-[#647C95] dark:text-slate-400 font-bold block mb-0.5">Start Date</span>
+                      <input
+                        type="date"
+                        value={downloadStartDate}
+                        onChange={(e) => setDownloadStartDate(e.target.value)}
+                        className="w-full h-8 px-2 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-xs font-bold text-[#183653] dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[#647C95] dark:text-slate-400 font-bold block mb-0.5">End Date</span>
+                      <input
+                        type="date"
+                        value={downloadEndDate}
+                        onChange={(e) => setDownloadEndDate(e.target.value)}
+                        className="w-full h-8 px-2 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-xs font-bold text-[#183653] dark:text-white"
+                      />
+                    </div>
+                  </div>
                 )}
-              </button>
+
+                {/* Export Action Buttons */}
+                <div className="space-y-1.5 pt-1 border-t border-[#EAF5FF] dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDownloadDropdown(false);
+                      exportLoanHistoryPDF({
+                        loan,
+                        customer,
+                        payments,
+                        period: downloadPeriod,
+                        startDate: downloadStartDate,
+                        endDate: downloadEndDate,
+                      });
+                    }}
+                    className="w-full min-h-[38px] px-3 rounded-xl bg-[#EAF5FF] hover:bg-[#D5E9FA] dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0878D1] dark:text-[#55B8F5] font-bold text-xs flex items-center space-x-2 transition active:scale-98"
+                  >
+                    <FileText className="w-4 h-4 text-[#0878D1] dark:text-[#55B8F5]" />
+                    <span className="flex-1 text-left">PDF Statement / PDF அறிக்கை</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDownloadDropdown(false);
+                      exportLoanHistoryExcel({
+                        loan,
+                        customer,
+                        payments,
+                        period: downloadPeriod,
+                        startDate: downloadStartDate,
+                        endDate: downloadEndDate,
+                      });
+                    }}
+                    className="w-full min-h-[38px] px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-[#18A879] font-bold text-xs flex items-center space-x-2 transition active:scale-98"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-[#18A879]" />
+                    <span className="flex-1 text-left">Excel Spreadsheet (.xlsx)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDownloadDropdown(false);
+                      shareLoanHistoryWhatsApp({
+                        loan,
+                        customer,
+                        period: downloadPeriod,
+                        startDate: downloadStartDate,
+                        endDate: downloadEndDate,
+                      });
+                    }}
+                    className="w-full min-h-[38px] px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center space-x-2 transition active:scale-98"
+                  >
+                    <MessageCircle className="w-4 h-4 text-white" />
+                    <span className="flex-1 text-left">Share on WhatsApp / வாட்ஸ்அப்</span>
+                  </button>
+                </div>
+              </div>
             )}
           </div>
+
+          {/* Right: Square Icon Buttons & More Menu */}
+          <div className="flex items-center space-x-1.5 shrink-0">
+            {/* WhatsApp Hub */}
+            <button
+              type="button"
+              onClick={() => setShowWhatsAppHub(true)}
+              title="WhatsApp Hub / வாட்ஸ்அப் மையம்"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-[#D5E9FA] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-[#EAF5FF] dark:hover:bg-slate-700 text-emerald-600 flex items-center justify-center shrink-0 shadow-2xs transition active:scale-95"
+            >
+              <MessageCircle className="w-4 h-4" />
+            </button>
+
+            {/* Payment History */}
+            <button
+              type="button"
+              onClick={() => setShowPaymentHistoryModal(true)}
+              title="Payment History / வரவு வரலாறு"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-[#D5E9FA] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-[#EAF5FF] dark:hover:bg-slate-700 text-[#0878D1] flex items-center justify-center shrink-0 shadow-2xs transition active:scale-95"
+            >
+              <History className="w-4 h-4" />
+            </button>
+
+            {/* Documents */}
+            <button
+              type="button"
+              onClick={() => setShowLoanFormModal(true)}
+              title="Documents & Forms / ஆவணங்கள்"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-[#D5E9FA] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-[#EAF5FF] dark:hover:bg-slate-700 text-[#0878D1] flex items-center justify-center shrink-0 shadow-2xs transition active:scale-95"
+            >
+              <FileText className="w-4 h-4" />
+            </button>
+
+            {/* More (Three Dots) Menu */}
+            <div className="relative" ref={moreMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowMoreMenu(!showMoreMenu)}
+                title="More actions / கூடுதல்"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-[#D5E9FA] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-[#EAF5FF] dark:hover:bg-slate-700 text-[#647C95] hover:text-[#183653] dark:text-slate-400 dark:hover:text-white flex items-center justify-center shrink-0 shadow-2xs transition active:scale-95"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {/* More Dropdown */}
+              {showMoreMenu && (
+                <div
+                  className="absolute right-0 top-full mt-2 w-48 rounded-2xl bg-white dark:bg-slate-900 border border-[#D5E9FA] dark:border-slate-800 shadow-2xl p-1.5 z-50 space-y-1 animate-fade-in"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      setShowEditModal(true);
+                    }}
+                    className="w-full px-3 py-2 rounded-xl text-xs font-bold text-[#183653] dark:text-slate-200 hover:bg-[#F3F9FF] dark:hover:bg-slate-800 flex items-center space-x-2 transition"
+                  >
+                    <Pencil className="w-3.5 h-3.5 text-[#0878D1]" />
+                    <span>Edit Loan / திருத்து</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      downloadLoanAgreementPDF(loan, customer);
+                    }}
+                    className="w-full px-3 py-2 rounded-xl text-xs font-bold text-[#183653] dark:text-slate-200 hover:bg-[#F3F9FF] dark:hover:bg-slate-800 flex items-center space-x-2 transition"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-[#647C95]" />
+                    <span>Print Form PDF</span>
+                  </button>
+
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        setDeleteConfirmInput('');
+                        setShowDeleteModal(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center space-x-2 transition"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Delete Loan / நீக்கு</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          2) SUMMARY CARDS (COLLECTED, OVERDUE AMOUNT, NEXT DUE DATE)
+      ========================================================================= */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        {/* Card 1: Collected */}
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-[#D5E9FA] dark:border-slate-800 shadow-2xs">
+          <span className="text-[10px] text-[#18A879] font-bold block uppercase truncate">
+            Collected / வரவு
+          </span>
+          <p className="text-sm sm:text-base font-black text-[#18A879] tabular-nums mt-0.5">
+            {formatCurrency(loan.totalCollected || 0)}
+          </p>
+          <p className="text-[10px] text-[#647C95] dark:text-slate-400 truncate mt-0.5 font-medium">
+            {loan.totalPayable > 0 ? Math.round(((loan.totalCollected || 0) / loan.totalPayable) * 100) : 0}% realized
+          </p>
+        </div>
+
+        {/* Card 2: Overdue Amount */}
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/60 shadow-2xs">
+          <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold block uppercase truncate">
+            Overdue Amount / தவணை
+          </span>
+          <p className="text-sm sm:text-base font-black text-rose-600 dark:text-rose-400 tabular-nums mt-0.5">
+            {formatCurrency(totalOverdueAmount)}
+          </p>
+          <p className="text-[10px] text-[#647C95] dark:text-slate-400 truncate mt-0.5 font-medium">
+            {overdueCount} {overdueCount === 1 ? 'due' : 'dues'} overdue
+          </p>
+        </div>
+
+        {/* Card 3: Next Due Date */}
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-[#EAF5FF] dark:bg-slate-800/80 border border-[#BFE3FA] dark:border-slate-700 shadow-2xs">
+          <span className="text-[10px] text-[#0878D1] dark:text-[#55B8F5] font-bold block uppercase truncate">
+            Next Due / அடுத்த தவணை
+          </span>
+          <p className="text-sm sm:text-base font-black text-[#064B8E] dark:text-white truncate mt-0.5">
+            {nextDueInst ? formatDate(nextDueInst.dueDate) : 'All Settled'}
+          </p>
+          <p className="text-[10px] text-[#647C95] dark:text-slate-400 truncate mt-0.5 font-medium">
+            {nextDueInst ? formatCurrency(nextDueInst.amount - (nextDueInst.paidAmount || 0)) : 'Balance: ₹0'}
+          </p>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          3) STICKY MASTER COLLECT BAR (STICKY JUST UNDER THE STICKY HEADER)
+      ========================================================================= */}
+      {unpaidInstallments.length > 0 && (
+        <div className="sticky top-[86px] sm:top-[94px] z-20 p-2.5 sm:p-3 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-[#D5E9FA] dark:border-slate-800 shadow-md flex items-center justify-between gap-2 flex-wrap transition-all">
+          {/* Quick Selection Chips */}
+          <div className="flex items-center space-x-1.5 overflow-x-auto pb-0.5 scrollbar-none flex-1 min-w-0">
+            <span className="text-[10px] font-black uppercase text-[#647C95] dark:text-slate-400 shrink-0 mr-1 flex items-center space-x-1">
+              <Filter className="w-3 h-3 text-[#0878D1]" />
+              <span>Select:</span>
+            </span>
+
+            {overdueCount > 0 && (
+              <button
+                type="button"
+                onClick={handleSelectOverdue}
+                className="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold whitespace-nowrap active:scale-95 transition shrink-0"
+              >
+                ⚡ All overdue ({overdueCount})
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSelectNext7Days}
+              className="px-2.5 py-1 rounded-xl bg-[#EAF5FF] hover:bg-[#D5E9FA] text-[#0878D1] border border-[#BFE3FA] text-xs font-bold whitespace-nowrap active:scale-95 transition shrink-0"
+            >
+              📅 Next 7 days
+            </button>
+
+            {/* Up to date picker */}
+            <div className="flex items-center space-x-1 bg-[#F3F9FF] dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 rounded-xl px-2 py-0.5 shrink-0">
+              <span className="text-[10px] text-[#647C95] dark:text-slate-400 font-bold">Up to:</span>
+              <input
+                type="date"
+                value={upToDateFilter}
+                onChange={(e) => handleSelectUpToDate(e.target.value)}
+                className="bg-transparent text-xs font-bold text-[#183653] dark:text-white outline-none"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleToggleAllUnpaid}
+              className="px-2 py-1 text-xs font-bold text-[#647C95] hover:text-[#183653] dark:text-slate-400 dark:hover:text-white underline whitespace-nowrap shrink-0"
+            >
+              {selectedInstNos.size === unpaidInstallments.length ? 'Clear all' : `All unpaid (${unpaidInstallments.length})`}
+            </button>
+          </div>
+
+          {/* Green Collect Action Button */}
+          {selectedInstNos.size > 0 && (
+            <button
+              type="button"
+              disabled={masterCollecting}
+              onClick={handleMasterCollect}
+              className="min-h-[38px] px-4 py-1.5 rounded-xl bg-[#18A879] hover:bg-[#138861] text-white font-black text-xs sm:text-sm shadow-md shadow-emerald-600/20 flex items-center space-x-2 active:scale-95 transition shrink-0 ml-auto"
+            >
+              {masterCollecting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Collecting {selectedInstNos.size}...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>
+                    Collect selected · {selectedInstNos.size} · {formatCurrency(totalSelectedAmount)}
+                  </span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       )}
 
       {/* =========================================================================
-          2 & 3) REPAYMENT SCHEDULE TABLE & MOBILE CARDS (1-TAP COLLECT + PENCIL)
+          4) REPAYMENT SCHEDULE TABLE & MOBILE CARDS (1-TAP COLLECT + PENCIL)
       ========================================================================= */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-white border border-[#D5E9FA] shadow-xs space-y-3">
-        <div className="flex items-center justify-between pb-3 border-b border-[#D5E9FA]">
+      <div className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-[#D5E9FA] dark:border-slate-800 shadow-xs space-y-3">
+        <div className="flex items-center justify-between pb-2.5 border-b border-[#EAF5FF] dark:border-slate-800">
           <div>
-            <h3 className="font-black text-base text-[#183653]">
+            <h3 className="font-black text-sm sm:text-base text-[#183653] dark:text-white">
               {t('repaymentSchedule')} / தவணை அட்டவணை
             </h3>
-            <p className="text-xs text-[#647C95]">
+            <p className="text-[11px] text-[#647C95] dark:text-slate-400">
               {loan.schedule?.length} scheduled installments · Auto-sorted with overdue tracking
             </p>
           </div>
-          <span className="text-xs font-bold text-[#0878D1]">
+          <span className="text-xs font-bold text-[#0878D1] dark:text-[#55B8F5]">
             1 Due = {formatCurrency(loan.installmentAmount)}
           </span>
         </div>
@@ -826,16 +1112,20 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   id={`inst-row-${inst.installmentNo}`}
                   className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${
                     isPaid
-                      ? 'bg-emerald-50/70 border-emerald-300'
+                      ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800'
+                      : isHoliday
+                      ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700'
+                      : isOverdue
+                      ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800 border-l-4 border-l-rose-500'
                       : isSelected
-                      ? 'bg-[#EAF5FF] border-[#0878D1] ring-1 ring-[#0878D1]'
-                      : 'bg-white border-[#D5E9FA] shadow-2xs'
+                      ? 'bg-[#EAF5FF] dark:bg-slate-800 border-[#0878D1] ring-1 ring-[#0878D1]'
+                      : 'bg-white dark:bg-slate-900 border-[#D5E9FA] dark:border-slate-800 shadow-2xs'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center space-x-2.5 min-w-0">
                       {/* Selection Checkbox (Unpaid only) */}
-                      {!isPaid && (
+                      {!isPaid && !isHoliday && (
                         <button
                           type="button"
                           onClick={() => handleToggleSelectInst(inst.installmentNo)}
@@ -850,10 +1140,10 @@ export const LoanDetail = ({ loanId, onBack }) => {
                       )}
 
                       <div>
-                        <p className="font-black text-xs text-[#183653]">
+                        <p className="font-black text-xs text-[#183653] dark:text-white">
                           #{inst.installmentNo} · {formatDate(inst.dueDate)}
                         </p>
-                        <p className="text-[11px] text-[#647C95] font-mono">
+                        <p className="text-[11px] text-[#647C95] dark:text-slate-400 font-mono">
                           {isPaid
                             ? `✓ Paid on ${formatDate(inst.paidDate || inst.dueDate)}`
                             : `Due: ${formatCurrency(inst.amount)}`}
@@ -862,20 +1152,20 @@ export const LoanDetail = ({ loanId, onBack }) => {
                     </div>
 
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-black tabular-nums text-[#183653]">
+                      <p className="text-sm font-black tabular-nums text-[#183653] dark:text-white">
                         {formatCurrency(inst.amount)}
                       </p>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase inline-block ${
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase inline-block ${
                           isPaid
-                            ? 'bg-emerald-100 text-[#18A879]'
+                            ? 'bg-emerald-100 text-[#18A879] dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300'
                             : isHoliday
-                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300'
                             : isMissed
                             ? 'bg-orange-100 text-orange-800 border border-orange-300'
                             : isOverdue
-                            ? 'bg-rose-100 text-rose-700'
-                            : 'bg-slate-100 text-[#647C95]'
+                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-300'
+                            : 'bg-slate-100 text-[#647C95] dark:bg-slate-800 dark:text-slate-300'
                         }`}
                       >
                         {isPaid ? 'PAID' : isHoliday ? 'HOLIDAY' : isMissed ? 'MISSED' : isOverdue ? 'OVERDUE' : 'PENDING'}
@@ -884,7 +1174,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   </div>
 
                   {/* Action Row: Collect & Pencil Button */}
-                  <div className="flex items-center justify-end space-x-2 pt-1 border-t border-[#D5E9FA]/60">
+                  <div className="flex items-center justify-end space-x-2 pt-1 border-t border-[#EAF5FF] dark:border-slate-800">
                     {isPendingSync && (
                       <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full mr-auto flex items-center space-x-1">
                         <Clock className="w-2.5 h-2.5 animate-spin" />
@@ -897,7 +1187,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                         type="button"
                         disabled={isCollecting}
                         onClick={() => handleDirectCollect(inst)}
-                        className="min-h-[44px] px-4 rounded-xl bg-[#18A879] hover:bg-[#138861] text-white font-black text-xs flex items-center space-x-1.5 shadow-xs active:scale-95 transition"
+                        className="min-h-[40px] px-4 rounded-xl bg-[#18A879] hover:bg-[#138861] text-white font-black text-xs flex items-center space-x-1.5 shadow-xs active:scale-95 transition"
                       >
                         {isCollecting ? (
                           <RefreshCw className="w-4 h-4 animate-spin" />
@@ -913,7 +1203,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                       type="button"
                       onClick={() => handleOpenPencil(inst)}
                       title="Edit amount / advance payment / correction"
-                      className="w-11 h-11 rounded-xl border border-[#D5E9FA] bg-white hover:bg-[#EAF5FF] text-[#0878D1] flex items-center justify-center shrink-0 active:scale-95 transition shadow-2xs"
+                      className="w-10 h-10 rounded-xl border border-[#D5E9FA] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-[#EAF5FF] dark:hover:bg-slate-700 text-[#0878D1] dark:text-[#55B8F5] flex items-center justify-center shrink-0 active:scale-95 transition shadow-2xs"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -924,9 +1214,9 @@ export const LoanDetail = ({ loanId, onBack }) => {
           </div>
         ) : (
           /* Desktop Table View with Checkbox Column, 1-Tap Collect & Pencil */
-          <div className="overflow-x-auto max-h-[580px]">
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
-              <thead className="sticky top-0 bg-[#F3F9FF] font-bold uppercase text-[10px] text-[#647C95] border-b border-[#D5E9FA] z-10">
+              <thead className="bg-[#F3F9FF] dark:bg-slate-800 font-bold uppercase text-[10px] text-[#647C95] dark:text-slate-300 border-b border-[#D5E9FA] dark:border-slate-700">
                 <tr>
                   <th className="py-2.5 px-3 w-10">
                     <button
@@ -951,7 +1241,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   <th className="py-2.5 px-3 text-right min-w-[140px]">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#D5E9FA]/60">
+              <tbody className="divide-y divide-[#EAF5FF] dark:divide-slate-800">
                 {loan.schedule?.map((inst) => {
                   const isPaid = inst.status === 'paid';
                   const isHoliday = inst.status === 'holiday';
@@ -967,15 +1257,19 @@ export const LoanDetail = ({ loanId, onBack }) => {
                       id={`inst-row-${inst.installmentNo}`}
                       className={`transition-colors ${
                         isPaid
-                          ? 'bg-emerald-50/40 hover:bg-emerald-50/70'
+                          ? 'bg-emerald-50/40 hover:bg-emerald-50/70 dark:bg-emerald-950/20'
+                          : isHoliday
+                          ? 'bg-amber-50/40 hover:bg-amber-50/70 dark:bg-amber-950/20'
+                          : isOverdue
+                          ? 'bg-rose-50/50 hover:bg-rose-50/80 dark:bg-rose-950/20 border-l-4 border-l-rose-500'
                           : isSelected
-                          ? 'bg-[#EAF5FF] hover:bg-[#EAF5FF]/80'
-                          : 'hover:bg-[#F3F9FF]'
+                          ? 'bg-[#EAF5FF] hover:bg-[#EAF5FF]/80 dark:bg-slate-800'
+                          : 'hover:bg-[#F3F9FF] dark:hover:bg-slate-850'
                       }`}
                     >
                       {/* Checkbox */}
                       <td className="py-2.5 px-3">
-                        {!isPaid && (
+                        {!isPaid && !isHoliday && (
                           <button
                             type="button"
                             onClick={() => handleToggleSelectInst(inst.installmentNo)}
@@ -990,15 +1284,15 @@ export const LoanDetail = ({ loanId, onBack }) => {
                         )}
                       </td>
 
-                      <td className="py-2.5 px-3 font-black text-[#183653]">
+                      <td className="py-2.5 px-3 font-black text-[#183653] dark:text-white">
                         {inst.installmentNo}
                       </td>
 
-                      <td className="py-2.5 px-3 font-semibold text-[#183653]">
+                      <td className="py-2.5 px-3 font-semibold text-[#183653] dark:text-white">
                         {formatDate(inst.dueDate)}
                       </td>
 
-                      <td className="py-2.5 px-3 text-right font-black tabular-nums text-[#183653]">
+                      <td className="py-2.5 px-3 text-right font-black tabular-nums text-[#183653] dark:text-white">
                         {formatCurrency(inst.amount)}
                       </td>
 
@@ -1008,16 +1302,16 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
                       <td className="py-2.5 px-3">
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase inline-flex items-center space-x-1 ${
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase inline-flex items-center space-x-1 ${
                             isPaid
-                              ? 'bg-emerald-100 text-[#18A879] border border-emerald-300'
+                              ? 'bg-emerald-100 text-[#18A879] dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300'
                               : isHoliday
-                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300'
                               : isMissed
                               ? 'bg-orange-100 text-orange-800 border border-orange-300'
                               : isOverdue
-                              ? 'bg-rose-100 text-rose-700 border border-rose-300 animate-pulse'
-                              : 'bg-slate-100 text-[#647C95] border border-slate-200'
+                              ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 animate-pulse'
+                              : 'bg-slate-100 text-[#647C95] dark:bg-slate-800 dark:text-slate-300 border border-slate-200'
                           }`}
                         >
                           {isPaid ? 'PAID' : isHoliday ? 'HOLIDAY' : isMissed ? 'MISSED' : isOverdue ? 'OVERDUE' : 'PENDING'}
@@ -1029,7 +1323,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                         )}
                       </td>
 
-                      <td className="py-2.5 px-3 text-[#647C95] text-[11px] font-mono">
+                      <td className="py-2.5 px-3 text-[#647C95] dark:text-slate-400 text-[11px] font-mono">
                         {inst.paidDate ? formatDate(inst.paidDate) : '-'}
                       </td>
 
@@ -1056,7 +1350,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                             type="button"
                             onClick={() => handleOpenPencil(inst)}
                             title="Edit amount / advance payment / correction"
-                            className="w-8 h-8 rounded-xl border border-[#D5E9FA] bg-white hover:bg-[#EAF5FF] text-[#0878D1] flex items-center justify-center shrink-0 active:scale-95 transition"
+                            className="w-8 h-8 rounded-xl border border-[#D5E9FA] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-[#EAF5FF] dark:hover:bg-slate-700 text-[#0878D1] dark:text-[#55B8F5] flex items-center justify-center shrink-0 active:scale-95 transition shadow-2xs"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
@@ -1076,11 +1370,11 @@ export const LoanDetail = ({ loanId, onBack }) => {
       ========================================================================= */}
       {pencilInst && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl border border-[#D5E9FA] space-y-3.5">
-            <div className="flex items-center justify-between pb-2 border-b border-[#D5E9FA]">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-5 shadow-2xl border border-[#D5E9FA] dark:border-slate-800 space-y-3.5">
+            <div className="flex items-center justify-between pb-2 border-b border-[#EAF5FF] dark:border-slate-800">
               <div className="flex items-center space-x-2">
                 <Pencil className="w-4 h-4 text-[#0878D1]" />
-                <h4 className="font-black text-sm text-[#183653]">
+                <h4 className="font-black text-sm text-[#183653] dark:text-white">
                   {pencilInst.status === 'paid'
                     ? `Edit Paid Installment #${pencilInst.installmentNo}`
                     : `Record / Advance Installment #${pencilInst.installmentNo}`}
@@ -1089,7 +1383,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
               <button
                 type="button"
                 onClick={() => setPencilInst(null)}
-                className="w-8 h-8 rounded-full bg-[#F3F9FF] hover:bg-[#EAF5FF] text-[#647C95] flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-[#F3F9FF] dark:bg-slate-800 hover:bg-[#EAF5FF] text-[#647C95] flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1104,7 +1398,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
             <form onSubmit={handleSavePencil} className="space-y-3">
               {/* Amount input */}
               <div>
-                <label className="block text-xs font-black text-[#183653] mb-1">
+                <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
                   Amount / தொகை (₹) *
                 </label>
                 <input
@@ -1113,13 +1407,13 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   required
                   value={pencilAmount || ''}
                   onChange={(e) => setPencilAmount(Number(e.target.value))}
-                  className="w-full h-10 px-3 rounded-xl bg-white border border-[#D5E9FA] text-[#183653] font-black text-base outline-none focus:border-[#0878D1]"
+                  className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-black text-base outline-none focus:border-[#0878D1]"
                 />
               </div>
 
               {/* Mode Toggle */}
               <div>
-                <label className="block text-xs font-black text-[#183653] mb-1">
+                <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
                   Payment Mode / முறை
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -1129,7 +1423,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                     className={`h-9 rounded-xl border text-xs font-bold flex items-center justify-center space-x-1.5 ${
                       pencilMode === 'cash'
                         ? 'bg-[#EAF5FF] border-[#0878D1] text-[#0878D1]'
-                        : 'bg-white border-[#D5E9FA] text-[#647C95]'
+                        : 'bg-white dark:bg-slate-800 border-[#D5E9FA] dark:border-slate-700 text-[#647C95]'
                     }`}
                   >
                     <Banknote className="w-3.5 h-3.5" />
@@ -1141,7 +1435,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                     className={`h-9 rounded-xl border text-xs font-bold flex items-center justify-center space-x-1.5 ${
                       pencilMode === 'upi'
                         ? 'bg-[#EAF5FF] border-[#0878D1] text-[#0878D1]'
-                        : 'bg-white border-[#D5E9FA] text-[#647C95]'
+                        : 'bg-white dark:bg-slate-800 border-[#D5E9FA] dark:border-slate-700 text-[#647C95]'
                     }`}
                   >
                     <QrCode className="w-3.5 h-3.5" />
@@ -1152,7 +1446,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
               {/* Paid Date */}
               <div>
-                <label className="block text-xs font-black text-[#183653] mb-1">
+                <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
                   Paid Date / தேதி
                 </label>
                 <input
@@ -1160,13 +1454,13 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   required
                   value={pencilDate}
                   onChange={(e) => setPencilDate(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-white border border-[#D5E9FA] text-[#183653] font-bold text-xs outline-none focus:border-[#0878D1]"
+                  className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-bold text-xs outline-none focus:border-[#0878D1]"
                 />
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-xs font-black text-[#183653] mb-1">
+                <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
                   Notes / குறிப்பு
                 </label>
                 <input
@@ -1174,7 +1468,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   placeholder="Optional notes or audit reason..."
                   value={pencilNotes}
                   onChange={(e) => setPencilNotes(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-white border border-[#D5E9FA] text-[#183653] font-medium text-xs outline-none focus:border-[#0878D1]"
+                  className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-medium text-xs outline-none focus:border-[#0878D1]"
                 />
               </div>
 
@@ -1200,6 +1494,78 @@ export const LoanDetail = ({ loanId, onBack }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          DELETE LOAN CONFIRMATION MODAL (CONFIRM BY TYPING LOAN NUMBER)
+      ========================================================================= */}
+      {showDeleteModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowDeleteModal(false);
+          }}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-rose-200 dark:border-rose-900 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-black text-base text-rose-700 dark:text-rose-400">
+                  Delete Loan / கடன் கணக்கை நீக்கு
+                </h3>
+                <p className="text-xs text-[#647C95] dark:text-slate-400">
+                  Permanent Action • நிரந்தர நடவடிக்கை
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
+              <p className="font-bold">⚠️ Warning / எச்சரிக்கை:</p>
+              <p>
+                This will permanently delete loan <strong>{loan.loanNo}</strong> and all associated installments and records. This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-[#183653] dark:text-slate-300">
+                Type loan number <span className="font-mono text-rose-600 font-black">{loan.loanNo}</span> to confirm deletion:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmInput}
+                onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                placeholder={`Type ${loan.loanNo}`}
+                className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-slate-800 border-2 border-rose-200 dark:border-rose-800 text-xs font-mono font-bold text-[#183653] dark:text-white outline-none focus:border-rose-500"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 h-10 rounded-xl border border-[#D5E9FA] text-xs font-bold text-[#647C95] hover:bg-slate-100 transition"
+              >
+                Cancel / ரத்து
+              </button>
+              <button
+                type="button"
+                disabled={deleteConfirmInput.trim() !== loan.loanNo.trim()}
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  handleDeleteLoan();
+                }}
+                className="flex-1 h-10 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white text-xs font-black transition active:scale-95 shadow-md shadow-rose-600/20"
+              >
+                Confirm Delete / நீக்கு
+              </button>
+            </div>
           </div>
         </div>
       )}
