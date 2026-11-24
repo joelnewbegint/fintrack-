@@ -1414,6 +1414,24 @@ export const api = {
     return { success: true, payment: newPayment, loan: updatedLoan, isOffline: true };
   },
 
+  updatePayment: async (id, data) => {
+    const result = await safeFetchJson(`/api/payments/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (result.ok && result.data) {
+      const payments = getStored(STORAGE_KEYS.PAYMENTS, initialPayments);
+      const idx = payments.findIndex((p) => p._id === id);
+      if (idx !== -1) {
+        payments[idx] = { ...payments[idx], ...data };
+        setStored(STORAGE_KEYS.PAYMENTS, payments);
+      }
+      return result.data;
+    }
+    return result.data || { success: false };
+  },
+
   deletePayment: async (id) => {
     const result = await safeFetchJson(`/api/payments/${id}`, {
       method: 'DELETE',

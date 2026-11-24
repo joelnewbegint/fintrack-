@@ -4,6 +4,7 @@ import {
   recordPayment,
   getPayments,
   deletePayment,
+  updatePayment,
 } from '../controllers/paymentController.js';
 import { protect, restrictTo } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -25,6 +26,8 @@ router.use(restrictTo('owner', 'loan_agent'));
 
 router.get('/', getPayments);
 router.post('/', validate(paymentSchema), recordPayment);
+router.put('/:id', restrictTo('owner'), updatePayment);
+router.patch('/:id', restrictTo('owner'), updatePayment);
 router.delete('/:id', restrictTo('owner'), deletePayment);
 
 export default router;

@@ -301,3 +301,97 @@ export const deletePayment = async (req, res, next) => {
     next(error);
   }
 };
+
+export const updatePayment = async (req, res, next) => {
+  try {
+    if (req.user?.role === 'client') {
+      return res.status(403).json({ success: false, message: 'Access denied: Clients cannot modify payments.' });
+    }
+    const { amount, mode, date, notes } = req.body;
+    const isObjId = mongoose.Types.ObjectId.isValid(req.params.id);
+    const payment = isObjId
+      ? await Payment.findById(req.params.id)
+      : await Payment.findOne({ $or: [{ clientId: req.params.id }, { receiptNo: req.params.id }] });
+
+    if (!payment) {
+      return res.status(404).json({ success: false, message: 'Payment not found' });
+    }
+
+    const isLoanObjId = mongoose.Types.ObjectId.isValid(payment.loanId);
+    const loan = isLoanObjId
+      ? await Loan.findById(payment.loanId)
+      : await Loan.findOne({ $or: [{ clientId: payment.loanId }, { loanNo: payment.loanId }] });
+    if (!loan) {
+      return res.status(404).json({ success: false, message: 'Associated loan not found' });
+    }
+
+    if (amount !== undefined && Number(amount) > 0) {
+      payment.amount = Number(amount);
+    }
+    if (mode && ['cash', 'upi'].includes(mode)) {
+      payment.mode = mode;
+    }
+    if (date) {
+      payment.date = new Date(date);
+    }
+    if (notes !== undefined) {
+      payment.notes = notes;
+    }
+    await payment.save();
+
+    // Reconstruct loan allocations based on all payments
+    const allPayments = await Payment.find({ loanId: loan._id }).sort({ date: 1, createdAt: 1 });
+    loan.totalCollected = allPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
+    loan.remainingBalance = Math.max(0, loan.totalPayable - loan.totalCollected);
+
+    // Reset schedule
+    loan.schedule.forEach((inst) => {
+      inst.paidAmount = 0;
+      inst.status = new Date(inst.dueDate) < new Date() ? 'overdue' : 'pending';
+      inst.paidDate = null;
+    });
+
+    // Replay all payments onto schedule
+    let runningPool = loan.totalCollected;
+    for (let i = 0; i < loan.schedule.length; i++) {
+      if (runningPool <= 0) break;
+      const inst = loan.schedule[i];
+      if (runningPool >= inst.amount) {
+        inst.paidAmount = inst.amount;
+        inst.status = 'paid';
+        inst.paidDate = payment.date || loan.startDate;
+        runningPool -= inst.amount;
+      } else {
+        inst.paidAmount = runningPool;
+        inst.status = 'partial';
+        runningPool = 0;
+      }
+    }
+
+    if (loan.remainingBalance === 0) {
+      loan.status = 'completed';
+    } else {
+      const now = new Date();
+      const hasOverdue = loan.schedule.some(
+        (s) => s.status !== 'paid' && new Date(s.dueDate) < now
+      );
+      loan.status = hasOverdue ? 'overdue' : 'active';
+    }
+
+    await loan.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment updated successfully',
+      payment,
+      loan: {
+        id: loan._id,
+        remainingBalance: loan.remainingBalance,
+        totalCollected: loan.totalCollected,
+        status: loan.status,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -334,20 +334,89 @@ export const LoanDetail = ({ loanId, onBack }) => {
   };
 
   // ---------------------------------------------------------------------------
+  // HELPER: Match Paid Installment with its associated Payment document
+  // ---------------------------------------------------------------------------
+  const findPaymentForInstallment = (inst, paymentsList = [], schedule = []) => {
+    if (!inst) return null;
+    if (inst.paymentId) {
+      const found = paymentsList.find((p) => String(p._id) === String(inst.paymentId));
+      if (found) return found;
+      return { _id: inst.paymentId, amount: inst.paidAmount || inst.amount };
+    }
+
+    const instNo = inst.installmentNo;
+    // 1. Match by notes: "Installment #4", "Inst #4", or "#4"
+    const noteMatch = paymentsList.find((p) => {
+      const n = p.notes || '';
+      const re = new RegExp(`(?:installment|inst)\\s*#?${instNo}\\b|#${instNo}\\b`, 'i');
+      return re.test(n);
+    });
+    if (noteMatch) return noteMatch;
+
+    // 2. Match by exact date and amount
+    if (inst.paidDate) {
+      const instDateStr = new Date(inst.paidDate).toISOString().slice(0, 10);
+      const dateMatch = paymentsList.find((p) => {
+        const pDateStr = p.date ? new Date(p.date).toISOString().slice(0, 10) : '';
+        return pDateStr === instDateStr && Number(p.amount) === Number(inst.paidAmount || inst.amount);
+      });
+      if (dateMatch) return dateMatch;
+    }
+
+    // 3. Positional chronological matching:
+    const paidSchedule = (schedule || []).filter((s) => s.status === 'paid');
+    const paidIndex = paidSchedule.findIndex((s) => s.installmentNo === instNo);
+
+    // Payments sorted chronologically (oldest to newest)
+    const sortedPayments = [...paymentsList].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+
+    if (paidIndex >= 0 && paidIndex < sortedPayments.length) {
+      return sortedPayments[paidIndex];
+    }
+
+    // Fallback: If it's the latest paid installment or single payment, return latest payment
+    if (sortedPayments.length > 0) {
+      return sortedPayments[sortedPayments.length - 1];
+    }
+
+    return null;
+  };
+
+  // ---------------------------------------------------------------------------
   // PENCIL MODAL: UNPAID (CUSTOM/ADVANCE) OR PAID (OWNER CORRECTION/REVERSE)
   // ---------------------------------------------------------------------------
   const handleOpenPencil = (inst) => {
-    setPencilInst(inst);
     setPencilError('');
-    setPencilMode('cash');
-    setPencilDate(inst.dueDate ? formatDateForInput(inst.dueDate) : formatDateForInput());
-    setPencilNotes('');
+    setPencilSubmitting(false);
 
-    if (inst.status !== 'paid') {
-      const instDue = Number(inst.amount) - (Number(inst.paidAmount) || 0);
-      setPencilAmount(instDue);
+    const isPaid = inst.status === 'paid';
+    const associatedPayment = isPaid ? findPaymentForInstallment(inst, payments, loan?.schedule) : null;
+    const instWithPayment = associatedPayment?._id
+      ? { ...inst, paymentId: associatedPayment._id, paymentReceiptNo: associatedPayment.receiptNo }
+      : inst;
+    setPencilInst(instWithPayment);
+
+    if (isPaid) {
+      const paidAmt =
+        Number(associatedPayment?.amount) ||
+        Number(inst.paidAmount) ||
+        Number(inst.amount) ||
+        Number(loan?.installmentAmount) ||
+        200;
+      setPencilAmount(paidAmt);
+      setPencilMode(associatedPayment?.mode || 'cash');
+      const pDate = associatedPayment?.date || inst.paidDate || inst.dueDate;
+      setPencilDate(pDate ? formatDateForInput(pDate) : formatDateForInput());
+      setPencilNotes(associatedPayment?.notes || '');
     } else {
-      setPencilAmount(Number(inst.paidAmount || inst.amount));
+      const instDue =
+        Number(inst.amount) - (Number(inst.paidAmount) || 0) ||
+        Number(loan?.installmentAmount) ||
+        200;
+      setPencilAmount(instDue);
+      setPencilMode('cash');
+      setPencilDate(inst.dueDate ? formatDateForInput(inst.dueDate) : formatDateForInput());
+      setPencilNotes('');
     }
   };
 
@@ -359,42 +428,73 @@ export const LoanDetail = ({ loanId, onBack }) => {
     const isPaid = pencilInst.status === 'paid';
     const payNum = Number(pencilAmount) || 0;
     if (payNum <= 0) {
-      setPencilError('Please enter a valid amount / சரியான தொகை தேவை');
+      setPencilError(lang === 'ta' ? 'சரியான தொகை தேவை' : 'Please enter a valid amount');
       return;
     }
+
+    const instNo = pencilInst.installmentNo;
+    const associatedPayment = isPaid ? findPaymentForInstallment(pencilInst, payments, loan?.schedule) : null;
 
     try {
       setPencilSubmitting(true);
       const auditNote = isPaid
-        ? `[Correction by ${user?.name || 'Owner'} on ${new Date().toLocaleDateString('en-IN')}]: ${pencilNotes || 'Adjusted amount/mode'}`
-        : pencilNotes || `Installment #${pencilInst.installmentNo} advance payment`;
+        ? pencilNotes || `Installment #${instNo} collection (${pencilMode.toUpperCase()})`
+        : pencilNotes || `Installment #${instNo} advance payment`;
 
-      const res = await api.recordPayment({
-        loanId: loan._id,
-        amount: payNum,
-        mode: pencilMode,
-        date: pencilDate,
-        notes: auditNote,
-      });
+      if (isPaid && associatedPayment?._id) {
+        // Update existing payment record in DB
+        await api.updatePayment(associatedPayment._id, {
+          amount: payNum,
+          mode: pencilMode,
+          date: pencilDate,
+          notes: auditNote,
+        });
+      } else if (isPaid) {
+        // Fallback for paid installment without payment doc
+        await api.recordPayment({
+          loanId: loan._id,
+          amount: payNum,
+          mode: pencilMode,
+          date: pencilDate,
+          notes: auditNote,
+        });
+      } else {
+        // Unpaid installment: record payment
+        const res = await api.recordPayment({
+          loanId: loan._id,
+          amount: payNum,
+          mode: pencilMode,
+          date: pencilDate,
+          notes: auditNote,
+        });
+
+        try {
+          confetti({ particleCount: 45, spread: 60, origin: { y: 0.7 } });
+        } catch (e) {}
+
+        showToast({
+          type: 'single',
+          message: `Saved ${formatCurrency(payNum)} for Installment #${instNo}`,
+          amount: payNum,
+          items: [{ paymentId: res?.payment?._id, instNo, amount: payNum }],
+        });
+      }
 
       setPencilInst(null);
       await fetchLoanData();
 
-      try {
-        confetti({ particleCount: 45, spread: 60, origin: { y: 0.7 } });
-      } catch (e) {}
-
-      showToast({
-        type: 'single',
-        message: `Saved ${formatCurrency(payNum)} for Installment #${pencilInst.installmentNo}`,
-        amount: payNum,
-        items: [{ paymentId: res?.payment?._id, instNo: pencilInst.installmentNo, amount: payNum }],
-      });
-
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
       }
+
+      if (isPaid) {
+        showToast({
+          type: 'single',
+          message: `Installment #${instNo} updated / தவணை #${instNo} திருத்தப்பட்டது`,
+        });
+      }
     } catch (err) {
+      console.error('Failed to save pencil installment:', err);
       setPencilError(err.message || 'Failed to save / சேமிக்க இயலவில்லை');
     } finally {
       setPencilSubmitting(false);
@@ -403,23 +503,63 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
   const handleReversePaidInst = async () => {
     if (!pencilInst || pencilInst.status !== 'paid') return;
-    if (!window.confirm(`Reverse payment for Installment #${pencilInst.installmentNo} (${formatCurrency(pencilInst.paidAmount || pencilInst.amount)})?`)) {
-      return;
-    }
+    const instNo = pencilInst.installmentNo;
+    const associatedPayment = findPaymentForInstallment(pencilInst, payments, loan?.schedule);
+
+    const reverseAmt = Number(pencilInst.paidAmount || pencilInst.amount || associatedPayment?.amount || 200);
+    const confirmReverse = window.confirm(
+      lang === 'ta'
+        ? `தவணை #${instNo} வசூலை (${formatCurrency(reverseAmt)}) ரத்து செய்ய வேண்டுமா?`
+        : `Are you sure you want to reverse payment for Installment #${instNo} (${formatCurrency(reverseAmt)})?`
+    );
+    if (!confirmReverse) return;
 
     try {
       setPencilSubmitting(true);
-      if (pencilInst.paymentId) {
-        await api.deletePayment(pencilInst.paymentId);
+      if (associatedPayment?._id) {
+        await api.deletePayment(associatedPayment._id);
+      } else {
+        // Fallback: If no standalone payment document exists, update loan schedule directly
+        const updatedSchedule = (loan.schedule || []).map((s) => {
+          if (s.installmentNo === instNo) {
+            return {
+              ...s,
+              status: new Date(s.dueDate) < new Date() ? 'overdue' : 'pending',
+              paidAmount: 0,
+              paidDate: null,
+            };
+          }
+          return s;
+        });
+        const newCollected = Math.max(0, (loan.totalCollected || 0) - reverseAmt);
+        const newRemaining = Math.min(loan.totalPayable, (loan.totalPayable || 0) - newCollected);
+        await api.updateLoan(loan._id, {
+          schedule: updatedSchedule,
+          totalCollected: newCollected,
+          remainingBalance: newRemaining,
+          status:
+            newRemaining > 0
+              ? updatedSchedule.some((s) => s.status === 'overdue')
+                ? 'overdue'
+                : 'active'
+              : 'completed',
+        });
       }
+
       setPencilInst(null);
       await fetchLoanData();
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
       }
+
+      showToast({
+        type: 'single',
+        message: `Installment #${instNo} reversed / தவணை #${instNo} வசூல் ரத்து செய்யப்பட்டது`,
+      });
     } catch (err) {
-      setPencilError(err.message || 'Failed to reverse payment');
+      console.error('Failed to reverse payment:', err);
+      setPencilError(err.message || 'Failed to reverse payment / ரத்து செய்ய இயலவில்லை');
     } finally {
       setPencilSubmitting(false);
     }
@@ -1370,45 +1510,80 @@ export const LoanDetail = ({ loanId, onBack }) => {
       ========================================================================= */}
       {pencilInst && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-5 shadow-2xl border border-[#D5E9FA] dark:border-slate-800 space-y-3.5">
-            <div className="flex items-center justify-between pb-2 border-b border-[#EAF5FF] dark:border-slate-800">
-              <div className="flex items-center space-x-2">
-                <Pencil className="w-4 h-4 text-[#0878D1]" />
-                <h4 className="font-black text-sm text-[#183653] dark:text-white">
-                  {pencilInst.status === 'paid'
-                    ? `Edit Paid Installment #${pencilInst.installmentNo}`
-                    : `Record / Advance Installment #${pencilInst.installmentNo}`}
-                </h4>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-[#D5E9FA] dark:border-slate-800 space-y-4">
+            {/* Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-[#EAF5FF] dark:border-slate-800 gap-2">
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-[#EAF5FF] dark:bg-slate-800 text-[#0878D1] dark:text-[#55B8F5] flex items-center justify-center shrink-0">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-black text-sm text-[#183653] dark:text-white truncate">
+                    {pencilInst.status === 'paid'
+                      ? `Edit Paid Installment #${pencilInst.installmentNo}`
+                      : `Record Payment #${pencilInst.installmentNo}`}
+                  </h4>
+                  <p className="text-[11px] text-[#647C95] dark:text-slate-400 truncate">
+                    {loan?.customerName || loan?.customerId?.name} · {loan?.loanNo} · Due: {formatDate(pencilInst.dueDate)}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setPencilInst(null)}
-                className="w-8 h-8 rounded-full bg-[#F3F9FF] dark:bg-slate-800 hover:bg-[#EAF5FF] text-[#647C95] flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-[#F3F9FF] dark:bg-slate-800 hover:bg-[#EAF5FF] text-[#647C95] flex items-center justify-center shrink-0 active:scale-95 transition"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {pencilError && (
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
-                {pencilError}
+            {/* Context Summary Strip for Paid Installment */}
+            {pencilInst.status === 'paid' && (
+              <div className="p-3 rounded-2xl bg-[#F3F9FF] dark:bg-slate-800/60 border border-[#D5E9FA] dark:border-slate-700/80 flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-[10px] font-bold text-[#647C95] dark:text-slate-400 uppercase tracking-wider block">
+                    Installment
+                  </span>
+                  <span className="font-mono font-black text-xs text-[#183653] dark:text-white">
+                    Due #{pencilInst.installmentNo}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-[#647C95] dark:text-slate-400 uppercase tracking-wider block">
+                    Recorded Payment
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                    PAID {formatCurrency(pencilInst.paidAmount || pencilInst.amount)}
+                  </span>
+                </div>
               </div>
             )}
 
-            <form onSubmit={handleSavePencil} className="space-y-3">
+            {pencilError && (
+              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold animate-fade-in flex items-center space-x-2">
+                <span>{pencilError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSavePencil} className="space-y-3.5">
               {/* Amount input */}
               <div>
                 <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
                   Amount / தொகை (₹) *
                 </label>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  value={pencilAmount || ''}
-                  onChange={(e) => setPencilAmount(Number(e.target.value))}
-                  className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-black text-base outline-none focus:border-[#0878D1]"
-                />
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-sm pointer-events-none">
+                    ₹
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={pencilAmount !== '' && pencilAmount !== undefined ? pencilAmount : ''}
+                    onChange={(e) => setPencilAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full h-10 pl-8 pr-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-black text-base outline-none focus:border-[#0878D1] focus:ring-2 focus:ring-[#0878D1]/20 transition"
+                  />
+                </div>
               </div>
 
               {/* Mode Toggle */}
@@ -1420,9 +1595,9 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   <button
                     type="button"
                     onClick={() => setPencilMode('cash')}
-                    className={`h-9 rounded-xl border text-xs font-bold flex items-center justify-center space-x-1.5 ${
+                    className={`h-9 rounded-xl border text-xs font-black flex items-center justify-center space-x-1.5 transition active:scale-95 ${
                       pencilMode === 'cash'
-                        ? 'bg-[#EAF5FF] border-[#0878D1] text-[#0878D1]'
+                        ? 'bg-[#EAF5FF] dark:bg-slate-700 border-[#0878D1] text-[#0878D1] dark:text-[#55B8F5] shadow-xs'
                         : 'bg-white dark:bg-slate-800 border-[#D5E9FA] dark:border-slate-700 text-[#647C95]'
                     }`}
                   >
@@ -1432,9 +1607,9 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   <button
                     type="button"
                     onClick={() => setPencilMode('upi')}
-                    className={`h-9 rounded-xl border text-xs font-bold flex items-center justify-center space-x-1.5 ${
+                    className={`h-9 rounded-xl border text-xs font-black flex items-center justify-center space-x-1.5 transition active:scale-95 ${
                       pencilMode === 'upi'
-                        ? 'bg-[#EAF5FF] border-[#0878D1] text-[#0878D1]'
+                        ? 'bg-[#EAF5FF] dark:bg-slate-700 border-[#0878D1] text-[#0878D1] dark:text-[#55B8F5] shadow-xs'
                         : 'bg-white dark:bg-slate-800 border-[#D5E9FA] dark:border-slate-700 text-[#647C95]'
                     }`}
                   >
@@ -1454,7 +1629,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   required
                   value={pencilDate}
                   onChange={(e) => setPencilDate(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-bold text-xs outline-none focus:border-[#0878D1]"
+                  className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-bold text-xs outline-none focus:border-[#0878D1] focus:ring-2 focus:ring-[#0878D1]/20 transition"
                 />
               </div>
 
@@ -1468,29 +1643,40 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   placeholder="Optional notes or audit reason..."
                   value={pencilNotes}
                   onChange={(e) => setPencilNotes(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-medium text-xs outline-none focus:border-[#0878D1]"
+                  className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-medium text-xs outline-none focus:border-[#0878D1] focus:ring-2 focus:ring-[#0878D1]/20 transition"
                 />
               </div>
 
-              {/* Buttons */}
+              {/* Action Buttons */}
               <div className="pt-2 flex items-center space-x-2">
                 {pencilInst.status === 'paid' && isOwner && (
                   <button
                     type="button"
                     disabled={pencilSubmitting}
                     onClick={handleReversePaidInst}
-                    className="flex-1 min-h-[42px] px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 font-black text-xs transition"
+                    className="flex-1 min-h-[42px] px-3 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-black text-xs transition flex items-center justify-center space-x-1.5 active:scale-95 disabled:opacity-50 shadow-2xs"
                   >
-                    Reverse / ரத்து
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reverse / ரத்து</span>
                   </button>
                 )}
 
                 <button
                   type="submit"
                   disabled={pencilSubmitting}
-                  className="flex-1 min-h-[42px] px-3 rounded-xl bg-[#0878D1] hover:bg-[#064B8E] text-white font-black text-xs shadow-md shadow-[#0878D1]/25 transition"
+                  className="flex-1 min-h-[42px] px-3 rounded-xl bg-[#0878D1] hover:bg-[#064B8E] text-white font-black text-xs shadow-md shadow-[#0878D1]/25 transition flex items-center justify-center space-x-1.5 active:scale-95 disabled:opacity-50"
                 >
-                  {pencilSubmitting ? 'Saving...' : 'Save Payment / சேமி'}
+                  {pencilSubmitting ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>{pencilInst.status === 'paid' ? 'Save Changes / சேமி' : 'Save Payment / சேமி'}</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
