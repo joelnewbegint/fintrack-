@@ -1181,11 +1181,12 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
                   <div className="flex items-center space-x-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                     {loan.remainingBalance > 0 ? (
                       <button
-                        onClick={() => setPayLoanItem(buildPayItem(loan, cust))}
-                        className="flex-1 h-8 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs flex items-center justify-center space-x-1"
+                        onClick={() => onViewLoan && onViewLoan(loan._id, { initialTab: 'schedule' })}
+                        className="flex-1 h-8 rounded-xl bg-[#18A879] hover:bg-[#138861] text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-xs active:scale-95 transition"
+                        title="Open Repayment Schedule / தவணை அட்டவணை"
                       >
                         <CreditCard className="w-3.5 h-3.5" />
-                        <span>Pay</span>
+                        <span>Pay / தவணை</span>
                       </button>
                     ) : (
                       <div className="flex-1 h-8 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs flex items-center justify-center">
@@ -1496,10 +1497,11 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
                             {/* Pay Button */}
                             {loan.remainingBalance > 0 ? (
                               <button
-                                onClick={() => setPayLoanItem(buildPayItem(loan, cust))}
-                                className="h-8 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-xs hover:shadow flex items-center space-x-1 active:scale-95 transition whitespace-nowrap"
+                                onClick={() => onViewLoan && onViewLoan(loan._id, { initialTab: 'schedule' })}
+                                className="h-8 px-3 rounded-xl bg-[#18A879] hover:bg-[#138861] text-white font-bold text-xs shadow-xs hover:shadow flex items-center space-x-1 active:scale-95 transition whitespace-nowrap"
+                                title="Open Repayment Schedule / தவணை அட்டவணை"
                               >
-                                <span>₹ Pay</span>
+                                <span>₹ Pay / அட்டவணை</span>
                               </button>
                             ) : (
                               <span className="h-8 px-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center border border-emerald-200/60 whitespace-nowrap">

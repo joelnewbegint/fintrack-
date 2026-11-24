@@ -114,7 +114,39 @@ export function App() {
   useEffect(() => {
     const handleUrlRouting = () => {
       try {
-        const path = window.location.pathname.toLowerCase();
+        const rawPath = window.location.pathname;
+        const path = rawPath.toLowerCase();
+
+        // Support direct repayment schedule route: /loans/:loanId/schedule
+        const scheduleMatch = rawPath.match(/^\/loans\/([^/]+)\/schedule\/?$/i);
+        const loanDetailMatch = rawPath.match(/^\/loans\/([^/]+)\/?$/i);
+
+        if (scheduleMatch) {
+          if (isEmiAgent) {
+            window.history.replaceState({}, '', '/emi');
+            setOwnerMode('emi');
+            setActiveEmiTab('dashboard');
+            return;
+          }
+          setSelectedLoanId(scheduleMatch[1]);
+          setActiveTab('loans');
+          setOwnerMode('loans');
+          return;
+        } else if (
+          loanDetailMatch &&
+          !['daily', 'weekly', 'monthly', 'closed'].includes(loanDetailMatch[1].toLowerCase())
+        ) {
+          if (isEmiAgent) {
+            window.history.replaceState({}, '', '/emi');
+            setOwnerMode('emi');
+            setActiveEmiTab('dashboard');
+            return;
+          }
+          setSelectedLoanId(loanDetailMatch[1]);
+          setActiveTab('loans');
+          setOwnerMode('loans');
+          return;
+        }
 
         if (path === '/emi' || path.startsWith('/emi/')) {
           if (isLoanAgent) {
@@ -625,7 +657,12 @@ export function App() {
           {selectedLoanId ? (
             <LoanDetail
               loanId={selectedLoanId}
-              onBack={() => setSelectedLoanId(null)}
+              onBack={() => {
+                setSelectedLoanId(null);
+                if (typeof window !== 'undefined') {
+                  window.history.pushState({}, '', '/loans');
+                }
+              }}
             />
           ) : selectedEMILoanId ? (
             <EMIDetail
@@ -685,7 +722,16 @@ export function App() {
               {activeTab === 'loans' && (
                 <Loans
                   initialType={loanFilterType}
-                  onViewLoan={(id) => setSelectedLoanId(id)}
+                  onViewLoan={(id, options) => {
+                    setSelectedLoanId(id);
+                    if (typeof window !== 'undefined') {
+                      if (options?.initialTab === 'schedule') {
+                        window.history.pushState({}, '', `/loans/${id}/schedule`);
+                      } else {
+                        window.history.pushState({}, '', `/loans/${id}`);
+                      }
+                    }
+                  }}
                   onSelectScheme={handleNavigateToScheme}
                 />
               )}
