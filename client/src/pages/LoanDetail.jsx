@@ -540,12 +540,6 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const handleReversePaidInst = async () => {
     if (!pencilInst || pencilInst.status !== 'paid') return;
     const instNo = pencilInst.installmentNo;
-    const reverseAmt = Number(pencilInst.paidAmount || pencilInst.amount || 200);
-
-    const confirmReverse = window.confirm(
-      `தவணை #${instNo} வசூலை (${formatCurrency(reverseAmt)}) ரத்து செய்ய வேண்டுமா? / Are you sure you want to reverse payment for Installment #${instNo}?`
-    );
-    if (!confirmReverse) return;
 
     try {
       setPencilSubmitting(true);
