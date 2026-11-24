@@ -82,6 +82,8 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const [pencilMode, setPencilMode] = useState('cash');
   const [pencilDate, setPencilDate] = useState(formatDateForInput());
   const [pencilNotes, setPencilNotes] = useState('');
+  const [pencilActionTab, setPencilActionTab] = useState('pay'); // 'pay' | 'holiday' | 'leave'
+  const [pencilSkipOption, setPencilSkipOption] = useState('move_next'); // 'move_next' | 'extend_end' | 'skip_only'
   const [pencilSubmitting, setPencilSubmitting] = useState(false);
   const [pencilError, setPencilError] = useState('');
 
@@ -383,11 +385,13 @@ export const LoanDetail = ({ loanId, onBack }) => {
   };
 
   // ---------------------------------------------------------------------------
-  // PENCIL MODAL: UNPAID (CUSTOM/ADVANCE) OR PAID (OWNER CORRECTION/REVERSE)
+  // PENCIL MODAL: UNPAID (CUSTOM/ADVANCE/HOLIDAY/LEAVE) OR PAID (REVERSE/CORRECTION)
   // ---------------------------------------------------------------------------
   const handleOpenPencil = (inst) => {
     setPencilError('');
     setPencilSubmitting(false);
+    setPencilActionTab('pay');
+    setPencilSkipOption('move_next');
 
     const isPaid = inst.status === 'paid';
     const associatedPayment = isPaid ? findPaymentForInstallment(inst, payments, loan?.schedule) : null;
@@ -426,58 +430,91 @@ export const LoanDetail = ({ loanId, onBack }) => {
     setPencilError('');
 
     const isPaid = pencilInst.status === 'paid';
-    const payNum = Number(pencilAmount) || 0;
-    if (payNum <= 0) {
-      setPencilError(lang === 'ta' ? 'சரியான தொகை தேவை' : 'Please enter a valid amount');
+    const instNo = pencilInst.installmentNo;
+
+    if (isPaid) {
+      const payNum = Number(pencilAmount) || 0;
+      if (payNum <= 0) {
+        setPencilError('Please enter a valid amount / சரியான தொகை தேவை');
+        return;
+      }
+      try {
+        setPencilSubmitting(true);
+        const associatedPayment = findPaymentForInstallment(pencilInst, payments, loan?.schedule);
+        const auditNote = pencilNotes || `Installment #${instNo} collection (${pencilMode.toUpperCase()})`;
+
+        if (associatedPayment?._id) {
+          await api.updatePayment(associatedPayment._id, {
+            amount: payNum,
+            mode: pencilMode,
+            date: pencilDate,
+            notes: auditNote,
+          });
+        } else {
+          await api.recordPayment({
+            loanId: loan._id,
+            amount: payNum,
+            mode: pencilMode,
+            date: pencilDate,
+            notes: auditNote,
+          });
+        }
+        setPencilInst(null);
+        await fetchLoanData();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+        }
+        showToast({
+          type: 'single',
+          message: `Installment #${instNo} updated / தவணை #${instNo} திருத்தப்பட்டது`,
+        });
+      } catch (err) {
+        console.error('Failed to update paid installment:', err);
+        setPencilError(err.message || 'Failed to update / திருத்த இயலவில்லை');
+      } finally {
+        setPencilSubmitting(false);
+      }
       return;
     }
 
-    const instNo = pencilInst.installmentNo;
-    const associatedPayment = isPaid ? findPaymentForInstallment(pencilInst, payments, loan?.schedule) : null;
+    // UNPAID INSTALLMENT: Pay | Holiday | Leave
+    if (pencilActionTab === 'leave' && !pencilNotes.trim()) {
+      setPencilError('Reason is required in notes for Leave / விடுப்பிற்கு காரணம் தேவை');
+      return;
+    }
+
+    const instDue = Math.max(0, Number(pencilInst.amount) - (Number(pencilInst.paidAmount) || 0));
+    const payNum = Number(pencilAmount) || 0;
+
+    if (pencilActionTab === 'pay') {
+      if (payNum <= 0) {
+        setPencilError('Please enter a valid amount / சரியான தொகை தேவை');
+        return;
+      }
+      const maxAllowed = (Number(loan?.principal) || 0) + instDue;
+      if (payNum > maxAllowed) {
+        setPencilError(`Amount cannot exceed outstanding principal + due (₹${maxAllowed}) / தொகை ₹${maxAllowed}-க்கு மேல் இருக்கக் கூடாது`);
+        return;
+      }
+    }
 
     try {
       setPencilSubmitting(true);
-      const auditNote = isPaid
-        ? pencilNotes || `Installment #${instNo} collection (${pencilMode.toUpperCase()})`
-        : pencilNotes || `Installment #${instNo} advance payment`;
+      await api.recordInstallmentAction(loan._id, {
+        action: pencilActionTab,
+        installmentNo: instNo,
+        amount: payNum,
+        mode: pencilMode,
+        paidDate: pencilDate,
+        notes: pencilNotes.trim(),
+        skipOption: pencilSkipOption,
+        reason: pencilNotes.trim(),
+      });
 
-      if (isPaid && associatedPayment?._id) {
-        // Update existing payment record in DB
-        await api.updatePayment(associatedPayment._id, {
-          amount: payNum,
-          mode: pencilMode,
-          date: pencilDate,
-          notes: auditNote,
-        });
-      } else if (isPaid) {
-        // Fallback for paid installment without payment doc
-        await api.recordPayment({
-          loanId: loan._id,
-          amount: payNum,
-          mode: pencilMode,
-          date: pencilDate,
-          notes: auditNote,
-        });
-      } else {
-        // Unpaid installment: record payment
-        const res = await api.recordPayment({
-          loanId: loan._id,
-          amount: payNum,
-          mode: pencilMode,
-          date: pencilDate,
-          notes: auditNote,
-        });
-
+      if (pencilActionTab === 'pay') {
         try {
           confetti({ particleCount: 45, spread: 60, origin: { y: 0.7 } });
         } catch (e) {}
-
-        showToast({
-          type: 'single',
-          message: `Saved ${formatCurrency(payNum)} for Installment #${instNo}`,
-          amount: payNum,
-          items: [{ paymentId: res?.payment?._id, instNo, amount: payNum }],
-        });
       }
 
       setPencilInst(null);
@@ -487,14 +524,13 @@ export const LoanDetail = ({ loanId, onBack }) => {
         window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
       }
 
-      if (isPaid) {
-        showToast({
-          type: 'single',
-          message: `Installment #${instNo} updated / தவணை #${instNo} திருத்தப்பட்டது`,
-        });
-      }
+      showToast({
+        type: 'single',
+        message: 'Saved / சேமிக்கப்பட்டது',
+        amount: payNum,
+      });
     } catch (err) {
-      console.error('Failed to save pencil installment:', err);
+      console.error('Failed to save installment action:', err);
       setPencilError(err.message || 'Failed to save / சேமிக்க இயலவில்லை');
     } finally {
       setPencilSubmitting(false);
@@ -504,47 +540,16 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const handleReversePaidInst = async () => {
     if (!pencilInst || pencilInst.status !== 'paid') return;
     const instNo = pencilInst.installmentNo;
-    const associatedPayment = findPaymentForInstallment(pencilInst, payments, loan?.schedule);
+    const reverseAmt = Number(pencilInst.paidAmount || pencilInst.amount || 200);
 
-    const reverseAmt = Number(pencilInst.paidAmount || pencilInst.amount || associatedPayment?.amount || 200);
     const confirmReverse = window.confirm(
-      lang === 'ta'
-        ? `தவணை #${instNo} வசூலை (${formatCurrency(reverseAmt)}) ரத்து செய்ய வேண்டுமா?`
-        : `Are you sure you want to reverse payment for Installment #${instNo} (${formatCurrency(reverseAmt)})?`
+      `தவணை #${instNo} வசூலை (${formatCurrency(reverseAmt)}) ரத்து செய்ய வேண்டுமா? / Are you sure you want to reverse payment for Installment #${instNo}?`
     );
     if (!confirmReverse) return;
 
     try {
       setPencilSubmitting(true);
-      if (associatedPayment?._id) {
-        await api.deletePayment(associatedPayment._id);
-      } else {
-        // Fallback: If no standalone payment document exists, update loan schedule directly
-        const updatedSchedule = (loan.schedule || []).map((s) => {
-          if (s.installmentNo === instNo) {
-            return {
-              ...s,
-              status: new Date(s.dueDate) < new Date() ? 'overdue' : 'pending',
-              paidAmount: 0,
-              paidDate: null,
-            };
-          }
-          return s;
-        });
-        const newCollected = Math.max(0, (loan.totalCollected || 0) - reverseAmt);
-        const newRemaining = Math.min(loan.totalPayable, (loan.totalPayable || 0) - newCollected);
-        await api.updateLoan(loan._id, {
-          schedule: updatedSchedule,
-          totalCollected: newCollected,
-          remainingBalance: newRemaining,
-          status:
-            newRemaining > 0
-              ? updatedSchedule.some((s) => s.status === 'overdue')
-                ? 'overdue'
-                : 'active'
-              : 'completed',
-        });
-      }
+      await api.reverseInstallment(loan._id, instNo);
 
       setPencilInst(null);
       await fetchLoanData();
@@ -558,7 +563,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
         message: `Installment #${instNo} reversed / தவணை #${instNo} வசூல் ரத்து செய்யப்பட்டது`,
       });
     } catch (err) {
-      console.error('Failed to reverse payment:', err);
+      console.error('Failed to reverse installment:', err);
       setPencilError(err.message || 'Failed to reverse payment / ரத்து செய்ய இயலவில்லை');
     } finally {
       setPencilSubmitting(false);
@@ -575,7 +580,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const overdueCount = useMemo(() => {
     const now = new Date();
     return unpaidInstallments.filter(
-      (inst) => inst.status === 'overdue' || (inst.status !== 'holiday' && new Date(inst.dueDate) < now)
+      (inst) => inst.status === 'overdue' || (inst.status !== 'holiday' && inst.status !== 'leave' && new Date(inst.dueDate) < now)
     ).length;
   }, [unpaidInstallments]);
 
@@ -586,7 +591,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
     (loan?.schedule || []).forEach((inst) => {
       const isPaid = inst.status === 'paid';
-      const isHoliday = inst.status === 'holiday' || inst.status === 'missed';
+      const isHoliday = inst.status === 'holiday' || inst.status === 'missed' || inst.status === 'leave';
       const instDue = Number(inst.amount) - (Number(inst.paidAmount) || 0);
 
       if (!isPaid && !isHoliday) {
@@ -1240,8 +1245,9 @@ export const LoanDetail = ({ loanId, onBack }) => {
             {loan.schedule?.map((inst) => {
               const isPaid = inst.status === 'paid';
               const isHoliday = inst.status === 'holiday';
+              const isLeave = inst.status === 'leave';
               const isMissed = inst.status === 'missed';
-              const isOverdue = !isHoliday && !isMissed && (inst.status === 'overdue' || (!isPaid && new Date(inst.dueDate) < new Date()));
+              const isOverdue = !isHoliday && !isMissed && !isLeave && (inst.status === 'overdue' || (!isPaid && new Date(inst.dueDate) < new Date()));
               const isSelected = selectedInstNos.has(inst.installmentNo);
               const isPendingSync = pendingSyncInstNos.has(inst.installmentNo) || inst.isOffline;
               const isCollecting = collectingInstNo === inst.installmentNo;
@@ -1255,6 +1261,8 @@ export const LoanDetail = ({ loanId, onBack }) => {
                       ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800'
                       : isHoliday
                       ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700'
+                      : isLeave
+                      ? 'bg-indigo-50/70 dark:bg-indigo-950/30 border-indigo-300 dark:border-indigo-700'
                       : isOverdue
                       ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800 border-l-4 border-l-rose-500'
                       : isSelected
@@ -1265,7 +1273,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center space-x-2.5 min-w-0">
                       {/* Selection Checkbox (Unpaid only) */}
-                      {!isPaid && !isHoliday && (
+                      {!isPaid && !isHoliday && !isLeave && (
                         <button
                           type="button"
                           onClick={() => handleToggleSelectInst(inst.installmentNo)}
@@ -1286,6 +1294,10 @@ export const LoanDetail = ({ loanId, onBack }) => {
                         <p className="text-[11px] text-[#647C95] dark:text-slate-400 font-mono">
                           {isPaid
                             ? `✓ Paid on ${formatDate(inst.paidDate || inst.dueDate)}`
+                            : isHoliday
+                            ? `🏖️ Holiday: ${inst.holidayReason || 'Shop / Area'}`
+                            : isLeave
+                            ? `👤 Leave: ${inst.holidayReason || 'Customer Leave'}`
                             : `Due: ${formatCurrency(inst.amount)}`}
                         </p>
                       </div>
@@ -1301,6 +1313,8 @@ export const LoanDetail = ({ loanId, onBack }) => {
                             ? 'bg-emerald-100 text-[#18A879] dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300'
                             : isHoliday
                             ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300'
+                            : isLeave
+                            ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-300'
                             : isMissed
                             ? 'bg-orange-100 text-orange-800 border border-orange-300'
                             : isOverdue
@@ -1308,7 +1322,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                             : 'bg-slate-100 text-[#647C95] dark:bg-slate-800 dark:text-slate-300'
                         }`}
                       >
-                        {isPaid ? 'PAID' : isHoliday ? 'HOLIDAY' : isMissed ? 'MISSED' : isOverdue ? 'OVERDUE' : 'PENDING'}
+                        {isPaid ? 'PAID' : isHoliday ? 'HOLIDAY' : isLeave ? 'LEAVE' : isMissed ? 'MISSED' : isOverdue ? 'OVERDUE' : 'PENDING'}
                       </span>
                     </div>
                   </div>
@@ -1322,7 +1336,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                       </span>
                     )}
 
-                    {!isPaid && !isHoliday && (
+                    {!isPaid && !isHoliday && !isLeave && (
                       <button
                         type="button"
                         disabled={isCollecting}
@@ -1385,8 +1399,9 @@ export const LoanDetail = ({ loanId, onBack }) => {
                 {loan.schedule?.map((inst) => {
                   const isPaid = inst.status === 'paid';
                   const isHoliday = inst.status === 'holiday';
+                  const isLeave = inst.status === 'leave';
                   const isMissed = inst.status === 'missed';
-                  const isOverdue = !isHoliday && !isMissed && (inst.status === 'overdue' || (!isPaid && new Date(inst.dueDate) < new Date()));
+                  const isOverdue = !isHoliday && !isMissed && !isLeave && (inst.status === 'overdue' || (!isPaid && new Date(inst.dueDate) < new Date()));
                   const isSelected = selectedInstNos.has(inst.installmentNo);
                   const isPendingSync = pendingSyncInstNos.has(inst.installmentNo) || inst.isOffline;
                   const isCollecting = collectingInstNo === inst.installmentNo;
@@ -1400,6 +1415,8 @@ export const LoanDetail = ({ loanId, onBack }) => {
                           ? 'bg-emerald-50/40 hover:bg-emerald-50/70 dark:bg-emerald-950/20'
                           : isHoliday
                           ? 'bg-amber-50/40 hover:bg-amber-50/70 dark:bg-amber-950/20'
+                          : isLeave
+                          ? 'bg-indigo-50/40 hover:bg-indigo-50/70 dark:bg-indigo-950/20'
                           : isOverdue
                           ? 'bg-rose-50/50 hover:bg-rose-50/80 dark:bg-rose-950/20 border-l-4 border-l-rose-500'
                           : isSelected
@@ -1409,7 +1426,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                     >
                       {/* Checkbox */}
                       <td className="py-2.5 px-3">
-                        {!isPaid && !isHoliday && (
+                        {!isPaid && !isHoliday && !isLeave && (
                           <button
                             type="button"
                             onClick={() => handleToggleSelectInst(inst.installmentNo)}
@@ -1447,6 +1464,8 @@ export const LoanDetail = ({ loanId, onBack }) => {
                               ? 'bg-emerald-100 text-[#18A879] dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300'
                               : isHoliday
                               ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300'
+                              : isLeave
+                              ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-300'
                               : isMissed
                               ? 'bg-orange-100 text-orange-800 border border-orange-300'
                               : isOverdue
@@ -1454,7 +1473,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                               : 'bg-slate-100 text-[#647C95] dark:bg-slate-800 dark:text-slate-300 border border-slate-200'
                           }`}
                         >
-                          {isPaid ? 'PAID' : isHoliday ? 'HOLIDAY' : isMissed ? 'MISSED' : isOverdue ? 'OVERDUE' : 'PENDING'}
+                          {isPaid ? 'PAID' : isHoliday ? 'HOLIDAY' : isLeave ? 'LEAVE' : isMissed ? 'MISSED' : isOverdue ? 'OVERDUE' : 'PENDING'}
                         </span>
                         {isPendingSync && (
                           <span className="ml-1 text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded-full">
@@ -1469,7 +1488,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
                       <td className="py-2.5 px-3 text-right">
                         <div className="flex items-center justify-end space-x-1.5">
-                          {!isPaid && !isHoliday && (
+                          {!isPaid && !isHoliday && !isLeave && (
                             <button
                               type="button"
                               disabled={isCollecting}
@@ -1506,7 +1525,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
       </div>
 
       {/* =========================================================================
-          PENCIL MODAL: UNPAID (CUSTOM/ADVANCE) OR PAID (OWNER CORRECTION/REVERSE)
+          PENCIL MODAL: UNPAID (CUSTOM/ADVANCE/HOLIDAY/LEAVE) OR PAID (REVERSE/CORRECTION)
       ========================================================================= */}
       {pencilInst && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
@@ -1521,7 +1540,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   <h4 className="font-black text-sm text-[#183653] dark:text-white truncate">
                     {pencilInst.status === 'paid'
                       ? `Edit Paid Installment #${pencilInst.installmentNo}`
-                      : `Record Payment #${pencilInst.installmentNo}`}
+                      : `Record / Advance Installment #${pencilInst.installmentNo}`}
                   </h4>
                   <p className="text-[11px] text-[#647C95] dark:text-slate-400 truncate">
                     {loan?.customerName || loan?.customerId?.name} · {loan?.loanNo} · Due: {formatDate(pencilInst.dueDate)}
@@ -1559,6 +1578,55 @@ export const LoanDetail = ({ loanId, onBack }) => {
               </div>
             )}
 
+            {/* 3-WAY TOGGLE (PAY | HOLIDAY | LEAVE) for Unpaid Installment */}
+            {pencilInst.status !== 'paid' && (
+              <div className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-[#F3F9FF] dark:bg-slate-800/80 border border-[#D5E9FA] dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPencilActionTab('pay');
+                    setPencilError('');
+                  }}
+                  className={`py-1.5 px-2 rounded-xl text-xs font-black transition flex items-center justify-center space-x-1 ${
+                    pencilActionTab === 'pay'
+                      ? 'bg-[#0878D1] text-white shadow-xs'
+                      : 'text-[#647C95] hover:text-[#183653] dark:text-slate-300'
+                  }`}
+                >
+                  <Banknote className="w-3.5 h-3.5" />
+                  <span>Pay</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPencilActionTab('holiday');
+                    setPencilError('');
+                  }}
+                  className={`py-1.5 px-1.5 rounded-xl text-[11px] font-black transition flex items-center justify-center space-x-1 ${
+                    pencilActionTab === 'holiday'
+                      ? 'bg-[#0878D1] text-white shadow-xs'
+                      : 'text-[#647C95] hover:text-[#183653] dark:text-slate-300'
+                  }`}
+                >
+                  <span>🏖️ Holiday / விடுமுறை</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPencilActionTab('leave');
+                    setPencilError('');
+                  }}
+                  className={`py-1.5 px-1.5 rounded-xl text-[11px] font-black transition flex items-center justify-center space-x-1 ${
+                    pencilActionTab === 'leave'
+                      ? 'bg-[#0878D1] text-white shadow-xs'
+                      : 'text-[#647C95] hover:text-[#183653] dark:text-slate-300'
+                  }`}
+                >
+                  <span>👤 Leave / விடுப்பு</span>
+                </button>
+              </div>
+            )}
+
             {pencilError && (
               <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold animate-fade-in flex items-center space-x-2">
                 <span>{pencilError}</span>
@@ -1566,63 +1634,142 @@ export const LoanDetail = ({ loanId, onBack }) => {
             )}
 
             <form onSubmit={handleSavePencil} className="space-y-3.5">
-              {/* Amount input */}
-              <div>
-                <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
-                  Amount / தொகை (₹) *
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-sm pointer-events-none">
-                    ₹
-                  </span>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={pencilAmount !== '' && pencilAmount !== undefined ? pencilAmount : ''}
-                    onChange={(e) => setPencilAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full h-10 pl-8 pr-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-black text-base outline-none focus:border-[#0878D1] focus:ring-2 focus:ring-[#0878D1]/20 transition"
-                  />
-                </div>
-              </div>
+              {/* HOLIDAY / LEAVE MODE: Info & Dropdown */}
+              {pencilInst.status !== 'paid' && (pencilActionTab === 'holiday' || pencilActionTab === 'leave') ? (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs font-medium space-y-1">
+                    <p className="font-bold flex items-center space-x-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>
+                        {pencilActionTab === 'holiday'
+                          ? 'Shop / Area Holiday (no collection on this day) / விடுமுறை நாள்'
+                          : 'Customer Absent or Leave Taken / வாடிக்கையாளர் விடுப்பு'}
+                      </span>
+                    </p>
+                    <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                      This installment will be excluded from overdue counts and penalty calculations.
+                    </p>
+                  </div>
 
-              {/* Mode Toggle */}
-              <div>
-                <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
-                  Payment Mode / முறை
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPencilMode('cash')}
-                    className={`h-9 rounded-xl border text-xs font-black flex items-center justify-center space-x-1.5 transition active:scale-95 ${
-                      pencilMode === 'cash'
-                        ? 'bg-[#EAF5FF] dark:bg-slate-700 border-[#0878D1] text-[#0878D1] dark:text-[#55B8F5] shadow-xs'
-                        : 'bg-white dark:bg-slate-800 border-[#D5E9FA] dark:border-slate-700 text-[#647C95]'
-                    }`}
-                  >
-                    <Banknote className="w-3.5 h-3.5" />
-                    <span>Cash</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPencilMode('upi')}
-                    className={`h-9 rounded-xl border text-xs font-black flex items-center justify-center space-x-1.5 transition active:scale-95 ${
-                      pencilMode === 'upi'
-                        ? 'bg-[#EAF5FF] dark:bg-slate-700 border-[#0878D1] text-[#0878D1] dark:text-[#55B8F5] shadow-xs'
-                        : 'bg-white dark:bg-slate-800 border-[#D5E9FA] dark:border-slate-700 text-[#647C95]'
-                    }`}
-                  >
-                    <QrCode className="w-3.5 h-3.5" />
-                    <span>UPI / GPay</span>
-                  </button>
+                  {/* Dropdown: After skipping / பிறகு */}
+                  <div>
+                    <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
+                      After skipping / பிறகு *
+                    </label>
+                    <select
+                      value={pencilSkipOption}
+                      onChange={(e) => setPencilSkipOption(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-bold text-xs outline-none focus:border-[#0878D1] transition"
+                    >
+                      <option value="move_next">a) Move due to next date / அடுத்த தேதிக்கு மாற்றுக (Default)</option>
+                      <option value="extend_end">b) Extend loan end date by 1 day / கடன் முடிவை நீட்டிக்க</option>
+                      <option value="skip_only">c) No change, mark skipped only / மாற்றம் இல்லை, தவிர்த்ததாக குறிக்க</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* PAY MODE OR EDIT PAID: Amount & Mode Inputs */
+                <>
+                  {/* Amount input */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-black text-[#183653] dark:text-white">
+                        Amount / தொகை (₹) *
+                      </label>
+                      {pencilInst.status !== 'paid' && (
+                        <span className="text-[11px] font-bold text-[#0878D1] dark:text-[#55B8F5]">
+                          Due: {formatCurrency(Math.max(0, Number(pencilInst.amount) - (Number(pencilInst.paidAmount) || 0)))}
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-sm pointer-events-none">
+                        ₹
+                      </span>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={pencilAmount !== '' && pencilAmount !== undefined ? pencilAmount : ''}
+                        onChange={(e) => setPencilAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                        className="w-full h-10 pl-8 pr-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-black text-base outline-none focus:border-[#0878D1] focus:ring-2 focus:ring-[#0878D1]/20 transition"
+                      />
+                    </div>
 
-              {/* Paid Date */}
+                    {/* LIVE SPLIT BOX WHILE TYPING (EXTRA TO PRINCIPAL RULE) */}
+                    {pencilInst.status !== 'paid' && (
+                      <div className="mt-2 p-2.5 rounded-xl bg-[#F3F9FF] dark:bg-slate-800/80 border border-[#D5E9FA] dark:border-slate-700 space-y-1 text-xs">
+                        {(() => {
+                          const due = Math.max(0, Number(pencilInst.amount) - (Number(pencilInst.paidAmount) || 0));
+                          const amt = Number(pencilAmount) || 0;
+                          const extra = Math.max(0, amt - due);
+                          const instPart = Math.min(amt, due);
+                          const curPrin = Number(loan?.principal) || 0;
+                          const newPrin = Math.max(0, curPrin - extra);
+                          const dateLabel = pencilDate ? formatDate(pencilDate) : 'Today';
+
+                          return (
+                            <>
+                              <div className="flex items-center justify-between text-[#183653] dark:text-white font-medium">
+                                <span>Installment #{pencilInst.installmentNo} ({dateLabel}):</span>
+                                <span className="font-bold tabular-nums">₹{instPart}</span>
+                              </div>
+                              {extra > 0 && (
+                                <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded-lg">
+                                  <span>Extra to principal ({dateLabel}):</span>
+                                  <span className="tabular-nums">+₹{extra}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center justify-between text-[#0878D1] dark:text-[#55B8F5] font-black pt-0.5 border-t border-[#D5E9FA]/60 dark:border-slate-700/60">
+                                <span>New principal:</span>
+                                <span className="tabular-nums">₹{newPrin}</span>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mode Toggle */}
+                  <div>
+                    <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
+                      Payment Mode / முறை
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPencilMode('cash')}
+                        className={`h-9 rounded-xl border text-xs font-black flex items-center justify-center space-x-1.5 transition active:scale-95 ${
+                          pencilMode === 'cash'
+                            ? 'bg-[#EAF5FF] dark:bg-slate-700 border-[#0878D1] text-[#0878D1] dark:text-[#55B8F5] shadow-xs'
+                            : 'bg-white dark:bg-slate-800 border-[#D5E9FA] dark:border-slate-700 text-[#647C95]'
+                        }`}
+                      >
+                        <Banknote className="w-3.5 h-3.5" />
+                        <span>Cash</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPencilMode('upi')}
+                        className={`h-9 rounded-xl border text-xs font-black flex items-center justify-center space-x-1.5 transition active:scale-95 ${
+                          pencilMode === 'upi'
+                            ? 'bg-[#EAF5FF] dark:bg-slate-700 border-[#0878D1] text-[#0878D1] dark:text-[#55B8F5] shadow-xs'
+                            : 'bg-white dark:bg-slate-800 border-[#D5E9FA] dark:border-slate-700 text-[#647C95]'
+                        }`}
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
+                        <span>UPI / GPay</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Paid / Target Date */}
               <div>
                 <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
-                  Paid Date / தேதி
+                  {pencilActionTab === 'pay' || pencilInst.status === 'paid' ? 'Paid Date / தேதி' : 'Date / தேதி'}
                 </label>
                 <input
                   type="date"
@@ -1633,14 +1780,25 @@ export const LoanDetail = ({ loanId, onBack }) => {
                 />
               </div>
 
-              {/* Notes */}
+              {/* Notes / Reason */}
               <div>
                 <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
-                  Notes / குறிப்பு
+                  {pencilActionTab === 'leave'
+                    ? 'Reason for Leave / விடுப்பிற்கான காரணம் *'
+                    : pencilActionTab === 'holiday'
+                    ? 'Reason / குறிப்பு (Optional)'
+                    : 'Notes / குறிப்பு'}
                 </label>
                 <input
                   type="text"
-                  placeholder="Optional notes or audit reason..."
+                  required={pencilActionTab === 'leave'}
+                  placeholder={
+                    pencilActionTab === 'leave'
+                      ? 'e.g. Out of station, Medical leave, Customer absent...'
+                      : pencilActionTab === 'holiday'
+                      ? 'e.g. Festival, Sunday, Shop closed...'
+                      : 'Optional notes or audit reason...'
+                  }
                   value={pencilNotes}
                   onChange={(e) => setPencilNotes(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-medium text-xs outline-none focus:border-[#0878D1] focus:ring-2 focus:ring-[#0878D1]/20 transition"
@@ -1674,7 +1832,15 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   ) : (
                     <>
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      <span>{pencilInst.status === 'paid' ? 'Save Changes / சேமி' : 'Save Payment / சேமி'}</span>
+                      <span>
+                        {pencilInst.status === 'paid'
+                          ? 'Save Changes / சேமி'
+                          : pencilActionTab === 'holiday'
+                          ? 'Declare Holiday / உறுதிசெய்'
+                          : pencilActionTab === 'leave'
+                          ? 'Record Leave / உறுதிசெய்'
+                          : 'Save Payment / சேமி'}
+                      </span>
                     </>
                   )}
                 </button>

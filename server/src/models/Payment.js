@@ -56,6 +56,11 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    paymentType: {
+      type: String,
+      enum: ['Installment', 'Principal', 'installment', 'principal', 'regular'],
+      default: 'Installment',
+    },
   },
   {
     timestamps: true,

@@ -1015,3 +1015,399 @@ export const deleteLoan = async (req, res, next) => {
     next(error);
   }
 };
+
+export const recordInstallmentAction = async (req, res, next) => {
+  try {
+    if (req.user?.role === 'client') {
+      return res.status(403).json({ success: false, message: 'Access denied: Clients cannot perform installment actions.' });
+    }
+
+    const { id } = req.params;
+    const isObjId = mongoose.Types.ObjectId.isValid(id);
+    const loan = isObjId
+      ? await Loan.findById(id).populate('customerId')
+      : await Loan.findOne({ $or: [{ clientId: id }, { loanNo: id }] }).populate('customerId');
+
+    if (!loan) {
+      return res.status(404).json({ success: false, message: 'Loan not found / கடன் கணக்கு கிடைக்கவில்லை' });
+    }
+
+    const {
+      action = 'pay', // 'pay' | 'holiday' | 'leave' | 'reverse'
+      installmentNo,
+      amount,
+      mode = 'cash',
+      paidDate,
+      notes = '',
+      skipOption = 'move_next', // 'move_next' | 'extend_end' | 'skip_only'
+      reason = '',
+    } = req.body;
+
+    // Helper: find target installment
+    let inst = null;
+    if (installmentNo !== undefined && installmentNo !== null) {
+      inst = loan.schedule.find((s) => s.installmentNo === Number(installmentNo));
+    }
+    if (!inst && paidDate) {
+      const pDateStr = new Date(paidDate).toISOString().slice(0, 10);
+      inst = loan.schedule.find((s) => s.dueDate && new Date(s.dueDate).toISOString().slice(0, 10) === pDateStr);
+    }
+    if (!inst) {
+      // Find first unpaid installment
+      inst = loan.schedule.find((s) => s.status !== 'paid');
+    }
+
+    if (!inst && action !== 'reverse') {
+      return res.status(400).json({ success: false, message: 'No pending installment found for this loan' });
+    }
+
+    const paymentDate = paidDate ? new Date(paidDate) : new Date();
+
+    // ---------------------------------------------------------------------------
+    // ACTION: REVERSE (Correct / undo a previously paid installment)
+    // ---------------------------------------------------------------------------
+    if (action === 'reverse') {
+      if (!inst || inst.status !== 'paid') {
+        return res.status(400).json({ success: false, message: 'Target installment is not marked as paid / இத்தவணை செலுத்தப்படவில்லை' });
+      }
+
+      const revAmt = Number(inst.paidAmount || inst.amount || 0);
+
+      // Revert installment fields
+      const isPastDue = new Date(inst.dueDate) < new Date();
+      inst.status = isPastDue ? 'overdue' : 'pending';
+      inst.paidAmount = 0;
+      inst.paidDate = null;
+
+      // Find and delete/adjust matching payment document
+      const matchingPayments = await Payment.find({
+        loanId: loan._id,
+      }).sort({ date: -1 });
+
+      let paymentDeleted = null;
+      for (const p of matchingPayments) {
+        const pNotes = p.notes || '';
+        const matchesInst = new RegExp(`(?:installment|inst)\\s*#?${inst.installmentNo}\\b|#${inst.installmentNo}\\b`, 'i').test(pNotes);
+        if (matchesInst) {
+          if (p.amount === revAmt) {
+            await Payment.findByIdAndDelete(p._id);
+            paymentDeleted = p._id;
+            break;
+          } else if (p.amount > revAmt) {
+            p.amount -= revAmt;
+            await p.save();
+            paymentDeleted = p._id;
+            break;
+          }
+        }
+      }
+
+      // If no notes match, find by amount and date
+      if (!paymentDeleted) {
+        for (const p of matchingPayments) {
+          if (Number(p.amount) === revAmt) {
+            await Payment.findByIdAndDelete(p._id);
+            paymentDeleted = p._id;
+            break;
+          }
+        }
+      }
+
+      loan.totalCollected = Math.max(0, (loan.totalCollected || 0) - revAmt);
+      loan.remainingBalance = Math.min(loan.totalPayable, (loan.totalPayable || 0) - loan.totalCollected);
+      loan.status = loan.remainingBalance <= 0
+        ? 'completed'
+        : loan.schedule.some((s) => s.status === 'overdue')
+          ? 'overdue'
+          : 'active';
+
+      await loan.save();
+
+      try {
+        await AuditLog.create({
+          userId: req.user?._id || 'owner',
+          userName: req.user?.name || 'Owner',
+          action: 'REVERSE_INSTALLMENT',
+          entity: 'Loan',
+          entityId: loan._id.toString(),
+          after: {
+            installmentNo: inst.installmentNo,
+            revertedAmount: revAmt,
+            remainingBalance: loan.remainingBalance,
+          },
+        });
+      } catch (e) {}
+
+      return res.status(200).json({
+        success: true,
+        message: 'Installment reversed successfully / தவணை ரத்து செய்யப்பட்டது',
+        loan,
+      });
+    }
+
+    // ---------------------------------------------------------------------------
+    // ACTION: HOLIDAY / LEAVE
+    // ---------------------------------------------------------------------------
+    if (action === 'holiday' || action === 'leave') {
+      const modeType = action; // 'holiday' or 'leave'
+      const noteReason = (reason || notes || '').trim();
+
+      if (modeType === 'leave' && !noteReason) {
+        return res.status(400).json({
+          success: false,
+          message: 'Reason is required in notes for Leave / விடுப்பிற்கு காரணம் தேவை',
+        });
+      }
+
+      const holidayReasonText = noteReason || (modeType === 'holiday' ? 'Shop / Area Holiday / விடுமுறை' : 'Customer Leave / விடுப்பு');
+
+      inst.status = modeType;
+      inst.holidayReason = holidayReasonText;
+
+      // Handle skip options
+      const targetInstNo = inst.installmentNo;
+      const getIntervalMs = (type) => {
+        if (type === 'weekly') return 7 * 24 * 60 * 60 * 1000;
+        if (type === 'monthly') return 30 * 24 * 60 * 60 * 1000;
+        return 24 * 60 * 60 * 1000; // daily
+      };
+      const intervalMs = getIntervalMs(loan.financeType);
+
+      if (skipOption === 'move_next' || skipOption === 'extend_end') {
+        // Shift subsequent unpaid installments forward by 1 interval
+        for (let i = 0; i < loan.schedule.length; i++) {
+          const s = loan.schedule[i];
+          if (s.installmentNo > targetInstNo && s.status !== 'paid') {
+            s.dueDate = new Date(new Date(s.dueDate).getTime() + intervalMs);
+          }
+        }
+        if (loan.endDate) {
+          loan.endDate = new Date(new Date(loan.endDate).getTime() + intervalMs);
+        }
+      }
+
+      // Record in loan.holidays
+      if (!Array.isArray(loan.holidays)) {
+        loan.holidays = [];
+      }
+      loan.holidays.push({
+        date: paymentDate.toISOString().slice(0, 10),
+        reason: holidayReasonText,
+        type: modeType,
+        skipOption,
+      });
+
+      // Status check (excluding holiday/leave from overdue)
+      const now = new Date();
+      const hasOverdue = loan.schedule.some(
+        (s) => s.status !== 'paid' && s.status !== 'holiday' && s.status !== 'leave' && new Date(s.dueDate) < now
+      );
+      loan.status = loan.remainingBalance <= 0 ? 'completed' : hasOverdue ? 'overdue' : 'active';
+
+      await loan.save();
+
+      try {
+        await AuditLog.create({
+          userId: req.user?._id || 'owner',
+          userName: req.user?.name || 'Owner',
+          action: modeType === 'holiday' ? 'DECLARE_HOLIDAY' : 'DECLARE_LEAVE',
+          entity: 'Loan',
+          entityId: loan._id.toString(),
+          after: {
+            loanNo: loan.loanNo,
+            installmentNo: targetInstNo,
+            date: paymentDate.toISOString().slice(0, 10),
+            mode: modeType,
+            skipOption,
+            reason: holidayReasonText,
+          },
+        });
+      } catch (e) {}
+
+      return res.status(200).json({
+        success: true,
+        message: 'Saved / சேமிக்கப்பட்டது',
+        loan,
+      });
+    }
+
+    // ---------------------------------------------------------------------------
+    // ACTION: PAY (With Extra Amount to Principal Rule)
+    // ---------------------------------------------------------------------------
+    const payNum = Number(amount);
+    if (isNaN(payNum) || payNum <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment amount must be greater than 0 / சரியான தொகை தேவை',
+      });
+    }
+
+    const instDue = Math.max(0, Number(inst.amount) - (Number(inst.paidAmount) || 0));
+    const maxAllowed = (Number(loan.principal) || 0) + instDue;
+
+    if (payNum > maxAllowed) {
+      return res.status(400).json({
+        success: false,
+        message: `Amount cannot exceed outstanding principal + due (₹${maxAllowed}) / தொகை ₹${maxAllowed}-க்கு மேல் இருக்கக் கூடாது`,
+      });
+    }
+
+    const createdBy = req.user ? req.user._id : 'owner';
+    const custId = loan.customerId ? (loan.customerId._id || loan.customerId) : req.body.customerId;
+    const createdPayments = [];
+
+    if (payNum <= instDue) {
+      // Normal Installment Payment
+      const randomHex = Math.floor(100000 + Math.random() * 900000);
+      const receiptNo = `RCP-${new Date().getFullYear().toString().slice(-2)}-${randomHex}`;
+      const p1 = await Payment.create({
+        clientId: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        createdBy,
+        receiptNo,
+        loanId: loan._id,
+        customerId: custId,
+        amount: payNum,
+        date: paymentDate,
+        mode: mode || 'cash',
+        paymentType: 'Installment',
+        collectedBy: req.user?._id || 'owner',
+        notes: notes ? `${notes} (Installment #${inst.installmentNo})` : `Installment #${inst.installmentNo} collection`,
+      });
+      createdPayments.push(p1);
+
+      inst.paidAmount = (inst.paidAmount || 0) + payNum;
+      if (inst.paidAmount >= inst.amount) {
+        inst.status = 'paid';
+        inst.paidDate = paymentDate;
+      } else {
+        inst.status = 'partial';
+        inst.paidDate = paymentDate;
+      }
+
+      loan.totalCollected = (loan.totalCollected || 0) + payNum;
+      loan.remainingBalance = Math.max(0, loan.totalPayable - loan.totalCollected);
+    } else {
+      // Extra Amount > Due: Split into Installment + Principal Payment
+      const extra = payNum - instDue;
+
+      // 1. Installment Payment Row
+      const r1Hex = Math.floor(100000 + Math.random() * 900000);
+      const receiptNo1 = `RCP-${new Date().getFullYear().toString().slice(-2)}-${r1Hex}`;
+      const p1 = await Payment.create({
+        clientId: `pay_${Date.now()}_inst`,
+        createdBy,
+        receiptNo: receiptNo1,
+        loanId: loan._id,
+        customerId: custId,
+        amount: instDue,
+        date: paymentDate,
+        mode: mode || 'cash',
+        paymentType: 'Installment',
+        collectedBy: req.user?._id || 'owner',
+        notes: notes ? `${notes} (Installment #${inst.installmentNo})` : `Installment #${inst.installmentNo} collection`,
+      });
+      createdPayments.push(p1);
+
+      // 2. Principal Payment Row
+      const r2Hex = Math.floor(100000 + Math.random() * 900000);
+      const receiptNo2 = `RCP-${new Date().getFullYear().toString().slice(-2)}-${r2Hex}`;
+      const p2 = await Payment.create({
+        clientId: `pay_${Date.now()}_prin`,
+        createdBy,
+        receiptNo: receiptNo2,
+        loanId: loan._id,
+        customerId: custId,
+        amount: extra,
+        date: paymentDate,
+        mode: mode || 'cash',
+        paymentType: 'Principal',
+        collectedBy: req.user?._id || 'owner',
+        notes: notes ? `${notes} (Principal payment)` : `Principal payment for Installment #${inst.installmentNo}`,
+      });
+      createdPayments.push(p2);
+
+      // Mark this installment fully paid
+      inst.paidAmount = inst.amount;
+      inst.status = 'paid';
+      inst.paidDate = paymentDate;
+
+      // Reduce loan's outstanding principal by Extra
+      const oldPrincipal = Number(loan.principal) || 0;
+      const newPrincipal = Math.max(0, oldPrincipal - extra);
+      loan.principal = newPrincipal;
+
+      // Recalculate interest and EMI on remaining dues from the new principal
+      const remainingUnpaid = loan.schedule.filter(
+        (s) => s.installmentNo > inst.installmentNo && s.status !== 'paid'
+      );
+      const remainingCount = remainingUnpaid.length;
+
+      if (remainingCount > 0) {
+        let remainingPayable = newPrincipal;
+        if (loan.interestType === 'addon' && Number(loan.interestPercent) > 0) {
+          const interestPortion = Math.round((newPrincipal * (Number(loan.interestPercent) / 100) * remainingCount) / loan.duration);
+          remainingPayable = newPrincipal + interestPortion;
+        }
+
+        const newPerInst = Math.ceil(remainingPayable / remainingCount);
+        loan.installmentAmount = newPerInst;
+
+        let runningSum = 0;
+        for (let i = 0; i < remainingUnpaid.length; i++) {
+          if (i === remainingUnpaid.length - 1) {
+            remainingUnpaid[i].amount = Math.max(0, remainingPayable - runningSum);
+          } else {
+            remainingUnpaid[i].amount = newPerInst;
+            runningSum += newPerInst;
+          }
+        }
+
+        // Recalculate totalPayable as sum of all schedule amounts
+        loan.totalPayable = loan.schedule.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
+      }
+
+      loan.totalCollected = (loan.totalCollected || 0) + payNum;
+      loan.remainingBalance = Math.max(0, loan.totalPayable - loan.totalCollected);
+    }
+
+    // Sync loan status
+    if (loan.remainingBalance === 0) {
+      loan.status = 'completed';
+    } else {
+      const now = new Date();
+      const hasOverdue = loan.schedule.some(
+        (s) => s.status !== 'paid' && s.status !== 'holiday' && s.status !== 'leave' && new Date(s.dueDate) < now
+      );
+      loan.status = hasOverdue ? 'overdue' : 'active';
+    }
+
+    await loan.save();
+
+    try {
+      await AuditLog.create({
+        userId: req.user?._id || 'owner',
+        userName: req.user?.name || 'Owner',
+        action: 'RECORD_INSTALLMENT_PAYMENT',
+        entity: 'Loan',
+        entityId: loan._id.toString(),
+        after: {
+          loanNo: loan.loanNo,
+          installmentNo: inst.installmentNo,
+          paidAmount: payNum,
+          remainingBalance: loan.remainingBalance,
+          newPrincipal: loan.principal,
+          paymentsCount: createdPayments.length,
+        },
+      });
+    } catch (e) {}
+
+    res.status(200).json({
+      success: true,
+      message: 'Saved / சேமிக்கப்பட்டது',
+      loan,
+      payments: createdPayments,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

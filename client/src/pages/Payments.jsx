@@ -212,15 +212,26 @@ export const Payments = () => {
                         <span>{formatDate(p.date)}</span>
                       </div>
 
-                      <span
-                        className={`flex-shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full font-black text-[10px] uppercase border ${
-                          p.mode === 'cash'
-                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                            : 'bg-[#EAF5FF] text-[#0878D1] border-[#D5E9FA]'
-                        }`}
-                      >
-                        {p.mode}
-                      </span>
+                      <div className="flex items-center space-x-1 shrink-0">
+                        <span
+                          className={`whitespace-nowrap px-2 py-0.5 rounded-full font-black text-[10px] uppercase border ${
+                            p.mode === 'cash'
+                              ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                              : 'bg-[#EAF5FF] text-[#0878D1] border-[#D5E9FA]'
+                          }`}
+                        >
+                          {p.mode}
+                        </span>
+                        <span
+                          className={`whitespace-nowrap px-2 py-0.5 rounded-full font-black text-[10px] uppercase border ${
+                            p.paymentType === 'Principal' || p.notes?.toLowerCase().includes('principal')
+                              ? 'bg-purple-100 text-purple-900 border-purple-300'
+                              : 'bg-sky-100 text-sky-900 border-sky-300'
+                          }`}
+                        >
+                          {p.paymentType === 'Principal' || p.notes?.toLowerCase().includes('principal') ? 'Principal' : 'Installment'}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Line 3: Collected By & Actions */}
@@ -326,15 +337,26 @@ export const Payments = () => {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded font-bold text-[10px] uppercase border ${
-                            p.mode === 'cash'
-                              ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                              : 'bg-[#EAF5FF] text-[#0878D1] border-[#D5E9FA]'
-                          }`}
-                        >
-                          {p.mode}
-                        </span>
+                        <div className="flex items-center space-x-1.5">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded font-bold text-[10px] uppercase border ${
+                              p.mode === 'cash'
+                                ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                : 'bg-[#EAF5FF] text-[#0878D1] border-[#D5E9FA]'
+                            }`}
+                          >
+                            {p.mode}
+                          </span>
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded font-bold text-[10px] uppercase border ${
+                              p.paymentType === 'Principal' || p.notes?.toLowerCase().includes('principal')
+                                ? 'bg-purple-100 text-purple-900 border-purple-300'
+                                : 'bg-sky-100 text-sky-900 border-sky-300'
+                            }`}
+                          >
+                            {p.paymentType === 'Principal' || p.notes?.toLowerCase().includes('principal') ? 'Principal' : 'Installment'}
+                          </span>
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-right font-bold tabular-nums text-[#183653] text-sm">
                         {formatCurrency(p.amount)}

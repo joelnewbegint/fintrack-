@@ -599,9 +599,18 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                     </div>
 
                     <div className="pt-2 border-t border-sky-100/60 dark:border-sky-900/40 flex items-center justify-between text-[11px] text-slate-500">
-                      <span className="uppercase font-bold text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                        {item.mode}
-                      </span>
+                      <div className="flex items-center space-x-1.5">
+                        <span className="uppercase font-bold text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                          {item.mode}
+                        </span>
+                        <span className={`uppercase font-bold text-[10px] px-2 py-0.5 rounded-full ${
+                          item.paymentType === 'Principal'
+                            ? 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-300'
+                            : 'bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 border border-sky-300'
+                        }`}>
+                          {item.paymentType === 'Principal' ? 'Principal' : 'Installment'}
+                        </span>
+                      </div>
                       <button
                         onClick={() => setReceiptPayment({ ...item.raw, customerId: customer })}
                         className="btn-sky-primary min-h-[38px] py-1 px-3 text-xs font-bold shadow-sm flex items-center space-x-1"
@@ -636,7 +645,18 @@ export const CustomerDetail = ({ customerId, onBack, onViewLoan }) => {
                         <td className="py-2.5 px-3 font-bold text-sky-600 dark:text-sky-400">{item.receiptNo}</td>
                         <td className="py-2.5 px-3">{formatDate(item.date)}</td>
                         <td className="py-2.5 px-3 font-semibold">{item.loanNo}</td>
-                        <td className="py-2.5 px-3 uppercase font-bold text-[10px]">{item.mode}</td>
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center space-x-1">
+                            <span className="uppercase font-bold text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">{item.mode}</span>
+                            <span className={`uppercase font-bold text-[10px] px-1.5 py-0.5 rounded ${
+                              item.paymentType === 'Principal'
+                                ? 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-300'
+                                : 'bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 border border-sky-300'
+                            }`}>
+                              {item.paymentType === 'Principal' ? 'Principal' : 'Installment'}
+                            </span>
+                          </div>
+                        </td>
                         <td className="py-2.5 px-3 text-right font-bold text-emerald-600 tabular-nums">
                           {formatCurrency(item.amount)}
                         </td>

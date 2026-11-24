@@ -19,7 +19,7 @@ const installmentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'paid', 'partial', 'overdue', 'holiday', 'missed'],
+    enum: ['pending', 'paid', 'partial', 'overdue', 'holiday', 'missed', 'leave'],
     default: 'pending',
   },
   holidayReason: {

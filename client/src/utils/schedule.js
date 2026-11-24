@@ -257,6 +257,7 @@ export const buildCustomerFullLedger = (customer, loans = [], payments = []) => 
       scheme: loanDoc?.financeType || 'daily',
       amount: amt,
       mode: (p.mode || 'cash').toUpperCase(),
+      paymentType: p.paymentType || (p.notes?.toLowerCase().includes('principal') ? 'Principal' : 'Installment'),
       runningBalance,
       notes: p.notes || '',
       collector:

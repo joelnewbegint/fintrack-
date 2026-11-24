@@ -159,9 +159,10 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [entryMode, setEntryMode] = useState('payment'); // 'payment' | 'holiday'
+  const [entryMode, setEntryMode] = useState('payment'); // 'payment' | 'holiday' | 'leave'
   const [holidayType, setHolidayType] = useState('holiday'); // 'holiday' | 'missed'
   const [holidayReason, setHolidayReason] = useState('');
+  const [skipOption, setSkipOption] = useState('move_next'); // 'move_next' | 'extend_end' | 'skip_only'
 
   // Advance / Multi-date payment state in full form
   const [useMultiDate, setUseMultiDate] = useState(false);
@@ -936,6 +937,14 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
       return;
     }
 
+    const instDue = Math.max(0, Number(selectedLoan.installmentAmount || selectedLoan.dueAmount || 200));
+    const maxAllowed = (Number(selectedLoan.principal) || Number(selectedLoan.remainingBalance) || 0) + instDue;
+
+    if (!useMultiDate && payNum > maxAllowed) {
+      setError(`Amount cannot exceed outstanding principal + due (₹${maxAllowed}) / தொகை ₹${maxAllowed}-க்கு மேல் இருக்கக் கூடாது`);
+      return;
+    }
+
     const loanId = selectedLoan.loanId || selectedLoan._id;
 
     try {
@@ -961,14 +970,14 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
           }
         }
       } else {
-        const res = await api.recordPayment({
-          loanId,
+        const res = await api.recordInstallmentAction(loanId, {
+          action: 'pay',
           amount: payNum,
           mode,
-          date,
+          paidDate: date,
           notes,
         });
-        lastRecorded = res?.payment;
+        lastRecorded = res?.payments?.[0] || res?.payment;
       }
 
       const paymentId = lastRecorded?._id || lastRecorded?.id || `pay_${Date.now()}`;
@@ -1046,9 +1055,9 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
     }
   };
 
-  // Holiday submit
+  // Holiday / Leave submit
   const handleHolidaySubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError('');
 
     if (!selectedLoan) {
@@ -1056,26 +1065,34 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
       return;
     }
 
+    if (entryMode === 'leave' && !holidayReason.trim()) {
+      setError('Reason is required in notes for Leave / விடுப்பிற்கு காரணம் தேவை');
+      return;
+    }
+
     try {
       setSubmitting(true);
-      const res = await api.declareLoanHoliday(selectedLoan.loanId || selectedLoan._id, {
-        date,
-        type: holidayType,
-        reason:
-          holidayReason ||
-          (holidayType === 'missed' ? 'Missed Collection / தவறிய நாள்' : 'Holiday / விடுமுறை'),
+      const loanId = selectedLoan.loanId || selectedLoan._id;
+      const res = await api.recordInstallmentAction(loanId, {
+        action: entryMode, // 'holiday' | 'leave'
+        paidDate: date,
+        reason: holidayReason.trim(),
+        notes: holidayReason.trim(),
+        skipOption,
       });
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
       }
 
+      showToast(loanId, null, parsedName.primary, 0);
+
       if (onSuccess) {
         onSuccess(res?.loan || selectedLoan);
       }
       onClose();
     } catch (err) {
-      setError(err.message || 'Failed to record holiday/missed day');
+      setError(err.message || 'Failed to record holiday/leave day');
     } finally {
       setSubmitting(false);
     }
@@ -1745,72 +1762,73 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
               </div>
             </div>
 
-            {/* Mode Switcher: Payment vs Holiday / Missed */}
-            <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[#F3F9FF] dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 shrink-0">
+            {/* 3-way toggle: Pay | Holiday / விடுமுறை | Leave / விடுப்பு */}
+            <div className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-[#F3F9FF] dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 shrink-0">
               <button
                 type="button"
-                onClick={() => setEntryMode('payment')}
-                className={`py-1.5 px-3 rounded-xl font-black text-xs transition flex items-center justify-center space-x-1.5 ${
+                onClick={() => {
+                  setEntryMode('payment');
+                  setError('');
+                }}
+                className={`py-1.5 px-2 rounded-xl font-black text-xs transition flex items-center justify-center space-x-1 ${
                   entryMode === 'payment'
                     ? 'bg-[#0878D1] text-white shadow-xs'
                     : 'text-[#647C95] hover:text-[#183653] dark:text-slate-300'
                 }`}
               >
                 <Banknote className="w-3.5 h-3.5" />
-                <span>Payment / வசூல்</span>
+                <span>Pay</span>
               </button>
               <button
                 type="button"
-                onClick={() => setEntryMode('holiday')}
-                className={`py-1.5 px-3 rounded-xl font-black text-xs transition flex items-center justify-center space-x-1.5 ${
+                onClick={() => {
+                  setEntryMode('holiday');
+                  setError('');
+                }}
+                className={`py-1.5 px-1.5 rounded-xl font-black text-[11px] transition flex items-center justify-center space-x-1 ${
                   entryMode === 'holiday'
                     ? 'bg-[#0878D1] text-white shadow-xs'
                     : 'text-[#647C95] hover:text-[#183653] dark:text-slate-300'
                 }`}
               >
-                <Coffee className="w-3.5 h-3.5" />
-                <span>Holiday / Missed</span>
+                <span>🏖️ Holiday / விடுமுறை</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEntryMode('leave');
+                  setError('');
+                }}
+                className={`py-1.5 px-1.5 rounded-xl font-black text-[11px] transition flex items-center justify-center space-x-1 ${
+                  entryMode === 'leave'
+                    ? 'bg-[#0878D1] text-white shadow-xs'
+                    : 'text-[#647C95] hover:text-[#183653] dark:text-slate-300'
+                }`}
+              >
+                <span>👤 Leave / விடுப்பு</span>
               </button>
             </div>
 
-            {entryMode === 'holiday' ? (
-              /* Holiday Form */
+            {entryMode === 'holiday' || entryMode === 'leave' ? (
+              /* Holiday / Leave Form */
               <div className="space-y-3 pt-1 animate-fade-in">
-                <div>
-                  <label className="block text-[11px] font-black uppercase tracking-wider text-[#647C95] mb-1.5">
-                    Declaration Type / வகை
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setHolidayType('holiday')}
-                      className={`py-2 px-3 rounded-xl border font-bold text-xs flex items-center justify-center space-x-1.5 transition ${
-                        holidayType === 'holiday'
-                          ? 'border-[#0878D1] bg-[#EAF5FF] text-[#0878D1] shadow-xs'
-                          : 'bg-white text-[#647C95] hover:bg-[#EAF5FF]'
-                      }`}
-                    >
-                      <Coffee className="w-4 h-4 text-[#0878D1]" />
-                      <span>🏖️ Holiday / விடுமுறை</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHolidayType('missed')}
-                      className={`py-2 px-3 rounded-xl border font-bold text-xs flex items-center justify-center space-x-1.5 transition ${
-                        holidayType === 'missed'
-                          ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-xs'
-                          : 'bg-white text-[#647C95] hover:bg-[#EAF5FF]'
-                      }`}
-                    >
-                      <AlertCircle className="w-4 h-4 text-amber-600" />
-                      <span>⚠️ Missed / தவறிய நாள்</span>
-                    </button>
-                  </div>
+                <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs font-medium space-y-1">
+                  <p className="font-bold flex items-center space-x-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>
+                      {entryMode === 'holiday'
+                        ? 'Shop / Area Holiday (no collection on this day) / விடுமுறை நாள்'
+                        : 'Customer Absent or Leave Taken / வாடிக்கையாளர் விடுப்பு'}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                    This installment will not count as overdue or attract penalties.
+                  </p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-black text-[#183653] mb-1">
-                    Date / தேதி
+                    Date / தேதி *
                   </label>
                   <input
                     type="date"
@@ -1822,11 +1840,33 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
 
                 <div>
                   <label className="block text-xs font-black text-[#183653] mb-1">
-                    Reason / குறிப்பு
+                    After skipping / பிறகு *
+                  </label>
+                  <select
+                    value={skipOption}
+                    onChange={(e) => setSkipOption(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl bg-white border border-[#D5E9FA] text-[#183653] font-bold text-xs outline-none focus:border-[#0878D1]"
+                  >
+                    <option value="move_next">a) Move due to next date / அடுத்த தேதிக்கு மாற்றுக (Default)</option>
+                    <option value="extend_end">b) Extend loan end date by 1 day / கடன் முடிவை நீட்டிக்க</option>
+                    <option value="skip_only">c) No change, mark skipped only / மாற்றம் இல்லை, தவிர்த்ததாக குறிக்க</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-[#183653] mb-1">
+                    {entryMode === 'leave'
+                      ? 'Reason for Leave / விடுப்பிற்கான காரணம் * (Required)'
+                      : 'Reason / குறிப்பு (Optional)'}
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Sunday, Festival, Shop Closed..."
+                    required={entryMode === 'leave'}
+                    placeholder={
+                      entryMode === 'leave'
+                        ? 'e.g. Out of station, Medical leave, Customer absent...'
+                        : 'e.g. Sunday, Festival, Shop Closed...'
+                    }
                     value={holidayReason}
                     onChange={(e) => setHolidayReason(e.target.value)}
                     className="w-full h-10 px-3.5 rounded-xl bg-white border border-[#D5E9FA] text-[#183653] font-bold text-xs outline-none focus:ring-2 focus:ring-[#0878D1]/20 focus:border-[#0878D1]"
@@ -1840,7 +1880,9 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                   className="w-full min-h-[44px] py-2 rounded-2xl bg-gradient-to-r from-[#0878D1] to-[#064B8E] hover:from-[#064B8E] hover:to-[#0878D1] text-white font-black text-xs shadow-md shadow-[#0878D1]/25 flex items-center justify-center space-x-2 disabled:opacity-50 active:scale-98 transition"
                 >
                   <Check className="w-4 h-4 stroke-[3]" />
-                  <span>Confirm Declaration / உறுதிசெய்</span>
+                  <span>
+                    {entryMode === 'holiday' ? 'Confirm Holiday / உறுதிசெய்' : 'Confirm Leave / உறுதிசெய்'}
+                  </span>
                 </button>
               </div>
             ) : (
@@ -2026,6 +2068,40 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                             placeholder="Enter amount"
                           />
                         </div>
+
+                        {/* LIVE SPLIT BOX WHILE TYPING (EXTRA TO PRINCIPAL RULE) */}
+                        {amount > 0 && selectedLoan && (
+                          <div className="mt-2 p-2.5 rounded-xl bg-[#F3F9FF] dark:bg-slate-800/80 border border-[#D5E9FA] dark:border-slate-700 space-y-1 text-xs">
+                            {(() => {
+                              const due = Math.max(0, Number(selectedLoan.installmentAmount || selectedLoan.dueAmount || 200));
+                              const amt = Number(amount) || 0;
+                              const extra = Math.max(0, amt - due);
+                              const instPart = Math.min(amt, due);
+                              const curPrin = Number(selectedLoan.principal || selectedLoan.remainingBalance || 0);
+                              const newPrin = Math.max(0, curPrin - extra);
+                              const dateLabel = date ? formatDate(date) : 'Today';
+
+                              return (
+                                <>
+                                  <div className="flex items-center justify-between text-[#183653] dark:text-white font-medium">
+                                    <span>Installment ({dateLabel}):</span>
+                                    <span className="font-bold tabular-nums">₹{instPart}</span>
+                                  </div>
+                                  {extra > 0 && (
+                                    <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded-lg">
+                                      <span>Extra to principal ({dateLabel}):</span>
+                                      <span className="tabular-nums">+₹{extra}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center justify-between text-[#0878D1] dark:text-[#55B8F5] font-black pt-0.5 border-t border-[#D5E9FA]/60 dark:border-slate-700/60">
+                                    <span>New principal:</span>
+                                    <span className="tabular-nums">₹{newPrin}</span>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        )}
                       </div>
 
                       <div>

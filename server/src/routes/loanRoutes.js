@@ -11,6 +11,7 @@ import {
   declareLoanHoliday,
   removeLoanHoliday,
   deleteLoan,
+  recordInstallmentAction,
 } from '../controllers/loanController.js';
 import { protect, restrictTo } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -67,6 +68,8 @@ router.patch('/:id', restrictTo('owner'), validate(updateLoanSchema), updateLoan
 router.patch('/:id/status', restrictTo('owner'), updateLoanStatus);
 router.post('/:id/holiday', restrictTo('owner'), declareLoanHoliday);
 router.delete('/:id/holiday', restrictTo('owner'), removeLoanHoliday);
+router.post('/:id/installment', restrictTo('owner', 'loan_agent'), recordInstallmentAction);
+router.post('/:id/reverse-installment', restrictTo('owner', 'loan_agent'), recordInstallmentAction);
 router.delete('/:id', restrictTo('owner'), deleteLoan);
 
 export default router;

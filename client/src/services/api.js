@@ -1286,6 +1286,74 @@ export const api = {
     return { success: true };
   },
 
+  recordInstallmentAction: async (loanId, data) => {
+    const result = await safeFetchJson(`/api/loans/${loanId}/installment`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (result.ok && result.data?.success) {
+      const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+      const index = loans.findIndex((l) => String(l._id) === String(loanId) || String(l.clientId) === String(loanId));
+      if (index !== -1 && result.data.loan) {
+        loans[index] = { ...loans[index], ...result.data.loan };
+        setStored(STORAGE_KEYS.LOANS, loans);
+      }
+      return result.data;
+    }
+
+    if (!result.ok && !navigator.onLine) {
+      await addToSyncQueue({
+        endpoint: `/api/loans/${loanId}/installment`,
+        method: 'POST',
+        data,
+        loanId,
+      });
+      return { success: true, isOffline: true, message: 'Saved offline / ஆஃப்லைனில் சேமிக்கப்பட்டது' };
+    }
+
+    if (!result.ok) {
+      throw new Error(result.error?.message || result.data?.message || 'Failed to save installment action');
+    }
+
+    return result.data;
+  },
+
+  reverseInstallment: async (loanId, installmentNo) => {
+    const result = await safeFetchJson(`/api/loans/${loanId}/reverse-installment`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ action: 'reverse', installmentNo }),
+    });
+
+    if (result.ok && result.data?.success) {
+      const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+      const index = loans.findIndex((l) => String(l._id) === String(loanId) || String(l.clientId) === String(loanId));
+      if (index !== -1 && result.data.loan) {
+        loans[index] = { ...loans[index], ...result.data.loan };
+        setStored(STORAGE_KEYS.LOANS, loans);
+      }
+      return result.data;
+    }
+
+    if (!result.ok && !navigator.onLine) {
+      await addToSyncQueue({
+        endpoint: `/api/loans/${loanId}/reverse-installment`,
+        method: 'POST',
+        data: { action: 'reverse', installmentNo },
+        loanId,
+      });
+      return { success: true, isOffline: true, message: 'Reversed offline / ஆஃப்லைனில் ரத்து செய்யப்பட்டது' };
+    }
+
+    if (!result.ok) {
+      throw new Error(result.error?.message || result.data?.message || 'Failed to reverse installment');
+    }
+
+    return result.data;
+  },
+
   declareGlobalHoliday: async (holidayData) => {
     const result = await safeFetchJson('/api/settings/holiday', {
       method: 'POST',
