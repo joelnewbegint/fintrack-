@@ -426,3 +426,4 @@ Thank you! / நன்றி!`;
 
   openWhatsApp({ phone: cust.phone, message: msg });
 };
+

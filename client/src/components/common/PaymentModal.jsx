@@ -298,29 +298,29 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
   };
 
   // ---------------------------------------------------------------------------
-  // 1) CARD TAP NAVIGATION (Opens customer page or loan detail, closes popup)
+  // 1) CARD TAP NAVIGATION (Opens loan repayment schedule / detail page, closes popup)
   // ---------------------------------------------------------------------------
   const handleCardClick = (l) => {
+    const loanId = l._id || l.loanId;
     const custId =
       l.customerId?._id ||
       (typeof l.customerId === 'string' && l.customerId.length > 5 ? l.customerId : null);
-    const loanId = l._id || l.loanId;
 
-    if (custId) {
-      if (typeof window !== 'undefined') {
-        window.history.pushState({}, '', `/customers/${custId}`);
-        window.dispatchEvent(
-          new CustomEvent('fintrack:navigate-customer', {
-            detail: { customerId: custId },
-          })
-        );
-      }
-    } else if (loanId) {
+    if (loanId) {
       if (typeof window !== 'undefined') {
         window.history.pushState({}, '', `/loans/${loanId}`);
         window.dispatchEvent(
           new CustomEvent('fintrack:navigate-loan', {
             detail: { loanId },
+          })
+        );
+      }
+    } else if (custId) {
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', `/customers/${custId}`);
+        window.dispatchEvent(
+          new CustomEvent('fintrack:navigate-customer', {
+            detail: { customerId: custId },
           })
         );
       }
@@ -1448,7 +1448,14 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                           </div>
 
                           <div className="flex items-center space-x-2 flex-wrap gap-y-1 min-w-0 flex-1">
-                            <span className="font-black text-sm text-[#183653] dark:text-white truncate">
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCardClick(l);
+                              }}
+                              className="font-black text-sm text-[#183653] dark:text-white truncate cursor-pointer hover:text-[#0878D1] hover:underline transition-colors"
+                              title="View loan repayment schedule / தவணை அட்டவணை"
+                            >
                               {pName.primary}
                             </span>
                             <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#EAF5FF] dark:bg-slate-800 text-[#0878D1] dark:text-[#55B8F5] border border-[#D5E9FA] dark:border-slate-700 shrink-0">
@@ -1678,7 +1685,22 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center space-x-2">
-                      <p className="font-black text-xs sm:text-sm text-[#183653] dark:text-white truncate">
+                      <p
+                        onClick={() => {
+                          const lid = selectedLoan?._id || selectedLoan?.loanId;
+                          if (lid && typeof window !== 'undefined') {
+                            window.history.pushState({}, '', `/loans/${lid}`);
+                            window.dispatchEvent(
+                              new CustomEvent('fintrack:navigate-loan', {
+                                detail: { loanId: lid },
+                              })
+                            );
+                            onClose();
+                          }
+                        }}
+                        className="font-black text-xs sm:text-sm text-[#183653] dark:text-white truncate cursor-pointer hover:text-[#0878D1] hover:underline transition-colors"
+                        title="View loan repayment schedule / தவணை அட்டவணை"
+                      >
                         {parsedName.primary}
                       </p>
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#EAF5FF] dark:bg-slate-800 text-[#0878D1] dark:text-[#55B8F5] border border-[#D5E9FA] dark:border-slate-700 shrink-0">
