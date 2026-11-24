@@ -120,6 +120,16 @@ export function App() {
         // Support direct repayment schedule route: /loans/:loanId/schedule
         const scheduleMatch = rawPath.match(/^\/loans\/([^/]+)\/schedule\/?$/i);
         const loanDetailMatch = rawPath.match(/^\/loans\/([^/]+)\/?$/i);
+        const customerMatch = rawPath.match(/^\/customers\/([^/]+)\/?$/i);
+
+        if (customerMatch) {
+          if (isEmiAgent) return;
+          setSelectedCustomerId(customerMatch[1]);
+          setSelectedLoanId(null);
+          setActiveTab('customers');
+          setOwnerMode('loans');
+          return;
+        }
 
         if (scheduleMatch) {
           if (isEmiAgent) {
@@ -226,6 +236,7 @@ export function App() {
           setOwnerMode('loans');
         } else if (path === '/customers') {
           if (isEmiAgent) return;
+          setSelectedCustomerId(null);
           setActiveTab('customers');
           setOwnerMode('loans');
         } else if (path === '/payments') {
@@ -266,9 +277,34 @@ export function App() {
       } catch (e) {}
     };
 
+    const handleNavCustomer = (e) => {
+      if (e.detail?.customerId) {
+        setSelectedCustomerId(e.detail.customerId);
+        setSelectedLoanId(null);
+        setActiveTab('customers');
+        setOwnerMode('loans');
+      }
+    };
+
+    const handleNavLoan = (e) => {
+      if (e.detail?.loanId) {
+        setSelectedLoanId(e.detail.loanId);
+        setSelectedCustomerId(null);
+        setActiveTab('loans');
+        setOwnerMode('loans');
+      }
+    };
+
     handleUrlRouting();
     window.addEventListener('popstate', handleUrlRouting);
-    return () => window.removeEventListener('popstate', handleUrlRouting);
+    window.addEventListener('fintrack:navigate-customer', handleNavCustomer);
+    window.addEventListener('fintrack:navigate-loan', handleNavLoan);
+
+    return () => {
+      window.removeEventListener('popstate', handleUrlRouting);
+      window.removeEventListener('fintrack:navigate-customer', handleNavCustomer);
+      window.removeEventListener('fintrack:navigate-loan', handleNavLoan);
+    };
   }, [isLoanAgent, isEmiAgent]);
 
   // Enforce role isolation & redirect to appropriate default on role mismatch
@@ -676,7 +712,12 @@ export function App() {
           ) : selectedCustomerId ? (
             <CustomerDetail
               customerId={selectedCustomerId}
-              onBack={() => setSelectedCustomerId(null)}
+              onBack={() => {
+                setSelectedCustomerId(null);
+                if (typeof window !== 'undefined') {
+                  window.history.pushState({}, '', '/customers');
+                }
+              }}
               onViewLoan={(id) => {
                 setSelectedCustomerId(null);
                 setSelectedLoanId(id);

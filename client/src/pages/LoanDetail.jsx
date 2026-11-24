@@ -813,7 +813,9 @@ export const LoanDetail = ({ loanId, onBack }) => {
           <div className="space-y-2.5">
             {loan.schedule?.map((inst) => {
               const isPaid = inst.status === 'paid';
-              const isOverdue = inst.status === 'overdue' || (!isPaid && new Date(inst.dueDate) < new Date());
+              const isHoliday = inst.status === 'holiday';
+              const isMissed = inst.status === 'missed';
+              const isOverdue = !isHoliday && !isMissed && (inst.status === 'overdue' || (!isPaid && new Date(inst.dueDate) < new Date()));
               const isSelected = selectedInstNos.has(inst.installmentNo);
               const isPendingSync = pendingSyncInstNos.has(inst.installmentNo) || inst.isOffline;
               const isCollecting = collectingInstNo === inst.installmentNo;
@@ -867,12 +869,16 @@ export const LoanDetail = ({ loanId, onBack }) => {
                         className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase inline-block ${
                           isPaid
                             ? 'bg-emerald-100 text-[#18A879]'
+                            : isHoliday
+                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                            : isMissed
+                            ? 'bg-orange-100 text-orange-800 border border-orange-300'
                             : isOverdue
                             ? 'bg-rose-100 text-rose-700'
                             : 'bg-slate-100 text-[#647C95]'
                         }`}
                       >
-                        {isPaid ? 'PAID' : isOverdue ? 'OVERDUE' : 'PENDING'}
+                        {isPaid ? 'PAID' : isHoliday ? 'HOLIDAY' : isMissed ? 'MISSED' : isOverdue ? 'OVERDUE' : 'PENDING'}
                       </span>
                     </div>
                   </div>
@@ -886,7 +892,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                       </span>
                     )}
 
-                    {!isPaid && (
+                    {!isPaid && !isHoliday && (
                       <button
                         type="button"
                         disabled={isCollecting}
@@ -948,7 +954,9 @@ export const LoanDetail = ({ loanId, onBack }) => {
               <tbody className="divide-y divide-[#D5E9FA]/60">
                 {loan.schedule?.map((inst) => {
                   const isPaid = inst.status === 'paid';
-                  const isOverdue = inst.status === 'overdue' || (!isPaid && new Date(inst.dueDate) < new Date());
+                  const isHoliday = inst.status === 'holiday';
+                  const isMissed = inst.status === 'missed';
+                  const isOverdue = !isHoliday && !isMissed && (inst.status === 'overdue' || (!isPaid && new Date(inst.dueDate) < new Date()));
                   const isSelected = selectedInstNos.has(inst.installmentNo);
                   const isPendingSync = pendingSyncInstNos.has(inst.installmentNo) || inst.isOffline;
                   const isCollecting = collectingInstNo === inst.installmentNo;
@@ -1003,12 +1011,16 @@ export const LoanDetail = ({ loanId, onBack }) => {
                           className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase inline-flex items-center space-x-1 ${
                             isPaid
                               ? 'bg-emerald-100 text-[#18A879] border border-emerald-300'
+                              : isHoliday
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : isMissed
+                              ? 'bg-orange-100 text-orange-800 border border-orange-300'
                               : isOverdue
                               ? 'bg-rose-100 text-rose-700 border border-rose-300 animate-pulse'
                               : 'bg-slate-100 text-[#647C95] border border-slate-200'
                           }`}
                         >
-                          {isPaid ? 'PAID' : isOverdue ? 'OVERDUE' : 'PENDING'}
+                          {isPaid ? 'PAID' : isHoliday ? 'HOLIDAY' : isMissed ? 'MISSED' : isOverdue ? 'OVERDUE' : 'PENDING'}
                         </span>
                         {isPendingSync && (
                           <span className="ml-1 text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded-full">
@@ -1023,7 +1035,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
                       <td className="py-2.5 px-3 text-right">
                         <div className="flex items-center justify-end space-x-1.5">
-                          {!isPaid && (
+                          {!isPaid && !isHoliday && (
                             <button
                               type="button"
                               disabled={isCollecting}

@@ -31,6 +31,7 @@ import {
   Calendar,
   Clock,
   ArrowLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 /**
@@ -66,6 +67,41 @@ const getKolkataDate = () => {
   }
 };
 
+/**
+ * Separate Holiday Table Storage Helpers (Additive only, leaves existing records untouched)
+ */
+const STORAGE_KEY_HOLIDAYS = 'fintrack_loan_holidays';
+const STORAGE_KEY_HOLIDAY_LOGS = 'fintrack_holiday_logs';
+
+const getStoredHolidays = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_HOLIDAYS);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const saveStoredHolidays = (list) => {
+  try {
+    localStorage.setItem(STORAGE_KEY_HOLIDAYS, JSON.stringify(list));
+  } catch (e) {}
+};
+
+const logHolidayAction = (action, details) => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_HOLIDAY_LOGS);
+    const logs = raw ? JSON.parse(raw) : [];
+    logs.unshift({
+      id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      action,
+      ...details,
+      timestamp: new Date().toISOString(),
+    });
+    localStorage.setItem(STORAGE_KEY_HOLIDAY_LOGS, JSON.stringify(logs.slice(0, 200)));
+  } catch (e) {}
+};
+
 export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
   const { isMobile } = useDeviceMode();
   const { user, isOwner, isLoanAgent } = useAuth();
@@ -96,6 +132,20 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
   // Bottom Toast state: { loanId, paymentId, customerName, amount }
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
+
+  // Separate holiday records
+  const [storedHolidays, setStoredHolidays] = useState(getStoredHolidays);
+
+  // Holiday Sheet Modal State (Small sheet popup for borrower card)
+  const [holidayModalLoan, setHolidayModalLoan] = useState(null);
+  const [holidayChoice, setHolidayChoice] = useState('today'); // 'today' | 'pick' | 'range'
+  const [holidayDates, setHolidayDates] = useState([formatDateForInput()]);
+  const [holidayRangeStart, setHolidayRangeStart] = useState(formatDateForInput());
+  const [holidayRangeEnd, setHolidayRangeEnd] = useState(formatDateForInput());
+  const [holidayModalReason, setHolidayModalReason] = useState('');
+  const [holidayExtendSchedule, setHolidayExtendSchedule] = useState(false);
+  const [holidaySheetError, setHolidaySheetError] = useState('');
+  const [savingHoliday, setSavingHoliday] = useState(false);
 
   // Edit / Full form state
   const initialDue =
@@ -245,6 +295,330 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
     }, 8000); // 8 seconds
     toastTimerRef.current = timerId;
     setToast({ loanId, paymentId, customerName, amount: payAmount });
+  };
+
+  // ---------------------------------------------------------------------------
+  // 1) CARD TAP NAVIGATION (Opens customer page or loan detail, closes popup)
+  // ---------------------------------------------------------------------------
+  const handleCardClick = (l) => {
+    const custId =
+      l.customerId?._id ||
+      (typeof l.customerId === 'string' && l.customerId.length > 5 ? l.customerId : null);
+    const loanId = l._id || l.loanId;
+
+    if (custId) {
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', `/customers/${custId}`);
+        window.dispatchEvent(
+          new CustomEvent('fintrack:navigate-customer', {
+            detail: { customerId: custId },
+          })
+        );
+      }
+    } else if (loanId) {
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', `/loans/${loanId}`);
+        window.dispatchEvent(
+          new CustomEvent('fintrack:navigate-loan', {
+            detail: { loanId },
+          })
+        );
+      }
+    }
+    onClose();
+  };
+
+  // ---------------------------------------------------------------------------
+  // 2) OVERDUE BADGE CALCULATION (Read-only, excludes holidays & paid dues)
+  // ---------------------------------------------------------------------------
+  const getOverdueMetrics = (loan) => {
+    if (!Array.isArray(loan?.schedule) || loan.schedule.length === 0) {
+      return { count: 0, amount: 0 };
+    }
+
+    const loanId = String(loan._id || loan.loanId);
+
+    // Collect all holiday dates for this loan
+    const holidayDates = new Set();
+    if (Array.isArray(loan.holidays)) {
+      loan.holidays.forEach((h) => {
+        if (h.date) holidayDates.add(h.date.slice(0, 10));
+      });
+    }
+    storedHolidays.forEach((h) => {
+      if (String(h.loanId) === loanId && h.date) {
+        holidayDates.add(h.date.slice(0, 10));
+      }
+    });
+
+    let count = 0;
+    let amount = 0;
+
+    loan.schedule.forEach((inst) => {
+      if (inst.status === 'paid') return;
+      const dueStr = inst.dueDate ? inst.dueDate.slice(0, 10) : '';
+      if (!dueStr || dueStr >= todayStr) return; // Only installments due before today
+      if (inst.status === 'holiday' || inst.status === 'missed' || holidayDates.has(dueStr)) {
+        return; // Exclude holidays
+      }
+
+      const instAmt = Number(inst.amount) || Number(loan.installmentAmount) || 0;
+      const paidAmt = Number(inst.paidAmount) || 0;
+      const unpaid = Math.max(0, instAmt - paidAmt);
+      if (unpaid > 0) {
+        count += 1;
+        amount += unpaid;
+      }
+    });
+
+    return { count, amount };
+  };
+
+  // ---------------------------------------------------------------------------
+  // 3) HOLIDAY HELPERS & RECORD LOOKUP
+  // ---------------------------------------------------------------------------
+  const getTodayHolidayRecord = (loan) => {
+    const loanId = String(loan._id || loan.loanId);
+
+    // Check separate holiday table
+    const localHol = storedHolidays.find(
+      (h) => String(h.loanId) === loanId && h.date === todayStr
+    );
+    if (localHol) return localHol;
+
+    // Check loan.holidays
+    if (Array.isArray(loan.holidays)) {
+      const dbHol = loan.holidays.find((h) => {
+        const d = h.date ? h.date.slice(0, 10) : '';
+        return d === todayStr;
+      });
+      if (dbHol) return dbHol;
+    }
+
+    // Check schedule for today
+    if (Array.isArray(loan.schedule)) {
+      const instToday = loan.schedule.find((inst) => {
+        const d = inst.dueDate ? inst.dueDate.slice(0, 10) : '';
+        return d === todayStr && (inst.status === 'holiday' || inst.status === 'missed');
+      });
+      if (instToday) return instToday;
+    }
+
+    return null;
+  };
+
+  const handleOpenHolidayModal = (loan) => {
+    setHolidayModalLoan(loan);
+    setHolidayChoice('today');
+    setHolidayDates([formatDateForInput()]);
+    setHolidayRangeStart(formatDateForInput());
+    setHolidayRangeEnd(formatDateForInput());
+    setHolidayModalReason('');
+    setHolidayExtendSchedule(false);
+    setHolidaySheetError('');
+  };
+
+  const handleSaveHolidaySheet = async (e) => {
+    if (e) e.preventDefault();
+    setHolidaySheetError('');
+
+    if (!holidayModalLoan) return;
+    const loanId = String(holidayModalLoan._id || holidayModalLoan.loanId);
+
+    // Determine target dates
+    let targetDates = [];
+    if (holidayChoice === 'today') {
+      targetDates = [todayStr];
+    } else if (holidayChoice === 'pick') {
+      targetDates = holidayDates.filter((d) => d && d.trim().length > 0);
+    } else if (holidayChoice === 'range') {
+      if (!holidayRangeStart || !holidayRangeEnd) {
+        setHolidaySheetError('Please select start and end dates / தேதிகளைத் தேர்ந்தெடுக்கவும்');
+        return;
+      }
+      const start = new Date(holidayRangeStart);
+      const end = new Date(holidayRangeEnd);
+      if (start > end) {
+        setHolidaySheetError(
+          'End date must be on or after start date / முடிவு தேதி தொடக்க தேதிக்கு பின் இருக்க வேண்டும்'
+        );
+        return;
+      }
+      const cur = new Date(start);
+      while (cur <= end) {
+        targetDates.push(formatDateForInput(cur));
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+
+    if (targetDates.length === 0) {
+      setHolidaySheetError(
+        'Please specify at least one date / குறைந்தபட்சம் ஒரு தேதியை தேர்வு செய்யவும்'
+      );
+      return;
+    }
+
+    // Validation: Block holidays on dates already fully paid
+    if (Array.isArray(holidayModalLoan.schedule)) {
+      for (const tDate of targetDates) {
+        const inst = holidayModalLoan.schedule.find((item) => {
+          const d = item.dueDate ? item.dueDate.slice(0, 10) : '';
+          return d === tDate;
+        });
+        if (
+          inst &&
+          (inst.status === 'paid' || (inst.paidAmount && inst.paidAmount >= inst.amount))
+        ) {
+          setHolidaySheetError(
+            `Cannot declare holiday on ${tDate}: installment is already paid / ${tDate} ஏற்கனவே வசூலிக்கப்பட்டது`
+          );
+          return;
+        }
+      }
+    }
+
+    try {
+      setSavingHoliday(true);
+      const newRecords = [];
+
+      for (const tDate of targetDates) {
+        const rec = {
+          id: `hol_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          loanId,
+          date: tDate,
+          reason: holidayModalReason.trim() || 'Holiday / விடுமுறை',
+          extendSchedule: !!holidayExtendSchedule,
+          createdBy: user?._id || user?.username || 'owner',
+          userName: user?.name || user?.username || 'Owner',
+          createdAt: new Date().toISOString(),
+        };
+        newRecords.push(rec);
+
+        // Call backend API / offline sync
+        try {
+          await api.declareLoanHoliday(loanId, {
+            date: tDate,
+            type: 'holiday',
+            reason: holidayModalReason || 'Holiday / விடுமுறை',
+          });
+        } catch (apiErr) {
+          console.warn('Backend holiday declaration failed/offline queued:', apiErr);
+        }
+
+        // Log holiday creation with user and time
+        logHolidayAction('CREATE_HOLIDAY', {
+          loanId,
+          loanNo: holidayModalLoan.loanNo,
+          customerName:
+            holidayModalLoan.customerId?.name || holidayModalLoan.customerName,
+          date: tDate,
+          reason: holidayModalReason,
+          extendSchedule: holidayExtendSchedule,
+          user: user?.name || user?.username || 'Owner',
+        });
+      }
+
+      // Save to separate holiday table
+      const updatedHols = [...storedHolidays, ...newRecords];
+      saveStoredHolidays(updatedHols);
+      setStoredHolidays(updatedHols);
+
+      // Optimistically update activeLoansList
+      setActiveLoansList((prev) =>
+        prev.map((l) => {
+          if (String(l._id || l.loanId) === loanId) {
+            const hols = Array.isArray(l.holidays) ? [...l.holidays] : [];
+            targetDates.forEach((td) => {
+              hols.push({ date: td, type: 'holiday', reason: holidayModalReason });
+            });
+            const sched = Array.isArray(l.schedule)
+              ? l.schedule.map((inst) => {
+                  const d = inst.dueDate ? inst.dueDate.slice(0, 10) : '';
+                  if (targetDates.includes(d) && inst.status !== 'paid') {
+                    return { ...inst, status: 'holiday', holidayReason: holidayModalReason };
+                  }
+                  return inst;
+                })
+              : l.schedule;
+            return { ...l, holidays: hols, schedule: sched };
+          }
+          return l;
+        })
+      );
+
+      // Broadcast update across the app
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
+
+      // Close modal sheet
+      setHolidayModalLoan(null);
+    } catch (err) {
+      console.error('Save holiday error:', err);
+      setHolidaySheetError(err.message || 'Failed to save holiday / விடுமுறை பதிவு தோல்வி');
+    } finally {
+      setSavingHoliday(false);
+    }
+  };
+
+  const handleUndoHoliday = async (loan) => {
+    const loanId = String(loan._id || loan.loanId);
+    try {
+      setSubmitting(true);
+      // Remove from storedHolidays for today's date
+      const updatedHols = storedHolidays.filter(
+        (h) => !(String(h.loanId) === loanId && h.date === todayStr)
+      );
+      saveStoredHolidays(updatedHols);
+      setStoredHolidays(updatedHols);
+
+      // Log holiday undo with user and time
+      logHolidayAction('UNDO_HOLIDAY', {
+        loanId,
+        loanNo: loan.loanNo,
+        date: todayStr,
+        user: user?.name || user?.username || 'Owner',
+      });
+
+      // Call backend API / offline sync
+      try {
+        await api.removeLoanHoliday(loanId, { date: todayStr });
+      } catch (e) {
+        console.warn('Backend holiday remove failed/offline queued:', e);
+      }
+
+      // Optimistically update activeLoansList
+      setActiveLoansList((prev) =>
+        prev.map((l) => {
+          if (String(l._id || l.loanId) === loanId) {
+            const hols = Array.isArray(l.holidays)
+              ? l.holidays.filter((h) => (h.date ? h.date.slice(0, 10) : '') !== todayStr)
+              : [];
+            const sched = Array.isArray(l.schedule)
+              ? l.schedule.map((inst) => {
+                  const d = inst.dueDate ? inst.dueDate.slice(0, 10) : '';
+                  if (d === todayStr && inst.status === 'holiday') {
+                    return { ...inst, status: 'pending', holidayReason: '' };
+                  }
+                  return inst;
+                })
+              : l.schedule;
+            return { ...l, holidays: hols, schedule: sched };
+          }
+          return l;
+        })
+      );
+
+      // Broadcast update across the app
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
+    } catch (err) {
+      console.error('Undo holiday error:', err);
+      setError(err.message || 'Failed to undo holiday / விடுமுறை ரத்து தோல்வி');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ---------------------------------------------------------------------------
@@ -998,10 +1372,12 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                   )}
                 </div>
               ) : (
-                /* 4) Borrower Row Cards */
+                /* 4) Borrower Row Cards (3-Row Layout with Card Navigation, Overdue Badge & Holiday) */
                 filteredAndSortedLoans.map((l) => {
                   const loanId = l._id || l.loanId;
                   const pName = parseCustomerName(l.customerId?.name || l.customerName);
+                  const custPhone = l.customerId?.phone || l.customerPhone || '';
+                  const custArea = l.customerId?.area || l.customerArea || '';
                   const remBal =
                     l.remainingBalance !== undefined
                       ? Number(l.remainingBalance)
@@ -1011,6 +1387,10 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
 
                   const collectedInfo = todayCollections[String(loanId)];
                   const isCollected = !!collectedInfo;
+                  const todayHolidayRecord = getTodayHolidayRecord(l);
+                  const isTodayHoliday = !!todayHolidayRecord;
+                  const overdueMetrics = getOverdueMetrics(l);
+
                   const isPendingSync =
                     pendingSyncLoanIds.has(String(loanId)) ||
                     pendingSyncLoanIds.has(String(l.loanNo)) ||
@@ -1024,45 +1404,71 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                         collectedInfo.collectedBy === user.name ||
                         collectedInfo.collectedBy === user.username));
 
+                  const canUndoHoliday =
+                    isOwner ||
+                    (user &&
+                      todayHolidayRecord &&
+                      (todayHolidayRecord.createdBy === user._id ||
+                        todayHolidayRecord.createdBy === user.username ||
+                        todayHolidayRecord.userName === user.name));
+
                   const isCollectingThis = collectingLoanId === loanId;
 
                   return (
                     <div
                       key={loanId}
-                      className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleCardClick(l)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleCardClick(l);
+                        }
+                      }}
+                      className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer relative shadow-2xs group outline-none focus:ring-2 focus:ring-[#0878D1]/30 ${
                         isCollected
                           ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800'
-                          : 'bg-white dark:bg-slate-900 hover:bg-[#F3F9FF] dark:hover:bg-slate-850 border-[#D5E9FA] dark:border-slate-800 shadow-2xs'
+                          : isTodayHoliday
+                          ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700'
+                          : 'bg-white dark:bg-slate-900 hover:bg-[#F3F9FF] dark:hover:bg-slate-850 border-[#D5E9FA] dark:border-slate-800 shadow-2xs hover:border-[#0878D1]/40'
                       }`}
                     >
-                      {/* Left: Round Initial Avatar + Line 1 (Name, Tag, Loan #, Area) + Line 2 (Balance in Amber) */}
-                      <div className="flex items-center space-x-3 min-w-0 flex-1">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0878D1] to-[#064B8E] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
-                          {pName.primary
-                            .split(' ')
-                            .map((n) => n[0])
-                            .slice(0, 2)
-                            .join('')
-                            .toUpperCase() || 'VK'}
-                        </div>
+                      {/* ROW 1: Initial avatar, name, scheme tag, overdue badge, chevron */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                          {/* Round initial avatar */}
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#0878D1] to-[#064B8E] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                            {pName.primary
+                              .split(' ')
+                              .map((n) => n[0])
+                              .slice(0, 2)
+                              .join('')
+                              .toUpperCase() || 'VK'}
+                          </div>
 
-                        <div className="min-w-0 flex-1">
-                          {/* Line 1: Name, Tag, Loan #, Area (Phone hidden to avoid clutter) */}
-                          <div className="flex items-center space-x-2 flex-wrap gap-y-0.5">
+                          <div className="flex items-center space-x-2 flex-wrap gap-y-1 min-w-0 flex-1">
                             <span className="font-black text-sm text-[#183653] dark:text-white truncate">
                               {pName.primary}
                             </span>
                             <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#EAF5FF] dark:bg-slate-800 text-[#0878D1] dark:text-[#55B8F5] border border-[#D5E9FA] dark:border-slate-700 shrink-0">
                               {l.financeType || 'daily'}
                             </span>
-                            <span className="font-bold text-xs text-[#0878D1] dark:text-[#55B8F5] font-mono shrink-0">
-                              {l.loanNo}
-                            </span>
-                            {(l.customerId?.area || l.customerArea) && (
-                              <span className="text-xs text-[#647C95] dark:text-slate-400 truncate">
-                                • {l.customerId?.area || l.customerArea}
+
+                            {/* Overdue Badge (if overdueCount > 0 and not paid today and not holiday today) */}
+                            {!isCollected && !isTodayHoliday && overdueMetrics.count > 0 && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shrink-0">
+                                Overdue {overdueMetrics.count} · {formatCurrency(overdueMetrics.amount)}
                               </span>
                             )}
+
+                            {/* Holiday Today Badge */}
+                            {isTodayHoliday && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shrink-0 flex items-center space-x-1">
+                                <span>🏖️ Holiday today / இன்று விடுமுறை</span>
+                              </span>
+                            )}
+
                             {isPendingSync && (
                               <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center space-x-1 shrink-0">
                                 <Clock className="w-2.5 h-2.5 animate-spin" />
@@ -1070,75 +1476,163 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                               </span>
                             )}
                           </div>
+                        </div>
 
-                          {/* Line 2: Balance in amber below (or Collected Today status) */}
-                          <div className="mt-0.5 flex items-center space-x-2 text-xs">
-                            {isCollected ? (
-                              <div className="flex items-center space-x-1.5 text-xs font-black text-[#18A879]">
-                                <CheckCircle className="w-3.5 h-3.5 shrink-0" />
-                                <span>
-                                  Collected {formatCurrency(collectedInfo.amount)} today · Bal{' '}
-                                  {formatCurrency(remBal)}
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-2">
-                                <span className="font-bold text-amber-600 dark:text-amber-500">
-                                  Bal: {formatCurrency(remBal)}
-                                </span>
-                                <span className="text-[#647C95] dark:text-slate-400">
-                                  · {formatCurrency(instAmt)} / due
-                                </span>
-                              </div>
-                            )}
-                          </div>
+                        {/* Chevron on far right */}
+                        <div className="shrink-0 text-[#647C95] dark:text-slate-400 group-hover:text-[#0878D1] group-hover:translate-x-0.5 transition pl-1">
+                          <ChevronRight className="w-4 h-4" />
                         </div>
                       </div>
 
-                      {/* Right: Actions (Collect & Square Pencil Button) */}
-                      <div className="flex items-center space-x-2 shrink-0">
+                      {/* ROW 2: Loan number, phone, area, then Bal: ₹... in amber and per-due amount */}
+                      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs">
+                        <div className="flex items-center space-x-2 text-[#647C95] dark:text-slate-400 font-medium truncate">
+                          <span className="font-bold text-[#0878D1] dark:text-[#55B8F5] font-mono">
+                            {l.loanNo}
+                          </span>
+                          {custPhone && (
+                            <span className="truncate">
+                              • 📞 {custPhone}
+                            </span>
+                          )}
+                          {custArea && (
+                            <span className="truncate">
+                              • 📍 {custArea}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center space-x-1.5">
+                          {isCollected ? (
+                            <div className="flex items-center space-x-1.5 text-xs font-black text-[#18A879]">
+                              <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                              <span>
+                                Collected {formatCurrency(collectedInfo.amount)} today · Bal{' '}
+                                {formatCurrency(remBal)}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-1.5 text-xs">
+                              <span className="font-black text-amber-600 dark:text-amber-500">
+                                Bal: {formatCurrency(remBal)}
+                              </span>
+                              <span className="text-[#647C95] dark:text-slate-400">
+                                · {formatCurrency(instAmt)} / due
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* ROW 3: Action Row (Green Collect button [takes remaining width], square pencil button, amber Holiday button) */}
+                      <div className="mt-3 pt-2.5 border-t border-[#EAF5FF] dark:border-slate-800 flex items-center space-x-2">
                         {isCollected ? (
-                          canUndo && (
+                          <>
+                            <div className="flex-1 min-h-[40px] px-3.5 py-2 rounded-xl bg-emerald-100/70 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-700 flex items-center justify-center space-x-1.5 text-xs font-black text-emerald-800 dark:text-emerald-200">
+                              <CheckCircle className="w-4 h-4 text-[#18A879]" />
+                              <span>Collected Today / இன்று வசூலானது</span>
+                            </div>
+                            {canUndo && (
+                              <button
+                                type="button"
+                                disabled={submitting}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUndo(loanId, collectedInfo?.paymentId);
+                                }}
+                                className="px-3.5 py-2 min-h-[40px] rounded-xl bg-white dark:bg-slate-800 hover:bg-rose-50 border border-rose-300 text-rose-700 text-xs font-bold active:scale-95 transition flex items-center space-x-1.5 shadow-2xs shrink-0"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                <span>Undo / ரத்து</span>
+                              </button>
+                            )}
+                          </>
+                        ) : isTodayHoliday ? (
+                          <>
+                            <div className="flex-1 min-h-[40px] px-3.5 py-2 rounded-xl bg-amber-100/70 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-700 flex items-center justify-center space-x-2 text-xs font-black text-amber-800 dark:text-amber-200">
+                              <Coffee className="w-4 h-4 text-amber-600" />
+                              <span>Holiday / இன்று விடுமுறை</span>
+                            </div>
+                            {canUndoHoliday && (
+                              <button
+                                type="button"
+                                disabled={submitting}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUndoHoliday(l);
+                                }}
+                                className="px-3.5 py-2 min-h-[40px] rounded-xl bg-white dark:bg-slate-800 hover:bg-amber-100 border border-amber-400 text-amber-800 dark:text-amber-300 text-xs font-bold active:scale-95 transition flex items-center space-x-1.5 shadow-2xs shrink-0"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                <span>Undo Holiday / ரத்து</span>
+                              </button>
+                            )}
+                            {/* Square Pencil Button */}
                             <button
                               type="button"
-                              disabled={submitting}
-                              onClick={() => handleUndo(loanId, collectedInfo?.paymentId)}
-                              className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-rose-50 border border-rose-300 text-rose-700 text-xs font-bold active:scale-95 transition flex items-center space-x-1 shadow-2xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenPencil(l);
+                              }}
+                              title="Edit amount / advance payment"
+                              className="w-10 h-10 rounded-xl border border-[#D5E9FA] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-[#EAF5FF] dark:hover:bg-slate-700 text-[#0878D1] dark:text-[#55B8F5] flex items-center justify-center shrink-0 active:scale-95 transition shadow-2xs"
                             >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              <span>Undo</span>
+                              <Pencil className="w-4 h-4" />
                             </button>
-                          )
+                          </>
                         ) : (
-                          <button
-                            type="button"
-                            disabled={isCollectingThis || collectAmount <= 0}
-                            onClick={() => handleDirectCollect(l)}
-                            className="bg-[#18A879] hover:bg-[#138861] disabled:opacity-50 text-white min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs font-black shadow-xs flex items-center space-x-1.5 active:scale-95 transition"
-                          >
-                            {isCollectingThis ? (
-                              <>
-                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                <span>Saving...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                <span>Collect {formatCurrency(collectAmount)}</span>
-                              </>
-                            )}
-                          </button>
-                        )}
+                          <>
+                            {/* Green Collect Button (takes remaining width) */}
+                            <button
+                              type="button"
+                              disabled={isCollectingThis || collectAmount <= 0}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDirectCollect(l);
+                              }}
+                              className="flex-1 bg-[#18A879] hover:bg-[#138861] disabled:opacity-50 text-white min-h-[40px] px-4 py-2 rounded-xl text-xs sm:text-sm font-black shadow-xs flex items-center justify-center space-x-2 active:scale-95 transition"
+                            >
+                              {isCollectingThis ? (
+                                <>
+                                  <RefreshCw className="w-4 h-4 animate-spin" />
+                                  <span>Saving...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="w-4 h-4 stroke-[3]" />
+                                  <span>Collect {formatCurrency(collectAmount)}</span>
+                                </>
+                              )}
+                            </button>
 
-                        {/* Square Pencil Button: Opens Full Form for Custom/Advance/Multi-Date */}
-                        <button
-                          type="button"
-                          onClick={() => handleOpenPencil(l)}
-                          title="Edit amount / advance payment"
-                          className="w-9 h-9 rounded-xl border border-[#D5E9FA] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-[#EAF5FF] dark:hover:bg-slate-700 text-[#0878D1] dark:text-[#55B8F5] flex items-center justify-center shrink-0 active:scale-95 transition shadow-2xs"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
+                            {/* Square Pencil Button: Opens Full Form for Custom/Advance/Multi-Date */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenPencil(l);
+                              }}
+                              title="Edit amount / advance payment"
+                              className="w-10 h-10 rounded-xl border border-[#D5E9FA] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-[#EAF5FF] dark:hover:bg-slate-700 text-[#0878D1] dark:text-[#55B8F5] flex items-center justify-center shrink-0 active:scale-95 transition shadow-2xs"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+
+                            {/* Amber Holiday Button */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenHolidayModal(l);
+                              }}
+                              title="Declare holiday for this loan"
+                              className="min-h-[40px] px-3.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400 font-bold text-xs flex items-center space-x-1.5 shrink-0 active:scale-95 transition shadow-2xs"
+                            >
+                              <Coffee className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                              <span>Holiday</span>
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   );
@@ -1672,6 +2166,217 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
               >
                 <X className="w-3.5 h-3.5" />
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            HOLIDAY MODAL SHEET (TODAY, PICK DATES, RANGE, REASON, EXTEND SCHEDULE)
+        ========================================================================= */}
+        {holidayModalLoan && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setHolidayModalLoan(null);
+            }}
+          >
+            <div
+              className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-4 sm:p-5 shadow-2xl border border-[#D5E9FA] dark:border-slate-800 space-y-4 animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2 border-b border-[#D5E9FA]/60 dark:border-slate-800">
+                <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center shrink-0">
+                    <Coffee className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm sm:text-base font-black text-[#183653] dark:text-white truncate">
+                      Declare Holiday / விடுமுறை அறிவிப்பு
+                    </h4>
+                    <p className="text-xs text-[#647C95] dark:text-slate-400 font-medium truncate">
+                      {parseCustomerName(holidayModalLoan.customerId?.name || holidayModalLoan.customerName).primary} • {holidayModalLoan.loanNo}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHolidayModalLoan(null)}
+                  className="w-8 h-8 rounded-full bg-[#F3F9FF] dark:bg-slate-800 hover:bg-[#EAF5FF] text-[#647C95] flex items-center justify-center transition shrink-0 ml-2"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {holidaySheetError && (
+                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center space-x-2 animate-fade-in">
+                  <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span>{holidaySheetError}</span>
+                </div>
+              )}
+
+              {/* Choices: Today only (default), Pick dates, Date range */}
+              <div>
+                <label className="block text-[11px] font-black uppercase tracking-wider text-[#647C95] mb-1.5">
+                  Holiday Selection / தேர்வு வகை
+                </label>
+                <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-[#F3F9FF] dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700">
+                  {[
+                    { id: 'today', label: 'Today Only', labelTa: 'இன்று மட்டும்' },
+                    { id: 'pick', label: 'Pick Dates', labelTa: 'தேதிகள்' },
+                    { id: 'range', label: 'Date Range', labelTa: 'வரம்பு' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setHolidayChoice(tab.id);
+                        setHolidaySheetError('');
+                      }}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold transition flex flex-col items-center justify-center ${
+                        holidayChoice === tab.id
+                          ? 'bg-[#0878D1] text-white shadow-xs'
+                          : 'text-[#647C95] hover:text-[#183653] dark:text-slate-300'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span className="text-[9px] opacity-80">{tab.labelTa}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dynamic Inputs based on choice */}
+              {holidayChoice === 'today' ? (
+                <div className="p-3 rounded-xl bg-[#EAF5FF] dark:bg-slate-800/60 border border-[#BFE3FA] dark:border-slate-700 text-xs text-[#064B8E] dark:text-[#55B8F5] flex items-center justify-between">
+                  <span className="font-bold">Holiday for Today / இன்றைய தேதி:</span>
+                  <span className="font-mono font-black">{todayStr}</span>
+                </div>
+              ) : holidayChoice === 'pick' ? (
+                <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                  <label className="block text-xs font-black text-[#183653] dark:text-white">
+                    Select Specific Dates / குறிப்பிட்ட தேதிகள்:
+                  </label>
+                  {holidayDates.map((dVal, idx) => (
+                    <div key={idx} className="flex items-center space-x-2">
+                      <input
+                        type="date"
+                        value={dVal}
+                        onChange={(e) => {
+                          const updated = [...holidayDates];
+                          updated[idx] = e.target.value;
+                          setHolidayDates(updated);
+                        }}
+                        className="flex-1 h-9 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] text-xs font-bold text-[#183653] dark:text-white"
+                      />
+                      {holidayDates.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setHolidayDates(holidayDates.filter((_, i) => i !== idx))}
+                          className="p-1.5 text-rose-500 hover:text-rose-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setHolidayDates([...holidayDates, formatDateForInput()])}
+                    className="w-full py-1.5 rounded-xl border border-dashed border-[#0878D1] text-[#0878D1] text-xs font-bold hover:bg-[#EAF5FF] transition flex items-center justify-center space-x-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Another Date / தேதி சேர்க்க</span>
+                  </button>
+                </div>
+              ) : (
+                /* Date range */
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
+                      Start Date / தொடக்கம்
+                    </label>
+                    <input
+                      type="date"
+                      value={holidayRangeStart}
+                      onChange={(e) => setHolidayRangeStart(e.target.value)}
+                      className="w-full h-9 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] text-xs font-bold text-[#183653] dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
+                      End Date / முடிவு
+                    </label>
+                    <input
+                      type="date"
+                      value={holidayRangeEnd}
+                      onChange={(e) => setHolidayRangeEnd(e.target.value)}
+                      className="w-full h-9 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] text-xs font-bold text-[#183653] dark:text-white"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Optional Reason */}
+              <div>
+                <label className="block text-xs font-black text-[#183653] dark:text-white mb-1">
+                  Reason / குறிப்பு (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Festival, Sunday, Shop closed, Health / திருவிழா, விடுமுறை..."
+                  value={holidayModalReason}
+                  onChange={(e) => setHolidayModalReason(e.target.value)}
+                  className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-xs font-medium text-[#183653] dark:text-white placeholder-[#647C95] outline-none focus:border-[#0878D1]"
+                />
+              </div>
+
+              {/* Toggle: Add holiday days to the end of the schedule (default off) */}
+              <label className="flex items-start space-x-2.5 p-2.5 rounded-xl bg-[#F3F9FF] dark:bg-slate-800/60 border border-[#D5E9FA] dark:border-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={holidayExtendSchedule}
+                  onChange={(e) => setHolidayExtendSchedule(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded text-[#0878D1] focus:ring-[#0878D1]"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-black text-[#183653] dark:text-white">
+                    Add holiday days to the end of the schedule
+                  </p>
+                  <p className="text-[11px] text-[#647C95] dark:text-slate-400">
+                    கால அட்டவணையின் முடிவில் விடுமுறை நாட்களைச் சேர்க்கவும்
+                  </p>
+                </div>
+              </label>
+
+              {/* Save Button */}
+              <div className="flex items-center space-x-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setHolidayModalLoan(null)}
+                  className="flex-1 min-h-[42px] px-4 rounded-xl border border-[#D5E9FA] dark:border-slate-700 font-bold text-xs text-[#647C95] hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  Cancel / ரத்து
+                </button>
+                <button
+                  type="button"
+                  disabled={savingHoliday}
+                  onClick={handleSaveHolidaySheet}
+                  className="flex-1 min-h-[42px] px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-xs shadow-md shadow-amber-500/20 flex items-center justify-center space-x-1.5 active:scale-95 transition disabled:opacity-50"
+                >
+                  {savingHoliday ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>Save Holiday / சேமி</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
