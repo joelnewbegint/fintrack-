@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   AreaChart,
@@ -19,7 +19,7 @@ import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useDeviceMode } from '../context/DeviceModeContext';
-import { formatCurrency, formatShortCurrency, formatDate, getOverdueDays } from '../utils/currency';
+import { formatCurrency, formatShortCurrency, formatDate, formatDateForInput, getOverdueDays } from '../utils/currency';
 import { parseCustomerName } from '../utils/customerName';
 import StatCard from '../components/common/StatCard';
 import FinanceTypeCard from '../components/common/FinanceTypeCard';
@@ -60,6 +60,9 @@ import {
   Briefcase,
   Sparkles,
   BarChart2,
+  Pencil,
+  RotateCcw,
+  X,
 } from 'lucide-react';
 
 export const Dashboard = ({
@@ -82,6 +85,9 @@ export const Dashboard = ({
   const [selectedPayItem, setSelectedPayItem] = useState(null);
   const [receiptPayment, setReceiptPayment] = useState(null);
   const [whatsappItem, setWhatsappItem] = useState(null);
+  const [collectingDueKey, setCollectingDueKey] = useState(null);
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
   const [filterQuery, setFilterQuery] = useState('');
   const [panelTab, setPanelTab] = useState('pending'); // 'pending' | 'completed'
   const [dashboardView, setDashboardView] = useState('overview'); // 'overview' | 'completed' | 'settled'
@@ -163,8 +169,177 @@ export const Dashboard = ({
       loadData(true);
     };
     window.addEventListener('fintrack:data-updated', handleSyncUpdate);
-    return () => window.removeEventListener('fintrack:data-updated', handleSyncUpdate);
+    return () => {
+      window.removeEventListener('fintrack:data-updated', handleSyncUpdate);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // 1-Tap Direct Collection for Dashboard Pending Dues
+  // ---------------------------------------------------------------------------
+  const handleDirectCollect = async (item) => {
+    const loanId = item.loanId;
+    const dueKey = `${loanId}-${item.dueDate || 'due'}`;
+    const remBal =
+      item.remainingBalance !== undefined
+        ? Number(item.remainingBalance)
+        : Number(item.dueAmount) || 200;
+    const instAmt = Number(item.dueAmount) || Number(item.installmentAmount) || 200;
+    const payAmount = Math.max(0, Math.min(instAmt, remBal > 0 ? remBal : instAmt));
+
+    if (payAmount <= 0) return;
+
+    const custName = parseCustomerName(item.customerName).primary;
+    const todayDate = formatDateForInput(new Date());
+
+    try {
+      setCollectingDueKey(dueKey);
+      const res = await api.recordPayment({
+        loanId,
+        amount: payAmount,
+        mode: 'cash',
+        date: todayDate,
+        notes: `Direct collection from Dashboard / நேரடி தவணை வசூல் (Inst #${item.installmentNo || ''})`,
+      });
+
+      const paymentId = res?.payment?._id || res?.payment?.id || `pay_${Date.now()}`;
+      const recordedPayment = res?.payment || {
+        _id: paymentId,
+        loanId: {
+          _id: loanId,
+          loanNo: item.loanNo,
+          financeType: item.financeType,
+        },
+        customerId: {
+          _id: item.customerId,
+          name: item.customerName,
+          phone: item.customerPhone,
+        },
+        amount: payAmount,
+        mode: 'cash',
+        date: todayDate,
+        receiptNo: res?.payment?.receiptNo || `REC-${Date.now().toString().slice(-4)}`,
+        collectedBy: user ? { _id: user._id, name: user.name } : { name: 'Owner' },
+      };
+
+      // Optimistically update Dashboard state
+      setStats((prev) => {
+        if (!prev) return prev;
+        const updatedDueList = (prev.todayDueList || []).filter(
+          (d) => `${d.loanId}-${d.dueDate}` !== `${item.loanId}-${item.dueDate}`
+        );
+        const updatedCompletedList = [recordedPayment, ...(prev.completedTodayList || [])];
+        return {
+          ...prev,
+          todayDueList: updatedDueList,
+          completedTodayList: updatedCompletedList,
+          todayStats: {
+            ...prev.todayStats,
+            collectedToday: (prev.todayStats?.collectedToday || 0) + payAmount,
+            todayPaymentsCount: (prev.todayStats?.todayPaymentsCount || 0) + 1,
+            dueCount: Math.max(0, (prev.todayStats?.dueCount || 1) - 1),
+          },
+          todayPending: Math.max(0, (Number(prev.todayPending) || 0) - payAmount),
+          cards: {
+            ...prev.cards,
+            totalCollected: (prev.cards?.totalCollected || 0) + payAmount,
+            totalOutstanding: Math.max(0, (prev.cards?.totalOutstanding || 0) - payAmount),
+          },
+        };
+      });
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
+
+      // Show 8-Second Floating Undo Toast
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      setToast({
+        message: `${formatCurrency(payAmount)} collected from ${custName} / வசூலானது`,
+        undoPayload: {
+          paymentId,
+          item,
+          payAmount,
+        },
+      });
+      toastTimerRef.current = setTimeout(() => {
+        setToast(null);
+      }, 8000);
+    } catch (err) {
+      console.error('Failed to direct collect:', err);
+      alert(err.message || 'Failed to record payment');
+    } finally {
+      setCollectingDueKey(null);
+    }
+  };
+
+  const handleUndoDirectCollect = async () => {
+    if (!toast?.undoPayload) return;
+    const { paymentId, item, payAmount } = toast.undoPayload;
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast(null);
+
+    try {
+      if (paymentId) {
+        await api.deletePayment(paymentId);
+      }
+
+      // Revert local state
+      setStats((prev) => {
+        if (!prev) return prev;
+        const restoredDueList = [item, ...(prev.todayDueList || [])];
+        const restoredCompletedList = (prev.completedTodayList || []).filter(
+          (p) => String(p._id) !== String(paymentId)
+        );
+        return {
+          ...prev,
+          todayDueList: restoredDueList,
+          completedTodayList: restoredCompletedList,
+          todayStats: {
+            ...prev.todayStats,
+            collectedToday: Math.max(0, (prev.todayStats?.collectedToday || 0) - payAmount),
+            todayPaymentsCount: Math.max(0, (prev.todayStats?.todayPaymentsCount || 0) - 1),
+            dueCount: (prev.todayStats?.dueCount || 0) + 1,
+          },
+          todayPending: (Number(prev.todayPending) || 0) + payAmount,
+          cards: {
+            ...prev.cards,
+            totalCollected: Math.max(0, (prev.cards?.totalCollected || 0) - payAmount),
+            totalOutstanding: (prev.cards?.totalOutstanding || 0) + payAmount,
+          },
+        };
+      });
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
+    } catch (err) {
+      console.error('Failed to undo collection:', err);
+      alert(err.message || 'Failed to undo collection');
+    }
+  };
+
+  const handleUndoPayment = async (payment) => {
+    if (!payment?._id) return;
+    const confirmUndo = window.confirm(
+      lang === 'ta'
+        ? `வசூல் ${formatCurrency(payment.amount)} ரத்து செய்ய வேண்டுமா?`
+        : `Are you sure you want to undo collection of ${formatCurrency(payment.amount)}?`
+    );
+    if (!confirmUndo) return;
+
+    try {
+      await api.deletePayment(payment._id);
+      loadData(true);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
+    } catch (err) {
+      console.error('Failed to undo payment:', err);
+      alert(err.message || 'Failed to undo payment');
+    }
+  };
 
   // Skeleton Loader
   if (loading && !stats) {
@@ -684,12 +859,38 @@ export const Dashboard = ({
                         <Send className="w-3.5 h-3.5 text-[#18A879]" />
                       </button>
 
+                      {/* 1-Tap Direct Collect Button (Green) */}
                       <button
-                        onClick={() => setSelectedPayItem(item)}
-                        className="btn-sky-primary min-h-[36px] py-1.5 px-3 text-xs font-black shadow-md flex items-center space-x-1 whitespace-nowrap active:scale-95"
+                        disabled={collectingDueKey === `${item.loanId}-${item.dueDate || 'due'}`}
+                        onClick={() => handleDirectCollect(item)}
+                        className="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-[#18A879] hover:bg-[#138861] disabled:opacity-50 text-white font-black text-xs shadow-xs flex items-center space-x-1.5 whitespace-nowrap active:scale-95 transition"
+                        title="One-tap collection / நேரடி தவணை வசூல்"
                       >
-                        <CreditCard className="w-3.5 h-3.5" />
-                        <span>{t('markPaid')}</span>
+                        {collectingDueKey === `${item.loanId}-${item.dueDate || 'due'}` ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                            <span>
+                              {lang === 'ta'
+                                ? `வசூல் ${formatCurrency(item.dueAmount)}`
+                                : `Collect ${formatCurrency(item.dueAmount)}`}
+                            </span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Square Pencil Button: Opens Full Form for Custom/Advance/Multi-Date */}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPayItem(item)}
+                        title="Edit amount / advance payment / தவணை திருத்துதல்"
+                        className="w-9 h-9 rounded-xl border border-[#D5E9FA] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-[#EAF5FF] dark:hover:bg-slate-700 text-[#0878D1] dark:text-[#55B8F5] flex items-center justify-center shrink-0 active:scale-95 transition shadow-2xs"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -767,12 +968,29 @@ export const Dashboard = ({
                       <span>{formatDate(p.date)}</span>
                     </div>
 
-                    <button
-                      onClick={() => setReceiptPayment(p)}
-                      className="px-3 py-1.5 rounded-xl glass hover:bg-sky-50 text-sky-600 font-bold text-xs border border-sky-200 shrink-0 min-h-[36px] flex items-center active:scale-95 transition"
-                    >
-                      Receipt
-                    </button>
+                    <div className="flex items-center space-x-1.5 shrink-0">
+                      <button
+                        onClick={() => setReceiptPayment(p)}
+                        className="px-3 py-1.5 rounded-xl glass hover:bg-sky-50 text-sky-600 font-bold text-xs border border-sky-200 shrink-0 min-h-[36px] flex items-center active:scale-95 transition"
+                      >
+                        Receipt
+                      </button>
+                      {(isOwner ||
+                        (user &&
+                          (p.collectedBy?._id === user._id ||
+                            p.collectedBy === user._id ||
+                            p.collectedBy?.name === user.name))) && (
+                        <button
+                          type="button"
+                          onClick={() => handleUndoPayment(p)}
+                          className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold shrink-0 min-h-[36px] flex items-center space-x-1 active:scale-95 transition shadow-2xs"
+                          title="Undo Collection / ரத்து"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Undo</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -1696,21 +1914,48 @@ export const Dashboard = ({
                                 </span>
                               </div>
 
-                              {/* Line 3: Actions (Pay & WhatsApp) */}
+                              {/* Line 3: Actions (Collect & WhatsApp & Pencil) */}
                               <div className="flex items-center justify-end space-x-2 pt-2 border-t border-sky-100 dark:border-sky-900/40">
                                 <button
                                   onClick={() => setWhatsappItem(item)}
-                                  className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl glass hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 active:scale-95 transition"
+                                  className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl glass hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 active:scale-95 transition"
                                   title="WhatsApp Reminder"
                                 >
                                   <Send className="w-4 h-4 text-emerald-500" />
                                 </button>
+
+                                {/* 1-Tap Direct Collect Button (Green) */}
                                 <button
-                                  onClick={() => setSelectedPayItem(item)}
-                                  className="btn-sky-primary min-h-[44px] px-4 py-2 text-xs font-black shadow-sm flex items-center space-x-1.5 active:scale-95"
+                                  disabled={collectingDueKey === `${item.loanId}-${item.dueDate || 'due'}`}
+                                  onClick={() => handleDirectCollect(item)}
+                                  className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-[#18A879] hover:bg-[#138861] disabled:opacity-50 text-white font-black text-xs shadow-xs flex items-center space-x-1.5 whitespace-nowrap active:scale-95 transition"
+                                  title="One-tap collection / நேரடி தவணை வசூல்"
                                 >
-                                  <CreditCard className="w-3.5 h-3.5" />
-                                  <span>{t('markPaid')}</span>
+                                  {collectingDueKey === `${item.loanId}-${item.dueDate || 'due'}` ? (
+                                    <>
+                                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                      <span>Saving...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                      <span>
+                                        {lang === 'ta'
+                                          ? `வசூல் ${formatCurrency(item.dueAmount)}`
+                                          : `Collect ${formatCurrency(item.dueAmount)}`}
+                                      </span>
+                                    </>
+                                  )}
+                                </button>
+
+                                {/* Square Pencil Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedPayItem(item)}
+                                  title="Edit amount / advance payment / தவணை திருத்துதல்"
+                                  className="w-10 h-10 rounded-xl border border-sky-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-sky-50 text-[#0878D1] flex items-center justify-center shrink-0 active:scale-95 transition shadow-2xs"
+                                >
+                                  <Pencil className="w-4 h-4" />
                                 </button>
                               </div>
                             </div>
@@ -1770,12 +2015,29 @@ export const Dashboard = ({
 
                               <div className="flex items-center justify-between pt-2 border-t border-sky-100 dark:border-sky-900/40 text-[11px] text-slate-400">
                                 <span>Collected by {p.collectedBy?.name || 'Owner'}</span>
-                                <button
-                                  onClick={() => setReceiptPayment(p)}
-                                  className="text-xs font-bold text-sky-600 hover:underline min-h-[36px] flex items-center"
-                                >
-                                  View Receipt
-                                </button>
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={() => setReceiptPayment(p)}
+                                    className="text-xs font-bold text-sky-600 hover:underline min-h-[36px] flex items-center"
+                                  >
+                                    View Receipt
+                                  </button>
+                                  {(isOwner ||
+                                    (user &&
+                                      (p.collectedBy?._id === user._id ||
+                                        p.collectedBy === user._id ||
+                                        p.collectedBy?.name === user.name))) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUndoPayment(p)}
+                                      className="px-2 py-1 rounded-lg bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 text-[11px] font-bold flex items-center space-x-1 active:scale-95 transition shadow-2xs"
+                                      title="Undo Collection / ரத்து"
+                                    >
+                                      <RotateCcw className="w-3 h-3" />
+                                      <span>Undo</span>
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           );
@@ -2413,6 +2675,41 @@ export const Dashboard = ({
         dailyCollectionBreakdown={stats?.dailyCollectionBreakdown || []}
         onOpenExpenses={onOpenExpenses}
       />
+
+      {/* 8-Second Floating Toast with Undo */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-bounce-in max-w-md w-full px-4">
+          <div className="p-3.5 rounded-2xl bg-slate-900/95 text-white shadow-2xl border border-slate-700/80 backdrop-blur-md flex items-center justify-between gap-3">
+            <div className="flex items-center space-x-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                <Check className="w-4 h-4 stroke-[3]" />
+              </div>
+              <p className="text-xs font-bold truncate">{toast.message}</p>
+            </div>
+
+            <div className="flex items-center space-x-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleUndoDirectCollect}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black text-xs transition active:scale-95 flex items-center space-x-1 border border-white/20"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Undo / ரத்து</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                  setToast(null);
+                }}
+                className="text-white/60 hover:text-white p-1"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
