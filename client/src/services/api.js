@@ -926,7 +926,19 @@ export const api = {
 
   getLoanById: async (id) => {
     const result = await safeFetchJson(`/api/loans/${id}`, { headers: getHeaders() });
-    if (result.ok && result.data) return result.data;
+    if (result.ok && result.data) {
+      if (result.data.loan) {
+        const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+        const idx = loans.findIndex(
+          (l) => String(l._id) === String(result.data.loan._id) || String(l._id) === String(id)
+        );
+        if (idx !== -1) {
+          loans[idx] = { ...loans[idx], ...result.data.loan };
+          setStored(STORAGE_KEYS.LOANS, loans);
+        }
+      }
+      return result.data;
+    }
 
     const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
     const customers = getStored(STORAGE_KEYS.CUSTOMERS, initialCustomers);

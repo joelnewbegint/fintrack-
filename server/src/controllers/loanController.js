@@ -219,6 +219,136 @@ export const calculateLoanInterest = (loan) => {
   return 0;
 };
 
+// Detect legacy schedule mismatch where earlier non-final rows keep the standard amount (e.g. ₹200)
+// while multiple subsequent non-final unpaid rows were lowered (e.g. ₹194) by prior extra-payment logic.
+function needsLegacyScheduleRepair(loan) {
+  if (!loan || !Array.isArray(loan.schedule) || loan.schedule.length < 3) return false;
+  const firstAmt = Number(loan.schedule[0]?.amount) || 0;
+  if (firstAmt <= 0) return false;
+
+  const nonFinalRows = loan.schedule.slice(0, -1);
+  const matchingFirstCount = nonFinalRows.filter((s) => Number(s.amount) === firstAmt).length;
+  const mismatchedUnpaid = nonFinalRows.filter(
+    (s) => s.status !== 'paid' && Number(s.amount) > 0 && Number(s.amount) !== firstAmt
+  );
+  const mismatchedAllUnpaid = loan.schedule.filter(
+    (s) => s.status !== 'paid' && Number(s.amount) > 0 && Number(s.amount) !== firstAmt
+  );
+
+  return (
+    matchingFirstCount >= 1 &&
+    (mismatchedUnpaid.length >= 2 || (Number(loan.installmentAmount) !== firstAmt && mismatchedAllUnpaid.length >= 2))
+  );
+}
+
+function rebalanceTailSchedule(loan, baseInstAmt, remainingBalance, excludedInstallmentNo = null) {
+  const stepAmt = Math.max(1, Number(baseInstAmt) || 200);
+  const targetRem = Math.max(0, Number(remainingBalance) || 0);
+  const unpaidRows = (loan.schedule || [])
+    .filter(
+      (s) =>
+        (excludedInstallmentNo === null || s.installmentNo !== excludedInstallmentNo) &&
+        s.status !== 'paid' &&
+        s.status !== 'holiday' &&
+        s.status !== 'leave' &&
+        s.status !== 'missed'
+    )
+    .sort((a, b) => a.installmentNo - b.installmentNo);
+
+  let leftToAssign = targetRem;
+  const keepNos = new Set();
+
+  for (let i = 0; i < unpaidRows.length; i++) {
+    const s = unpaidRows[i];
+    if (leftToAssign <= 0) break;
+    const alreadyPaid = Number(s.paidAmount) || 0;
+    const normalDue = alreadyPaid > 0 ? Math.max(1, stepAmt - alreadyPaid) : stepAmt;
+    const assignedDue = Math.min(leftToAssign, normalDue);
+    s.amount = alreadyPaid + assignedDue;
+    leftToAssign -= assignedDue;
+    keepNos.add(s.installmentNo);
+  }
+
+  if (leftToAssign > 0 && keepNos.size > 0) {
+    const lastKept = unpaidRows.filter((s) => keepNos.has(s.installmentNo)).pop();
+    if (lastKept) {
+      lastKept.amount = (Number(lastKept.amount) || 0) + leftToAssign;
+    }
+  }
+
+  const dropNos = new Set(unpaidRows.filter((s) => !keepNos.has(s.installmentNo)).map((s) => s.installmentNo));
+  if (dropNos.size > 0) {
+    loan.schedule = loan.schedule.filter((s) => !dropNos.has(s.installmentNo));
+  }
+
+  loan.duration = loan.schedule.length;
+  if (loan.schedule.length > 0) {
+    loan.endDate = loan.schedule[loan.schedule.length - 1].dueDate;
+  }
+}
+
+async function repairLegacyScheduleIfNeeded(loan) {
+  if (!needsLegacyScheduleRepair(loan)) return false;
+
+  const schedule = loan.schedule;
+  const firstAmt = Number(schedule[0].amount);
+
+  // Restore original principal and totalPayable if altered by prior logic
+  const disbursed = Number(loan.disbursedAmount) || 0;
+  const charge = Number(loan.chargeAmount) || 0;
+  const it = loan.interestType || 'deduction';
+  if (disbursed > 0) {
+    const expectedPrincipal = it === 'deduction' ? disbursed + charge : disbursed;
+    const expectedTotalPayable = it === 'deduction' ? expectedPrincipal : expectedPrincipal + charge;
+    if (expectedPrincipal > 0) loan.principal = expectedPrincipal;
+    if (expectedTotalPayable > 0) loan.totalPayable = expectedTotalPayable;
+  } else {
+    const expectedTotalPayable = schedule.length * firstAmt;
+    if (expectedTotalPayable > 0) loan.totalPayable = expectedTotalPayable;
+  }
+
+  loan.installmentAmount = firstAmt;
+
+  // Recompute collected amount from actual Payment documents (falling back to row sum if no Payment docs)
+  const paymentQueryOr = [{ loanId: loan._id }];
+  if (loan.clientId) paymentQueryOr.push({ loanId: loan.clientId });
+  if (loan.loanNo) paymentQueryOr.push({ loanId: loan.loanNo });
+  const payments = await Payment.find({ $or: paymentQueryOr }).select('amount notes paymentType');
+  const sumPayments = payments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+  const paidSumFromRows = schedule.reduce((acc, s) => acc + (Number(s.paidAmount) || 0), 0);
+
+  // Sync any Principal extra payment note onto its paid installment row if it was previously capped at due
+  for (const p of payments) {
+    if (p.paymentType === 'Principal' || /principal\s*payment|extra\s*payment/i.test(p.notes || '')) {
+      const m = (p.notes || '').match(/#(\d+)/);
+      if (m) {
+        const instNo = Number(m[1]);
+        const targetInst = schedule.find((s) => s.installmentNo === instNo && s.status === 'paid');
+        if (targetInst && Number(targetInst.paidAmount || 0) <= Number(targetInst.amount || 0)) {
+          targetInst.paidAmount = (Number(targetInst.paidAmount) || 0) + (Number(p.amount) || 0);
+        }
+      }
+    }
+  }
+
+  loan.totalCollected = payments.length > 0 ? Math.max(sumPayments, paidSumFromRows) : paidSumFromRows;
+  const newRemaining = Math.max(0, (Number(loan.totalPayable) || 0) - (Number(loan.totalCollected) || 0));
+  loan.remainingBalance = newRemaining;
+
+  rebalanceTailSchedule(loan, firstAmt, newRemaining, null);
+
+  const now = new Date();
+  loan.status =
+    loan.remainingBalance <= 0
+      ? 'completed'
+      : loan.schedule.some((s) => s.status !== 'paid' && s.status !== 'holiday' && s.status !== 'leave' && new Date(s.dueDate) < now)
+      ? 'overdue'
+      : 'active';
+
+  await loan.save();
+  return true;
+}
+
 export const getLoans = async (req, res, next) => {
   try {
     const { status, financeType, customerId, search, excludeClosed, view } = req.query;
@@ -261,6 +391,13 @@ export const getLoans = async (req, res, next) => {
     let loans = await Loan.find(query)
       .populate('customerId', 'name phone area photoUrl')
       .sort({ createdAt: -1 });
+
+    // Auto-repair any loan whose schedule was split to lower installment amounts by legacy extra-payment logic
+    for (const l of loans) {
+      if (needsLegacyScheduleRepair(l)) {
+        await repairLegacyScheduleIfNeeded(l);
+      }
+    }
 
     // Ensure customer details are always populated and never undefined/Unknown
     loans = loans.map((l) => {
@@ -561,6 +698,8 @@ export const getLoanById = async (req, res, next) => {
         message: 'Loan not found',
       });
     }
+
+    await repairLegacyScheduleIfNeeded(loan);
 
     // Role-based Client Isolation
     if (req.user?.role === 'client') {
@@ -1032,6 +1171,8 @@ export const recordInstallmentAction = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Loan not found / கடன் கணக்கு கிடைக்கவில்லை' });
     }
 
+    await repairLegacyScheduleIfNeeded(loan);
+
     const {
       action = 'pay', // 'pay' | 'holiday' | 'leave' | 'reverse'
       installmentNo,
@@ -1403,52 +1544,7 @@ export const recordInstallmentAction = async (req, res, next) => {
 
       // Keep installment amount the same and reduce remaining tail dates from the end of schedule
       const baseInstAmt = Math.max(1, Number(loan.installmentAmount) || Number(inst.amount) || 200);
-      const remainingUnpaid = loan.schedule
-        .filter(
-          (s) =>
-            s.installmentNo !== inst.installmentNo &&
-            s.status !== 'paid' &&
-            s.status !== 'holiday' &&
-            s.status !== 'leave' &&
-            s.status !== 'missed'
-        )
-        .sort((a, b) => a.installmentNo - b.installmentNo);
-
-      let leftToAssign = newRemainingBalance;
-      const keepNos = new Set();
-
-      for (let i = 0; i < remainingUnpaid.length; i++) {
-        const s = remainingUnpaid[i];
-        if (leftToAssign <= 0) break;
-        const alreadyPaid = Number(s.paidAmount) || 0;
-        const normalDue = alreadyPaid > 0 ? Math.max(1, baseInstAmt - alreadyPaid) : baseInstAmt;
-        const assignedDue = Math.min(leftToAssign, normalDue);
-        s.amount = alreadyPaid + assignedDue;
-        leftToAssign -= assignedDue;
-        keepNos.add(s.installmentNo);
-      }
-
-      if (leftToAssign > 0 && keepNos.size > 0) {
-        const lastKept = remainingUnpaid.filter((s) => keepNos.has(s.installmentNo)).pop();
-        if (lastKept) {
-          lastKept.amount = (Number(lastKept.amount) || 0) + leftToAssign;
-        }
-      }
-
-      const dropNos = new Set(
-        remainingUnpaid
-          .filter((s) => !keepNos.has(s.installmentNo))
-          .map((s) => s.installmentNo)
-      );
-
-      if (dropNos.size > 0) {
-        loan.schedule = loan.schedule.filter((s) => !dropNos.has(s.installmentNo));
-      }
-
-      loan.duration = loan.schedule.length;
-      if (loan.schedule.length > 0) {
-        loan.endDate = loan.schedule[loan.schedule.length - 1].dueDate;
-      }
+      rebalanceTailSchedule(loan, baseInstAmt, newRemainingBalance, inst.installmentNo);
     }
 
     // Sync loan status
