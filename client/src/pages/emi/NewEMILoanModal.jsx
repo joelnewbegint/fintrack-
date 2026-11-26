@@ -33,6 +33,8 @@ import {
   Plus,
   Minus,
   Check,
+  ChevronLeft,
+  ChevronRight,
   ChevronDown,
   ChevronUp,
   AlertCircle,
@@ -67,6 +69,22 @@ const TENURE_CHIPS = [3, 6, 9, 12, 18, 24];
 const RATE_CHIPS = [10, 12, 14, 18, 24];
 const INTEREST_AMOUNT_CHIPS = [1000, 2000, 4000, 5000];
 const CHARGE_QUICK_CHIPS = [0, 250, 500, 1000];
+
+const EMI_LEVELS = [
+  { step: 1, title: 'Customer', titleTa: 'வாடிக்கையாளர்' },
+  { step: 2, title: 'Product', titleTa: 'பொருள்' },
+  { step: 3, title: 'EMI Terms', titleTa: 'விதிமுறைகள்' },
+  { step: 4, title: 'Charges', titleTa: 'கட்டணங்கள்' },
+  { step: 5, title: 'Breakdown', titleTa: 'கணக்கீடு' },
+];
+
+const LEVEL_FIELD_KEYS = {
+  1: ['customerName', 'customerPhone', 'customerArea'],
+  2: ['productName', 'productPrice', 'financeAmount'],
+  3: ['tenure', 'interest'],
+  4: ['startDate'],
+  5: [],
+};
 
 const compressImageFile = (file, maxDim = 720) =>
   new Promise((resolve, reject) => {
@@ -162,6 +180,8 @@ export const NewEMILoanModal = ({ isOpen, onClose, onSuccess }) => {
   const [notes, setNotes] = useState('');
 
   // Section 5 & UI state
+  const [currentStep, setCurrentStep] = useState(1);
+  const [maxUnlockedStep, setMaxUnlockedStep] = useState(1);
   const [showFullSchedule, setShowFullSchedule] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -169,6 +189,14 @@ export const NewEMILoanModal = ({ isOpen, onClose, onSuccess }) => {
 
   // Debounced inputs for smooth live calculation
   const [debouncedParams, setDebouncedParams] = useState(null);
+
+  const goToStep = (nextStep) => {
+    setCurrentStep(nextStep);
+    setMaxUnlockedStep((prev) => Math.max(prev, nextStep));
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  };
 
   // Lock body scroll & reset state cleanly on open
   useEffect(() => {
@@ -179,6 +207,8 @@ export const NewEMILoanModal = ({ isOpen, onClose, onSuccess }) => {
 
     // Reset cleanly on open
     submittingRef.current = false;
+    setCurrentStep(1);
+    setMaxUnlockedStep(1);
     setError('');
     setFieldErrors({});
     setCustomerMode('new');
@@ -445,50 +475,129 @@ export const NewEMILoanModal = ({ isOpen, onClose, onSuccess }) => {
     setCharges((prev) => prev.filter((c) => c.key !== key));
   };
 
-  const validateForm = () => {
+  const getStepErrors = (step) => {
     const errs = {};
-    const digits = normalizePhone(customerPhone);
 
-    if (!customerName.trim()) errs.customerName = 'Customer full name is required / பெயர் தேவை';
-    if (digits.length !== 10) errs.customerPhone = 'Valid 10-digit mobile number required / 10 இலக்க எண் தேவை';
-    if (!customerArea.trim()) errs.customerArea = 'Area is required / பகுதி தேவை';
-
-    if (!productName.trim()) errs.productName = 'Product name is required / பொருள் பெயர் தேவை';
-    const priceNum = Number(productPrice);
-    if (!productPrice || Number.isNaN(priceNum) || priceNum <= 0) {
-      errs.productPrice = 'Product price must be greater than 0 / பொருள் விலை தேவை';
-    }
-    if (liveFinanceAmount <= 0) {
-      errs.financeAmount = 'Finance amount must be greater than ₹0 (reduce down payment)';
-    }
-
-    const tNum = Number(tenureMonths);
-    if (!tNum || tNum < 1 || tNum > 120) {
-      errs.tenure = 'Tenure must be between 1 and 120 months';
-    }
-
-    if (interestMode === 'amount') {
-      if (interestAmount === '' || Number(interestAmount) < 0 || Number.isNaN(Number(interestAmount))) {
-        errs.interest = 'Interest amount must be 0 or greater';
+    if (step === 1) {
+      const digits = normalizePhone(customerPhone);
+      if (!customerName.trim()) errs.customerName = 'Customer full name is required / பெயர் தேவை';
+      if (digits.length !== 10) errs.customerPhone = 'Valid 10-digit mobile number required / 10 இலக்க எண் தேவை';
+      if (!customerArea.trim()) errs.customerArea = 'Area is required / பகுதி தேவை';
+    } else if (step === 2) {
+      if (!productName.trim()) errs.productName = 'Product name is required / பொருள் பெயர் தேவை';
+      const priceNum = Number(productPrice);
+      if (!productPrice || Number.isNaN(priceNum) || priceNum <= 0) {
+        errs.productPrice = 'Product price must be greater than 0 / பொருள் விலை தேவை';
+      } else if (liveFinanceAmount <= 0) {
+        errs.financeAmount = 'Finance amount must be greater than ₹0 (reduce down payment)';
       }
-    } else {
-      if (annualRate === '' || Number(annualRate) < 0 || Number.isNaN(Number(annualRate))) {
+    } else if (step === 3) {
+      const tNum = Number(tenureMonths);
+      if (!tNum || tNum < 1 || tNum > 120) {
+        errs.tenure = 'Tenure must be between 1 and 120 months';
+      }
+      if (interestMode === 'amount') {
+        if (interestAmount === '' || Number(interestAmount) < 0 || Number.isNaN(Number(interestAmount))) {
+          errs.interest = 'Interest amount must be 0 or greater';
+        }
+      } else if (annualRate === '' || Number(annualRate) < 0 || Number.isNaN(Number(annualRate))) {
         errs.interest = 'Interest rate must be 0 or greater';
       }
+    } else if (step === 4) {
+      if (!startDate) {
+        errs.startDate = 'Start date is required / தொடக்க தேதி தேவை';
+      }
     }
 
-    setFieldErrors(errs);
-    const firstMsg = Object.values(errs)[0] || '';
+    return errs;
+  };
+
+  const validateStep = (step) => {
+    const stepErrs = getStepErrors(step);
+    const stepKeys = LEVEL_FIELD_KEYS[step] || [];
+
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      stepKeys.forEach((k) => {
+        delete next[k];
+      });
+      return { ...next, ...stepErrs };
+    });
+
+    const firstMsg = Object.values(stepErrs)[0] || '';
+    setError(firstMsg);
+    return !firstMsg;
+  };
+
+  const validateForm = () => {
+    const allErrs = {};
+    let firstFailingStep = null;
+
+    for (const level of [1, 2, 3, 4]) {
+      const stepErrs = getStepErrors(level);
+      if (Object.keys(stepErrs).length > 0 && firstFailingStep === null) {
+        firstFailingStep = level;
+      }
+      Object.assign(allErrs, stepErrs);
+    }
+
+    setFieldErrors(allErrs);
+    const firstMsg = Object.values(allErrs)[0] || '';
     if (firstMsg) {
       setError(firstMsg);
+      if (firstFailingStep !== null) {
+        setCurrentStep(firstFailingStep);
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
+      }
       return false;
     }
     setError('');
     return true;
   };
 
+  const handleNextStep = () => {
+    if (!validateStep(currentStep)) return;
+    const nextStep = Math.min(5, currentStep + 1);
+    goToStep(nextStep);
+  };
+
+  const handlePrevStep = () => {
+    if (currentStep <= 1) return;
+    setError('');
+    goToStep(currentStep - 1);
+  };
+
+  const handleStepSelect = (targetStep) => {
+    if (targetStep === currentStep || loading) return;
+    if (targetStep < currentStep) {
+      setError('');
+      goToStep(targetStep);
+      return;
+    }
+
+    // Moving forward: validate intermediate steps cleanly up to targetStep - 1
+    for (let s = currentStep; s < targetStep; s += 1) {
+      if (!validateStep(s)) {
+        if (s !== currentStep) {
+          setCurrentStep(s);
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = 0;
+          }
+        }
+        return;
+      }
+    }
+    goToStep(targetStep);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (currentStep < 5) {
+      handleNextStep();
+      return;
+    }
     if (submittingRef.current || loading) return;
     if (!validateForm()) return;
 
@@ -606,32 +715,98 @@ export const NewEMILoanModal = ({ isOpen, onClose, onSuccess }) => {
         className="w-full max-w-[760px] max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-[#D5E9FA] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Sticky Modal Header */}
-        <div className="px-5 py-4 bg-white border-b border-[#D5E9FA] flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0B6FD6] to-[#0A4FA3] text-white flex items-center justify-center shadow-sm shrink-0">
-              <ShoppingBag className="w-5 h-5" />
+        {/* Sticky Modal Header + 5-Level Stepper */}
+        <div className="bg-white border-b border-[#D5E9FA] shrink-0">
+          <div className="px-5 py-3.5 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0B6FD6] to-[#0A4FA3] text-white flex items-center justify-center shadow-sm shrink-0">
+                <ShoppingBag className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-base sm:text-lg font-extrabold text-[#183653] leading-tight">
+                    New product EMI / புதிய பொருள் EMI
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full bg-[#EAF5FF] border border-[#BFE0FB] text-[10px] font-black text-[#0B6FD6] uppercase tracking-wide">
+                    Level {currentStep} / 5
+                  </span>
+                </div>
+                <p className="text-xs text-[#647C95]">
+                  {EMI_LEVELS[currentStep - 1]?.title} · {EMI_LEVELS[currentStep - 1]?.titleTa}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-extrabold text-[#183653] leading-tight">
-                New product EMI / புதிய பொருள் EMI
-              </h2>
-              <p className="text-xs text-[#647C95]">
-                Customer, product and EMI in one page · வாடிக்கையாளர், பொருள் மற்றும் EMI ஒரே பக்கத்தில்
-              </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-9 h-9 rounded-full bg-[#F3F9FF] hover:bg-[#EAF5FF] text-[#647C95] hover:text-[#183653] flex items-center justify-center transition"
+              aria-label="Close modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* 5-Level Progress Rail */}
+          <div className="px-4 sm:px-5 pb-3 pt-1">
+            <div className="h-1.5 w-full rounded-full bg-[#EAF5FF] overflow-hidden mb-2.5">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#0EA5E9] via-[#0B6FD6] to-[#0A4FA3] transition-all duration-300"
+                style={{ width: `${(currentStep / EMI_LEVELS.length) * 100}%` }}
+              />
+            </div>
+
+            <div className="grid grid-cols-5 gap-1.5">
+              {EMI_LEVELS.map((lvl) => {
+                const isActive = currentStep === lvl.step;
+                const isCompleted = lvl.step < currentStep || (lvl.step < maxUnlockedStep && !isActive);
+                const isReachable = lvl.step <= maxUnlockedStep || lvl.step === currentStep + 1;
+
+                return (
+                  <button
+                    key={lvl.step}
+                    type="button"
+                    onClick={() => handleStepSelect(lvl.step)}
+                    className={`group flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2 px-1.5 sm:px-2.5 py-1.5 rounded-xl border text-left transition ${
+                      isActive
+                        ? 'bg-[#EAF5FF] border-[#0B6FD6] shadow-xs ring-2 ring-[#0EA5E9]/20'
+                        : isCompleted
+                        ? 'bg-[#F3F9FF] border-[#BFE0FB] hover:border-[#0B6FD6]'
+                        : isReachable
+                        ? 'bg-white border-[#E2EEF9] hover:border-[#BFE0FB]'
+                        : 'bg-[#F9FBFE] border-[#EAF2FA] opacity-80 hover:opacity-100'
+                    }`}
+                  >
+                    <span
+                      className={`w-6 h-6 rounded-full text-[11px] font-black flex items-center justify-center shrink-0 transition ${
+                        isActive
+                          ? 'bg-gradient-to-br from-[#0B6FD6] to-[#0A4FA3] text-white shadow-xs'
+                          : isCompleted
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-[#EAF5FF] text-[#647C95]'
+                      }`}
+                    >
+                      {isCompleted ? <Check className="w-3.5 h-3.5" /> : lvl.step}
+                    </span>
+                    <div className="min-w-0 text-center sm:text-left">
+                      <div
+                        className={`text-[10px] sm:text-[11px] font-extrabold leading-tight truncate ${
+                          isActive ? 'text-[#0A4FA3]' : isCompleted ? 'text-[#183653]' : 'text-[#647C95]'
+                        }`}
+                      >
+                        {lvl.title}
+                      </div>
+                      <div className="hidden sm:block text-[9px] font-semibold text-[#647C95] leading-tight truncate">
+                        {lvl.titleTa}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-[#F3F9FF] hover:bg-[#EAF5FF] text-[#647C95] hover:text-[#183653] flex items-center justify-center transition"
-            aria-label="Close modal"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
-        {/* ONE Internal Scrollable Form Area */}
+        {/* ONE Internal Scrollable Form Area (renders current level) */}
         <form
           id="new-product-emi-form"
           onSubmit={handleSubmit}
@@ -639,8 +814,9 @@ export const NewEMILoanModal = ({ isOpen, onClose, onSuccess }) => {
           ref={scrollContainerRef}
         >
           {/* ════════════════════════════════════════════════════════════════
-              SECTION 1: CUSTOMER
+              LEVEL 1: CUSTOMER
           ════════════════════════════════════════════════════════════════ */}
+          {currentStep === 1 && (
           <section className="rounded-2xl bg-white border border-[#D5E9FA] p-4 sm:p-5 space-y-4 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#EAF5FF]">
               <div className="flex items-center space-x-2.5">
@@ -1125,10 +1301,12 @@ export const NewEMILoanModal = ({ isOpen, onClose, onSuccess }) => {
               </div>
             </div>
           </section>
+          )}
 
           {/* ════════════════════════════════════════════════════════════════
-              SECTION 2: PRODUCT (Manual only, NO defaults/presets)
+              LEVEL 2: PRODUCT (Manual only, NO defaults/presets)
           ════════════════════════════════════════════════════════════════ */}
+          {currentStep === 2 && (
           <section className="rounded-2xl bg-white border border-[#D5E9FA] p-4 sm:p-5 space-y-4 shadow-xs">
             <div className="flex items-center space-x-2.5 pb-3 border-b border-[#EAF5FF]">
               <span className="w-7 h-7 rounded-full bg-[#0B6FD6] text-white text-xs font-black flex items-center justify-center shrink-0">
@@ -1344,10 +1522,12 @@ export const NewEMILoanModal = ({ isOpen, onClose, onSuccess }) => {
               </div>
             </div>
           </section>
+          )}
 
           {/* ════════════════════════════════════════════════════════════════
-              SECTION 3: EMI TERMS
+              LEVEL 3: EMI TERMS
           ════════════════════════════════════════════════════════════════ */}
+          {currentStep === 3 && (
           <section className="rounded-2xl bg-white border border-[#D5E9FA] p-4 sm:p-5 space-y-4 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#EAF5FF]">
               <div className="flex items-center space-x-2.5">
@@ -1619,10 +1799,12 @@ export const NewEMILoanModal = ({ isOpen, onClose, onSuccess }) => {
                   )} for ${Number(tenureMonths) || 0} months, equal monthly EMI`}
             </div>
           </section>
+          )}
 
           {/* ════════════════════════════════════════════════════════════════
-              SECTION 4: MANUAL CHARGE CARDS
+              LEVEL 4: MANUAL CHARGE CARDS
           ════════════════════════════════════════════════════════════════ */}
+          {currentStep === 4 && (
           <section className="rounded-2xl bg-white border border-[#D5E9FA] p-4 sm:p-5 space-y-4 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#EAF5FF]">
               <div className="flex items-center space-x-2.5">
@@ -1862,10 +2044,46 @@ export const NewEMILoanModal = ({ isOpen, onClose, onSuccess }) => {
               </div>
             </div>
           </section>
+          )}
 
           {/* ════════════════════════════════════════════════════════════════
-              SECTION 5: BREAKDOWN & SCHEDULE
+              LEVEL 5: BREAKDOWN & SCHEDULE
           ════════════════════════════════════════════════════════════════ */}
+          {currentStep === 5 && (
+          <div className="space-y-4">
+            {/* Compact quick-jump summary of Levels 1-3 */}
+            <div className="rounded-2xl bg-white border border-[#D5E9FA] px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleStepSelect(1)}
+                  className="px-2.5 py-1 rounded-full bg-[#F3F9FF] hover:bg-[#EAF5FF] border border-[#D5E9FA] font-bold text-[#183653] transition"
+                >
+                  {customerName.trim() || 'Customer'} ({normalizePhone(customerPhone) || '—'})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStepSelect(2)}
+                  className="px-2.5 py-1 rounded-full bg-[#F3F9FF] hover:bg-[#EAF5FF] border border-[#D5E9FA] font-bold text-[#183653] transition"
+                >
+                  {productName.trim() || 'Product'} · {formatINR(Number(productPrice) || 0)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStepSelect(3)}
+                  className="px-2.5 py-1 rounded-full bg-[#EAF5FF] hover:bg-[#DCEEFF] border border-[#BFE0FB] font-bold text-[#0A4FA3] transition"
+                >
+                  {tenureMonths}m ·{' '}
+                  {interestMode === 'rate'
+                    ? `${annualRate || 0}% (${method === 'reducing' ? 'Reducing' : 'Flat'})`
+                    : `Interest ${formatINR(calc.totalInterest)}`}
+                </button>
+              </div>
+              <span className="text-[11px] font-semibold text-[#647C95]">
+                Tap pill to edit / மாற்ற தட்டவும்
+              </span>
+            </div>
+
           <section className="rounded-2xl bg-white border border-[#D5E9FA] p-4 sm:p-5 space-y-4 shadow-xs">
             <div className="flex items-center space-x-2.5 pb-3 border-b border-[#EAF5FF]">
               <span className="w-7 h-7 rounded-full bg-[#0B6FD6] text-white text-xs font-black flex items-center justify-center shrink-0">
@@ -2028,6 +2246,8 @@ export const NewEMILoanModal = ({ isOpen, onClose, onSuccess }) => {
               />
             </div>
           </section>
+          </div>
+          )}
         </form>
 
         {/* Sticky Modal Footer */}
@@ -2039,28 +2259,55 @@ export const NewEMILoanModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="h-11 px-5 rounded-xl bg-[#F3F9FF] hover:bg-[#EAF5FF] border border-[#D5E9FA] text-xs font-bold text-[#183653] transition disabled:opacity-50"
-            >
-              Cancel / ரத்து
-            </button>
-            <button
-              type="submit"
-              form="new-product-emi-form"
-              disabled={loading}
-              className="h-11 px-6 rounded-xl bg-gradient-to-r from-[#0B6FD6] to-[#0A4FA3] hover:brightness-105 text-xs sm:text-sm font-extrabold text-white shadow-md flex items-center justify-center space-x-2 transition active:scale-[0.99] disabled:opacity-60"
-            >
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>
-                {loading
-                  ? 'Saving & sanctioning...'
-                  : 'Save customer and sanction EMI / சேமித்து கடன் வழங்குக'}
-              </span>
-            </button>
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="h-11 px-4 rounded-xl bg-[#F3F9FF] hover:bg-[#EAF5FF] border border-[#D5E9FA] text-xs font-bold text-[#183653] transition disabled:opacity-50"
+              >
+                Cancel / ரத்து
+              </button>
+              {currentStep > 1 && (
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  disabled={loading}
+                  className="h-11 px-4 rounded-xl bg-white hover:bg-[#F3F9FF] border border-[#BFE0FB] text-xs font-bold text-[#0A4FA3] flex items-center gap-1 transition disabled:opacity-50"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Previous / முந்தைய</span>
+                </button>
+              )}
+            </div>
+
+            {currentStep < 5 ? (
+              <button
+                type="button"
+                onClick={handleNextStep}
+                className="h-11 px-5 sm:px-6 rounded-xl bg-gradient-to-r from-[#0B6FD6] to-[#0A4FA3] hover:brightness-105 text-xs sm:text-sm font-extrabold text-white shadow-md flex items-center justify-center gap-1.5 transition active:scale-[0.99]"
+              >
+                <span>
+                  Next: {EMI_LEVELS[currentStep]?.title} / அடுத்து
+                </span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                form="new-product-emi-form"
+                disabled={loading}
+                className="h-11 px-5 sm:px-6 rounded-xl bg-gradient-to-r from-[#0B6FD6] to-[#0A4FA3] hover:brightness-105 text-xs sm:text-sm font-extrabold text-white shadow-md flex items-center justify-center space-x-2 transition active:scale-[0.99] disabled:opacity-60"
+              >
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>
+                  {loading
+                    ? 'Saving & sanctioning...'
+                    : 'Save customer and sanction EMI / சேமித்து கடன் வழங்குக'}
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </div>
