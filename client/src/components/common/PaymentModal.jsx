@@ -937,11 +937,10 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
       return;
     }
 
-    const instDue = Math.max(0, Number(selectedLoan.installmentAmount || selectedLoan.dueAmount || 200));
-    const maxAllowed = (Number(selectedLoan.principal) || Number(selectedLoan.remainingBalance) || 0) + instDue;
+    const maxAllowed = Math.max(0, Number(currentBalance) || 0);
 
     if (!useMultiDate && payNum > maxAllowed) {
-      setError(`Amount cannot exceed outstanding principal + due (₹${maxAllowed}) / தொகை ₹${maxAllowed}-க்கு மேல் இருக்கக் கூடாது`);
+      setError(`Amount cannot exceed pending due (${formatCurrency(maxAllowed)}) / தொகை நிலுவைத் தொகை ${formatCurrency(maxAllowed)}-க்கு மேல் இருக்கக் கூடாது`);
       return;
     }
 
@@ -2069,33 +2068,42 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                           />
                         </div>
 
-                        {/* LIVE SPLIT BOX WHILE TYPING (EXTRA TO PRINCIPAL RULE) */}
+                        {/* LIVE SPLIT BOX WHILE TYPING (MINUS INSTALLMENT + EXTRA FROM PENDING DUE) */}
                         {amount > 0 && selectedLoan && (
                           <div className="mt-2 p-2.5 rounded-xl bg-[#F3F9FF] dark:bg-slate-800/80 border border-[#D5E9FA] dark:border-slate-700 space-y-1 text-xs">
                             {(() => {
                               const due = Math.max(0, Number(selectedLoan.installmentAmount || selectedLoan.dueAmount || 200));
+                              const pendingDue = Math.max(0, Number(currentBalance) || 0);
+                              const effectiveDue = Math.min(due, pendingDue);
                               const amt = Number(amount) || 0;
-                              const extra = Math.max(0, amt - due);
-                              const instPart = Math.min(amt, due);
-                              const curPrin = Number(selectedLoan.principal || selectedLoan.remainingBalance || 0);
-                              const newPrin = Math.max(0, curPrin - extra);
+                              const instPart = Math.min(amt, effectiveDue);
+                              const extra = Math.max(0, amt - effectiveDue);
+                              const newPendingDue = Math.max(0, pendingDue - instPart - extra);
                               const dateLabel = date ? formatDate(date) : 'Today';
 
                               return (
                                 <>
+                                  <div className="flex items-center justify-between text-[#647C95] dark:text-slate-400 font-medium">
+                                    <span>Pending Due / நிலுவை:</span>
+                                    <span className="font-bold text-[#183653] dark:text-white tabular-nums">
+                                      {formatCurrency(pendingDue)}
+                                    </span>
+                                  </div>
                                   <div className="flex items-center justify-between text-[#183653] dark:text-white font-medium">
                                     <span>Installment ({dateLabel}):</span>
-                                    <span className="font-bold tabular-nums">₹{instPart}</span>
+                                    <span className="font-bold text-rose-600 dark:text-rose-400 tabular-nums">
+                                      - {formatCurrency(instPart)}
+                                    </span>
                                   </div>
                                   {extra > 0 && (
                                     <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded-lg">
-                                      <span>Extra to principal ({dateLabel}):</span>
-                                      <span className="tabular-nums">+₹{extra}</span>
+                                      <span>Extra Amount / கூடுதல் ({dateLabel}):</span>
+                                      <span className="tabular-nums">- {formatCurrency(extra)}</span>
                                     </div>
                                   )}
                                   <div className="flex items-center justify-between text-[#0878D1] dark:text-[#55B8F5] font-black pt-0.5 border-t border-[#D5E9FA]/60 dark:border-slate-700/60">
-                                    <span>New principal:</span>
-                                    <span className="tabular-nums">₹{newPrin}</span>
+                                    <span>New Pending Due / மீதி நிலுவை:</span>
+                                    <span className="tabular-nums">{formatCurrency(newPendingDue)}</span>
                                   </div>
                                 </>
                               );

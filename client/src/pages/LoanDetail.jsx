@@ -484,6 +484,14 @@ export const LoanDetail = ({ loanId, onBack }) => {
     }
 
     const instDue = Math.max(0, Number(pencilInst.amount) - (Number(pencilInst.paidAmount) || 0));
+    const pendingDue =
+      loan?.remainingBalance !== undefined
+        ? Math.max(0, Number(loan.remainingBalance))
+        : Math.max(
+            0,
+            (Number(loan?.totalPayable) || Number(loan?.principal) || 0) -
+              (Number(loan?.totalCollected) || 0)
+          );
     const payNum = Number(pencilAmount) || 0;
 
     if (pencilActionTab === 'pay') {
@@ -491,9 +499,10 @@ export const LoanDetail = ({ loanId, onBack }) => {
         setPencilError('Please enter a valid amount / சரியான தொகை தேவை');
         return;
       }
-      const maxAllowed = (Number(loan?.principal) || 0) + instDue;
-      if (payNum > maxAllowed) {
-        setPencilError(`Amount cannot exceed outstanding principal + due (₹${maxAllowed}) / தொகை ₹${maxAllowed}-க்கு மேல் இருக்கக் கூடாது`);
+      if (payNum > pendingDue) {
+        setPencilError(
+          `Amount cannot exceed pending due (${formatCurrency(pendingDue)}) / தொகை நிலுவைத் தொகை ${formatCurrency(pendingDue)}-க்கு மேல் இருக்கக் கூடாது`
+        );
         return;
       }
     }
@@ -1690,33 +1699,49 @@ export const LoanDetail = ({ loanId, onBack }) => {
                       />
                     </div>
 
-                    {/* LIVE SPLIT BOX WHILE TYPING (EXTRA TO PRINCIPAL RULE) */}
+                    {/* LIVE SPLIT BOX WHILE TYPING (MINUS INSTALLMENT + EXTRA FROM PENDING DUE) */}
                     {pencilInst.status !== 'paid' && (
                       <div className="mt-2 p-2.5 rounded-xl bg-[#F3F9FF] dark:bg-slate-800/80 border border-[#D5E9FA] dark:border-slate-700 space-y-1 text-xs">
                         {(() => {
                           const due = Math.max(0, Number(pencilInst.amount) - (Number(pencilInst.paidAmount) || 0));
+                          const pendingDue =
+                            loan?.remainingBalance !== undefined
+                              ? Math.max(0, Number(loan.remainingBalance))
+                              : Math.max(
+                                  0,
+                                  (Number(loan?.totalPayable) || Number(loan?.principal) || 0) -
+                                    (Number(loan?.totalCollected) || 0)
+                                );
+                          const effectiveDue = Math.min(due, pendingDue);
                           const amt = Number(pencilAmount) || 0;
-                          const extra = Math.max(0, amt - due);
-                          const instPart = Math.min(amt, due);
-                          const curPrin = Number(loan?.principal) || 0;
-                          const newPrin = Math.max(0, curPrin - extra);
+                          const instPart = Math.min(amt, effectiveDue);
+                          const extra = Math.max(0, amt - effectiveDue);
+                          const newPendingDue = Math.max(0, pendingDue - instPart - extra);
                           const dateLabel = pencilDate ? formatDate(pencilDate) : 'Today';
 
                           return (
                             <>
+                              <div className="flex items-center justify-between text-[#647C95] dark:text-slate-400 font-medium">
+                                <span>Pending Due / நிலுவை:</span>
+                                <span className="font-bold text-[#183653] dark:text-white tabular-nums">
+                                  {formatCurrency(pendingDue)}
+                                </span>
+                              </div>
                               <div className="flex items-center justify-between text-[#183653] dark:text-white font-medium">
                                 <span>Installment #{pencilInst.installmentNo} ({dateLabel}):</span>
-                                <span className="font-bold tabular-nums">₹{instPart}</span>
+                                <span className="font-bold text-rose-600 dark:text-rose-400 tabular-nums">
+                                  - {formatCurrency(instPart)}
+                                </span>
                               </div>
                               {extra > 0 && (
                                 <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded-lg">
-                                  <span>Extra to principal ({dateLabel}):</span>
-                                  <span className="tabular-nums">+₹{extra}</span>
+                                  <span>Extra Amount / கூடுதல் ({dateLabel}):</span>
+                                  <span className="tabular-nums">- {formatCurrency(extra)}</span>
                                 </div>
                               )}
-                              <div className="flex items-center justify-between text-[#0878D1] dark:text-[#55B8F5] font-black pt-0.5 border-t border-[#D5E9FA]/60 dark:border-slate-700/60">
-                                <span>New principal:</span>
-                                <span className="tabular-nums">₹{newPrin}</span>
+                              <div className="flex items-center justify-between text-[#0878D1] dark:text-[#55B8F5] font-black pt-1 border-t border-[#D5E9FA]/60 dark:border-slate-700/60">
+                                <span>New Pending Due / மீதி நிலுவை:</span>
+                                <span className="tabular-nums">{formatCurrency(newPendingDue)}</span>
                               </div>
                             </>
                           );

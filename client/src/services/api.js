@@ -1310,6 +1310,21 @@ export const api = {
         data,
         loanId,
       });
+      if (data?.action === 'pay' && Number(data?.amount) > 0) {
+        const loans = getStored(STORAGE_KEYS.LOANS, initialLoans);
+        const index = loans.findIndex((l) => String(l._id) === String(loanId) || String(l.clientId) === String(loanId));
+        if (index !== -1) {
+          const targetLoan = loans[index];
+          const curRem =
+            targetLoan.remainingBalance !== undefined
+              ? Number(targetLoan.remainingBalance)
+              : Math.max(0, (Number(targetLoan.totalPayable) || Number(targetLoan.principal) || 0) - (Number(targetLoan.totalCollected) || 0));
+          const payAmt = Number(data.amount) || 0;
+          targetLoan.totalCollected = (Number(targetLoan.totalCollected) || 0) + payAmt;
+          targetLoan.remainingBalance = Math.max(0, curRem - payAmt);
+          setStored(STORAGE_KEYS.LOANS, loans);
+        }
+      }
       return { success: true, isOffline: true, message: 'Saved offline / ஆஃப்லைனில் சேமிக்கப்பட்டது' };
     }
 

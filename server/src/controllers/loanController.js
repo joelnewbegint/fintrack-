@@ -1242,13 +1242,19 @@ export const recordInstallmentAction = async (req, res, next) => {
       });
     }
 
+    const currentPendingDue = Math.max(
+      0,
+      loan.remainingBalance !== undefined && loan.remainingBalance !== null
+        ? Number(loan.remainingBalance)
+        : (Number(loan.totalPayable) || Number(loan.principal) || 0) - (Number(loan.totalCollected) || 0)
+    );
     const instDue = Math.max(0, Number(inst.amount) - (Number(inst.paidAmount) || 0));
-    const maxAllowed = (Number(loan.principal) || 0) + instDue;
+    const effectiveInstDue = Math.min(instDue, currentPendingDue);
 
-    if (payNum > maxAllowed) {
+    if (payNum > currentPendingDue) {
       return res.status(400).json({
         success: false,
-        message: `Amount cannot exceed outstanding principal + due (₹${maxAllowed}) / தொகை ₹${maxAllowed}-க்கு மேல் இருக்கக் கூடாது`,
+        message: `Amount cannot exceed pending due (₹${currentPendingDue}) / தொகை நிலுவைத் தொகை ₹${currentPendingDue}-க்கு மேல் இருக்கக் கூடாது`,
       });
     }
 
@@ -1256,7 +1262,7 @@ export const recordInstallmentAction = async (req, res, next) => {
     const custId = loan.customerId ? (loan.customerId._id || loan.customerId) : req.body.customerId;
     const createdPayments = [];
 
-    if (payNum <= instDue) {
+    if (payNum <= effectiveInstDue) {
       // Normal Installment Payment
       const randomHex = Math.floor(100000 + Math.random() * 900000);
       const receiptNo = `RCP-${new Date().getFullYear().toString().slice(-2)}-${randomHex}`;
@@ -1276,7 +1282,7 @@ export const recordInstallmentAction = async (req, res, next) => {
       createdPayments.push(p1);
 
       inst.paidAmount = (inst.paidAmount || 0) + payNum;
-      if (inst.paidAmount >= inst.amount) {
+      if (inst.paidAmount >= inst.amount || currentPendingDue - payNum <= 0) {
         inst.status = 'paid';
         inst.paidDate = paymentDate;
       } else {
@@ -1284,35 +1290,38 @@ export const recordInstallmentAction = async (req, res, next) => {
         inst.paidDate = paymentDate;
       }
 
-      loan.totalCollected = (loan.totalCollected || 0) + payNum;
-      loan.remainingBalance = Math.max(0, loan.totalPayable - loan.totalCollected);
+      loan.totalCollected = (Number(loan.totalCollected) || 0) + payNum;
+      loan.remainingBalance = Math.max(0, currentPendingDue - payNum);
     } else {
-      // Extra Amount > Due: Split into Installment + Principal Payment
-      const extra = payNum - instDue;
+      // Extra Amount > Due: Split into Installment + Principal/Extra Payment and deduct BOTH from Pending Due
+      const extra = payNum - effectiveInstDue;
 
       // 1. Installment Payment Row
       const r1Hex = Math.floor(100000 + Math.random() * 900000);
       const receiptNo1 = `RCP-${new Date().getFullYear().toString().slice(-2)}-${r1Hex}`;
-      const p1 = await Payment.create({
-        clientId: `pay_${Date.now()}_inst`,
-        createdBy,
-        receiptNo: receiptNo1,
-        loanId: loan._id,
-        customerId: custId,
-        amount: instDue,
-        date: paymentDate,
-        mode: mode || 'cash',
-        paymentType: 'Installment',
-        collectedBy: req.user?._id || 'owner',
-        notes: notes ? `${notes} (Installment #${inst.installmentNo})` : `Installment #${inst.installmentNo} collection`,
-      });
-      createdPayments.push(p1);
+      if (effectiveInstDue > 0) {
+        const p1 = await Payment.create({
+          clientId: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 6)}_inst`,
+          createdBy,
+          receiptNo: receiptNo1,
+          loanId: loan._id,
+          customerId: custId,
+          amount: effectiveInstDue,
+          date: paymentDate,
+          mode: mode || 'cash',
+          paymentType: 'Installment',
+          collectedBy: req.user?._id || 'owner',
+          notes: notes ? `${notes} (Installment #${inst.installmentNo})` : `Installment #${inst.installmentNo} collection`,
+        });
+        createdPayments.push(p1);
+      }
 
-      // 2. Principal Payment Row
-      const r2Hex = Math.floor(100000 + Math.random() * 900000);
+      // 2. Principal / Extra Payment Row
+      let r2Hex = Math.floor(100000 + Math.random() * 900000);
+      if (r2Hex === r1Hex) r2Hex = r1Hex >= 999999 ? 100000 : r1Hex + 1;
       const receiptNo2 = `RCP-${new Date().getFullYear().toString().slice(-2)}-${r2Hex}`;
       const p2 = await Payment.create({
-        clientId: `pay_${Date.now()}_prin`,
+        clientId: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 6)}_prin`,
         createdBy,
         receiptNo: receiptNo2,
         loanId: loan._id,
@@ -1322,52 +1331,55 @@ export const recordInstallmentAction = async (req, res, next) => {
         mode: mode || 'cash',
         paymentType: 'Principal',
         collectedBy: req.user?._id || 'owner',
-        notes: notes ? `${notes} (Principal payment)` : `Principal payment for Installment #${inst.installmentNo}`,
+        notes: notes ? `${notes} (Extra / Principal payment)` : `Extra payment for Installment #${inst.installmentNo}`,
       });
       createdPayments.push(p2);
 
-      // Mark this installment fully paid
-      inst.paidAmount = inst.amount;
+      // Mark this installment paid
+      inst.paidAmount = (Number(inst.paidAmount) || 0) + effectiveInstDue;
       inst.status = 'paid';
       inst.paidDate = paymentDate;
 
-      // Reduce loan's outstanding principal by Extra
-      const oldPrincipal = Number(loan.principal) || 0;
-      const newPrincipal = Math.max(0, oldPrincipal - extra);
-      loan.principal = newPrincipal;
+      // Subtract both installment amount and extra amount from pending due
+      loan.totalCollected = (Number(loan.totalCollected) || 0) + payNum;
+      const newRemainingBalance = Math.max(0, currentPendingDue - payNum);
+      loan.remainingBalance = newRemainingBalance;
 
-      // Recalculate interest and EMI on remaining dues from the new principal
+      // Distribute remaining pending due evenly across remaining unpaid installments (without marking future dues paid unless full payoff)
       const remainingUnpaid = loan.schedule.filter(
-        (s) => s.installmentNo > inst.installmentNo && s.status !== 'paid'
+        (s) =>
+          s.installmentNo !== inst.installmentNo &&
+          s.status !== 'paid' &&
+          s.status !== 'holiday' &&
+          s.status !== 'leave' &&
+          s.status !== 'missed'
       );
       const remainingCount = remainingUnpaid.length;
 
       if (remainingCount > 0) {
-        let remainingPayable = newPrincipal;
-        if (loan.interestType === 'addon' && Number(loan.interestPercent) > 0) {
-          const interestPortion = Math.round((newPrincipal * (Number(loan.interestPercent) / 100) * remainingCount) / loan.duration);
-          remainingPayable = newPrincipal + interestPortion;
-        }
-
-        const newPerInst = Math.ceil(remainingPayable / remainingCount);
-        loan.installmentAmount = newPerInst;
-
-        let runningSum = 0;
-        for (let i = 0; i < remainingUnpaid.length; i++) {
-          if (i === remainingUnpaid.length - 1) {
-            remainingUnpaid[i].amount = Math.max(0, remainingPayable - runningSum);
-          } else {
-            remainingUnpaid[i].amount = newPerInst;
-            runningSum += newPerInst;
+        if (newRemainingBalance <= 0) {
+          remainingUnpaid.forEach((s) => {
+            s.amount = Number(s.paidAmount) || 0;
+            s.status = 'paid';
+            s.paidDate = paymentDate;
+          });
+          loan.installmentAmount = 0;
+        } else {
+          const baseDue = Math.floor(newRemainingBalance / remainingCount);
+          const remainder = newRemainingBalance - baseDue * remainingCount;
+          for (let i = 0; i < remainingCount; i++) {
+            const s = remainingUnpaid[i];
+            const alreadyPaid = Number(s.paidAmount) || 0;
+            const duePart = baseDue + (i >= remainingCount - remainder ? 1 : 0);
+            s.amount = alreadyPaid + duePart;
+            if (duePart === 0) {
+              s.status = 'paid';
+              s.paidDate = paymentDate;
+            }
           }
+          loan.installmentAmount = baseDue > 0 ? baseDue : 1;
         }
-
-        // Recalculate totalPayable as sum of all schedule amounts
-        loan.totalPayable = loan.schedule.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
       }
-
-      loan.totalCollected = (loan.totalCollected || 0) + payNum;
-      loan.remainingBalance = Math.max(0, loan.totalPayable - loan.totalCollected);
     }
 
     // Sync loan status
