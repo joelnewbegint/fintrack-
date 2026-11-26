@@ -65,9 +65,15 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          try {
+            controller.abort(new Error('Auth session verification timed out'));
+          } catch {
+            controller.abort();
+          }
+        }, 12000);
         try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3500);
           const baseUrl = getApiBaseUrl();
 
           const res = await fetch(`${baseUrl}/api/auth/me`, {
@@ -76,7 +82,6 @@ export const AuthProvider = ({ children }) => {
             },
             signal: controller.signal,
           });
-          clearTimeout(timeoutId);
 
           const data = await safeParseJson(res);
           if (data && !data.__isHtml && data.success && data.user) {
@@ -91,7 +96,11 @@ export const AuthProvider = ({ children }) => {
             logout();
           }
         } catch (err) {
-          console.warn('Session background verification note:', err.message);
+          if (err?.name !== 'AbortError' && !controller.signal.aborted) {
+            console.warn('Session background verification note:', err.message);
+          }
+        } finally {
+          clearTimeout(timeoutId);
         }
       }
       setLoading(false);
@@ -105,9 +114,15 @@ export const AuthProvider = ({ children }) => {
     const cleanPass = (password || '').trim();
 
     let apiSuccess = false;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      try {
+        controller.abort(new Error('Login timed out'));
+      } catch {
+        controller.abort();
+      }
+    }, 20000);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
       const baseUrl = getApiBaseUrl();
 
       const res = await fetch(`${baseUrl}/api/auth/login`, {
@@ -122,7 +137,6 @@ export const AuthProvider = ({ children }) => {
         }),
         signal: controller.signal,
       });
-      clearTimeout(timeoutId);
 
       const data = await safeParseJson(res);
       if (data && !data.__isHtml) {
@@ -158,6 +172,8 @@ export const AuthProvider = ({ children }) => {
         throw apiErr;
       }
       console.warn('Server API not responding directly, checking offline authorization...', apiErr.message);
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     if (apiSuccess) return;

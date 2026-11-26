@@ -133,24 +133,34 @@ export const setApiBaseUrl = (url) => {
 
 // Check if response is valid JSON; returns { ok: true, data } or { ok: false, error, isOffline }
 const safeFetchJson = async (url, options = {}, isRetry = false) => {
+  const { timeoutMs, ...fetchOptions } = options;
+  const method = (fetchOptions.method || 'GET').toUpperCase();
+  const effectiveTimeout = Number(timeoutMs) || (method === 'GET' ? 25000 : 45000);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    try {
+      controller.abort(new Error(`Request timed out after ${Math.round(effectiveTimeout / 1000)}s`));
+    } catch {
+      controller.abort();
+    }
+  }, effectiveTimeout);
+
   try {
     const baseUrl = getApiBaseUrl();
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 9000);
 
     // Always fetch fresh headers directly at request time
-    const headers = { ...getHeaders(), ...(options.headers || {}) };
+    const headers = { ...getHeaders(), ...(fetchOptions.headers || {}) };
 
     const res = await fetch(fullUrl, {
-      ...options,
+      ...fetchOptions,
       headers,
-      signal: options.signal || controller.signal,
+      signal: fetchOptions.signal || controller.signal,
     });
-    clearTimeout(timeoutId);
 
     // Central Auth Interceptor: If 401 Unauthorized, attempt refresh once
     if (res.status === 401 && !isRetry && !url.includes('/api/auth/login') && !url.includes('/api/auth/refresh')) {
+      clearTimeout(timeoutId);
       try {
         const isRemembered = localStorage.getItem('fintrack_remember') === 'true';
         const currentToken = isRemembered
@@ -180,11 +190,11 @@ const safeFetchJson = async (url, options = {}, isRetry = false) => {
             }
             // Retry the original request once with the new fresh token
             const retryHeaders = {
-              ...(options.headers || {}),
+              ...(fetchOptions.headers || {}),
               'Content-Type': 'application/json',
               Authorization: `Bearer ${refreshData.token}`,
             };
-            return await safeFetchJson(url, { ...options, headers: retryHeaders }, true);
+            return await safeFetchJson(url, { ...fetchOptions, headers: retryHeaders }, true);
           }
         }
       } catch (refreshErr) {
@@ -225,7 +235,29 @@ const safeFetchJson = async (url, options = {}, isRetry = false) => {
     // Server returned HTML (e.g. Firebase static hosting or 404/502)
     return { ok: false, isHtml: true, isOffline: true, status: res.status };
   } catch (err) {
-    return { ok: false, isOffline: true, error: err.message };
+    const isAborted =
+      err?.name === 'AbortError' ||
+      controller.signal.aborted ||
+      /aborted/i.test(err?.message || '');
+
+    if (isAborted && !fetchOptions.signal?.aborted) {
+      return {
+        ok: false,
+        isTimeout: true,
+        isOffline: typeof navigator !== 'undefined' ? !navigator.onLine : false,
+        error: `Request timed out after ${Math.round(effectiveTimeout / 1000)}s. Server may be waking up — please try again.`,
+      };
+    }
+
+    return {
+      ok: false,
+      isOffline: true,
+      error: isAborted
+        ? 'Request was cancelled. Please try again.'
+        : (err?.message || 'Network request failed'),
+    };
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
@@ -2043,15 +2075,19 @@ export const api = {
 
     const testUrl = `${baseUrl}/api/health`;
     const start = Date.now();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      try {
+        controller.abort(new Error('Connection timed out (15s)'));
+      } catch {
+        controller.abort();
+      }
+    }, 15000);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
-
       const res = await fetch(testUrl, {
         method: 'GET',
         signal: controller.signal,
       });
-      clearTimeout(timeoutId);
 
       const latency = Date.now() - start;
       if (res.ok) {
@@ -2073,12 +2109,15 @@ export const api = {
         isConfigured: true,
       };
     } catch (err) {
+      const isAborted = err?.name === 'AbortError' || controller.signal.aborted || /aborted/i.test(err?.message || '');
       return {
         online: false,
         latency: Date.now() - start,
-        reason: err.name === 'AbortError' ? 'Connection timed out (6s)' : err.message,
+        reason: isAborted ? 'Connection timed out (15s)' : err.message,
         isConfigured: true,
       };
+    } finally {
+      clearTimeout(timeoutId);
     }
   },
 
