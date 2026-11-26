@@ -98,6 +98,7 @@ export function App() {
   const [selectedEMILoanId, setSelectedEMILoanId] = useState(null);
   const [loanFilterType, setLoanFilterType] = useState('all');
   const [emiListFilter, setEmiListFilter] = useState('active');
+  const [emiInitialSearch, setEmiInitialSearch] = useState('');
   const [selectedScheme, setSelectedScheme] = useState('daily');
   const [activeEmiTab, setActiveEmiTab] = useState(() => {
     try {
@@ -166,16 +167,23 @@ export function App() {
             return;
           }
           setOwnerMode('emi');
-          if (path === '/emi/list' || path === '/emi/accounts') {
+          const emiDetailMatch = rawPath.match(/^\/emi\/loans\/([^/]+)\/?$/i);
+          if (emiDetailMatch) {
+            setSelectedEMILoanId(emiDetailMatch[1]);
             setActiveEmiTab('list');
-          } else if (path === '/emi/receipts') {
-            setActiveEmiTab('receipts');
-          } else if (path === '/emi/customers') {
-            setActiveEmiTab('customers');
-          } else if (path === '/emi/reports') {
-            setActiveEmiTab('reports');
           } else {
-            setActiveEmiTab('dashboard');
+            setSelectedEMILoanId(null);
+            if (path === '/emi/list' || path === '/emi/accounts') {
+              setActiveEmiTab('list');
+            } else if (path === '/emi/receipts') {
+              setActiveEmiTab('receipts');
+            } else if (path === '/emi/customers') {
+              setActiveEmiTab('customers');
+            } else if (path === '/emi/reports') {
+              setActiveEmiTab('reports');
+            } else {
+              setActiveEmiTab('dashboard');
+            }
           }
         } else if (path === '/loans/daily') {
           if (isEmiAgent) {
@@ -504,21 +512,34 @@ export function App() {
 
   // DEDICATED EMI PANEL VIEW (/emi) WITH STRICT ROLE BOUNDARY
   if (user && (isEmiAgent || ownerMode === 'emi')) {
+    const navigateEmiTab = (tab) => {
+      setSelectedEMILoanId(null);
+      if (tab !== 'list') setEmiInitialSearch('');
+      setActiveEmiTab(tab);
+      try {
+        window.history.pushState({}, '', tab === 'dashboard' ? '/emi' : `/emi/${tab}`);
+      } catch (e) {}
+    };
+
+    const openEmiLoanDetail = (id) => {
+      if (!id) return;
+      setSelectedEMILoanId(id);
+      try {
+        window.history.pushState({}, '', `/emi/loans/${id}`);
+      } catch (e) {}
+    };
+
     return (
       <ProtectedRoute allowedRoles={['owner', 'admin', 'emi_agent']}>
         <EmiLayout
           activeEmiTab={activeEmiTab}
-          setActiveEmiTab={(tab) => {
-            setSelectedEMILoanId(null);
-            setActiveEmiTab(tab);
-            try {
-              window.history.pushState({}, '', tab === 'dashboard' ? '/emi' : `/emi/${tab}`);
-            } catch (e) {}
-          }}
+          onSelectEmiTab={navigateEmiTab}
+          setActiveEmiTab={navigateEmiTab}
           onOpenCollectModal={() => {
             setGlobalEmiPayItem(null);
             setShowGlobalEmiPayModal(true);
           }}
+          onOpenNewEMILoanModal={() => setShowNewEMILoanModal(true)}
           onOpenNewLoanModal={() => setShowNewEMILoanModal(true)}
           onSwitchToLoans={() => {
             setSelectedEMILoanId(null);
@@ -532,7 +553,12 @@ export function App() {
           {selectedEMILoanId ? (
             <EMIDetail
               loanId={selectedEMILoanId}
-              onBack={() => setSelectedEMILoanId(null)}
+              onBack={() => {
+                setSelectedEMILoanId(null);
+                try {
+                  window.history.pushState({}, '', activeEmiTab === 'dashboard' ? '/emi' : `/emi/${activeEmiTab}`);
+                } catch (e) {}
+              }}
               onOpenCollectModal={(item) => {
                 setGlobalEmiPayItem(item);
                 setShowGlobalEmiPayModal(true);
@@ -542,40 +568,42 @@ export function App() {
             <EMIDashboard
               onOpenNewEMILoan={() => setShowNewEMILoanModal(true)}
               onOpenCollectModal={(item) => {
-                setGlobalEmiPayItem(item || {});
+                setGlobalEmiPayItem(item || null);
                 setShowGlobalEmiPayModal(true);
               }}
-              onViewLoan={(id) => setSelectedEMILoanId(id)}
+              onViewLoan={openEmiLoanDetail}
               onNavigateToList={(tab) => {
+                setEmiInitialSearch('');
                 setEmiListFilter(tab || 'active');
-                setActiveEmiTab('list');
-                try {
-                  window.history.pushState({}, '', '/emi/list');
-                } catch (e) {}
+                navigateEmiTab('list');
               }}
               onNavigateToCustomers={() => {
-                setActiveEmiTab('customers');
-                try {
-                  window.history.pushState({}, '', '/emi/customers');
-                } catch (e) {}
+                navigateEmiTab('customers');
               }}
             />
           ) : activeEmiTab === 'list' ? (
             <EMIList
               initialTab={emiListFilter}
-              onViewLoan={(id) => setSelectedEMILoanId(id)}
+              initialSearch={emiInitialSearch}
+              onViewLoan={openEmiLoanDetail}
               onOpenNewLoan={() => setShowNewEMILoanModal(true)}
               onOpenCollectModal={(item) => {
-                setGlobalEmiPayItem(item || {});
+                setGlobalEmiPayItem(item || null);
                 setShowGlobalEmiPayModal(true);
               }}
             />
           ) : activeEmiTab === 'receipts' ? (
-            <EMIReceipts />
+            <EMIReceipts onViewLoan={openEmiLoanDetail} />
           ) : activeEmiTab === 'customers' ? (
             <EMICustomers
               onOpenNewLoan={() => setShowNewEMILoanModal(true)}
-              onViewCustomerLoans={(id) => setSelectedEMILoanId(id)}
+              onViewCustomerLoans={(customer) => {
+                const searchVal = typeof customer === 'string' ? customer : (customer?.name || customer?.phone || '');
+                setEmiInitialSearch(searchVal);
+                setEmiListFilter('all');
+                navigateEmiTab('list');
+              }}
+              onViewLoan={openEmiLoanDetail}
             />
           ) : activeEmiTab === 'reports' ? (
             <EMIReports />
@@ -583,13 +611,17 @@ export function App() {
             <EMIDashboard
               onOpenNewEMILoan={() => setShowNewEMILoanModal(true)}
               onOpenCollectModal={(item) => {
-                setGlobalEmiPayItem(item || {});
+                setGlobalEmiPayItem(item || null);
                 setShowGlobalEmiPayModal(true);
               }}
-              onViewLoan={(id) => setSelectedEMILoanId(id)}
+              onViewLoan={openEmiLoanDetail}
               onNavigateToList={(tab) => {
+                setEmiInitialSearch('');
                 setEmiListFilter(tab || 'active');
-                setActiveEmiTab('list');
+                navigateEmiTab('list');
+              }}
+              onNavigateToCustomers={() => {
+                navigateEmiTab('customers');
               }}
             />
           )}
@@ -600,7 +632,11 @@ export function App() {
             onClose={() => setShowNewEMILoanModal(false)}
             onSuccess={() => {
               setShowNewEMILoanModal(false);
-              setActiveEmiTab('list');
+              setEmiListFilter('active');
+              navigateEmiTab('list');
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('fintrack:emi-updated'));
+              }
             }}
           />
 
@@ -613,6 +649,9 @@ export function App() {
             }}
             onSuccess={() => {
               fetchNotificationsCount();
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('fintrack:emi-updated'));
+              }
             }}
           />
         </EmiLayout>

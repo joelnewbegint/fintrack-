@@ -5,35 +5,36 @@ import api from '../../services/api';
 import {
   Receipt,
   Search,
-  Calendar,
   Printer,
   MessageCircle,
-  FileSpreadsheet,
   CheckCircle2,
-  Clock,
-  ArrowUpDown,
-  Filter,
+  RotateCcw,
 } from 'lucide-react';
-import { openWhatsApp, generateEMIWhatsAppMessage } from '../../utils/emiWhatsapp';
 
-export const EMIReceipts = () => {
+export const EMIReceipts = ({ onViewLoan }) => {
   const { isOwner } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang } = useLanguage();
 
   const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [modeFilter, setModeFilter] = useState('all'); // 'all' | 'cash' | 'upi'
-  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [modeFilter, setModeFilter] = useState('all'); // 'all' | 'cash' | 'upi' | 'cheque'
+  const [reversingId, setReversingId] = useState(null);
 
-  const fetchReceipts = async () => {
+  const fetchReceipts = async (silent = false) => {
     try {
-      setLoading(true);
-      const res = await api.getEMILoans({});
-      if (res.success && Array.isArray(res.loans)) {
-        // Collect all payments across loans
+      if (!silent) setLoading(true);
+      const res = await api.getEMIPayments({ mode: modeFilter });
+      if (res.success && Array.isArray(res.payments)) {
+        setReceipts(res.payments);
+        return;
+      }
+
+      // Fallback if backend route not updated yet
+      const loansRes = await api.getEMILoans({});
+      if (loansRes.success && Array.isArray(loansRes.loans)) {
         const allPayments = [];
-        for (const loan of res.loans) {
+        for (const loan of loansRes.loans) {
           try {
             const detailRes = await api.getEMILoanById(loan._id);
             if (detailRes.success && Array.isArray(detailRes.payments)) {
@@ -44,14 +45,15 @@ export const EMIReceipts = () => {
                   customerName: loan.customerName,
                   customerPhone: loan.customerPhone,
                   customerArea: loan.customerArea,
-                  loanPrincipal: loan.principal,
-                  loanMonthlyInstallment: loan.monthlyInstallment,
+                  installmentNo: Array.isArray(p.installmentNos) && p.installmentNos.length > 0 ? p.installmentNos.join(', ') : '1',
                 });
               });
             }
           } catch (e) {}
         }
-        allPayments.sort((a, b) => new Date(b.paymentDate || b.createdAt) - new Date(a.paymentDate || a.createdAt));
+        allPayments.sort(
+          (a, b) => new Date(b.paymentDate || b.createdAt) - new Date(a.paymentDate || a.createdAt)
+        );
         setReceipts(allPayments);
       }
     } catch (e) {
@@ -63,7 +65,13 @@ export const EMIReceipts = () => {
 
   useEffect(() => {
     fetchReceipts();
-  }, []);
+  }, [modeFilter]);
+
+  useEffect(() => {
+    const handleRefresh = () => fetchReceipts(true);
+    window.addEventListener('fintrack:emi-updated', handleRefresh);
+    return () => window.removeEventListener('fintrack:emi-updated', handleRefresh);
+  }, [modeFilter]);
 
   const filteredReceipts = receipts.filter((r) => {
     const q = search.trim().toLowerCase();
@@ -77,24 +85,50 @@ export const EMIReceipts = () => {
     return matchSearch && matchMode;
   });
 
-  const totalCollected = filteredReceipts.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-  const totalCash = filteredReceipts.filter(r => (r.mode || 'cash').toLowerCase() === 'cash').reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-  const totalUpi = filteredReceipts.filter(r => (r.mode || 'cash').toLowerCase() === 'upi').reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const validReceipts = filteredReceipts.filter((r) => r.status !== 'reversed');
+  const totalCollected = validReceipts.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const totalCash = validReceipts
+    .filter((r) => (r.mode || 'cash').toLowerCase() === 'cash')
+    .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const totalUpi = validReceipts
+    .filter((r) => (r.mode || 'cash').toLowerCase() === 'upi')
+    .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+
+  const handleReverseReceipt = async (r) => {
+    if (!isOwner || r.status === 'reversed') return;
+    if (!window.confirm(`Reverse receipt ${r.receiptNo} (₹${Number(r.amount).toLocaleString('en-IN')})?`)) return;
+    try {
+      setReversingId(r._id);
+      await api.reverseEMIPayment(r._id, 'Owner reversal from Receipts log');
+      await fetchReceipts(false);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:emi-updated'));
+      }
+    } catch (e) {
+      alert(e.message || 'Failed to reverse EMI receipt');
+    } finally {
+      setReversingId(null);
+    }
+  };
 
   const handlePrintSlip = (r) => {
     const printWindow = window.open('', '_blank', 'width=350,height=550');
     if (!printWindow) return;
+    const instLabel =
+      Array.isArray(r.installmentNos) && r.installmentNos.length > 0
+        ? r.installmentNos.join(', ')
+        : r.installmentNo || '1';
     printWindow.document.write(`
       <html>
         <head>
           <title>EMI Receipt - ${r.receiptNo || 'VK'}</title>
           <style>
-            body { font-family: monospace; padding: 15px; font-size: 12px; color: #111; }
+            body { font-family: monospace; padding: 15px; font-size: 12px; color: #183653; }
             .center { text-align: center; }
             .bold { font-weight: bold; }
-            .divider { border-top: 1px dashed #444; margin: 8px 0; }
+            .divider { border-top: 1px dashed #647C95; margin: 8px 0; }
             .row { display: flex; justify-content: space-between; margin: 3px 0; }
-            .total { font-size: 15px; font-weight: bold; margin: 8px 0; }
+            .total { font-size: 15px; font-weight: bold; margin: 8px 0; color: #0878D1; }
           </style>
         </head>
         <body>
@@ -109,12 +143,12 @@ export const EMIReceipts = () => {
           <div class="row"><span>Phone:</span><span>${r.customerPhone || '-'}</span></div>
           <div class="row"><span>Area:</span><span>${r.customerArea || '-'}</span></div>
           <div class="divider"></div>
-          <div class="row"><span>Installment No:</span><span>#${r.installmentNo || '1'}</span></div>
+          <div class="row"><span>Installment No:</span><span>#${instLabel}</span></div>
           <div class="row"><span>Payment Mode:</span><span class="bold">${(r.mode || 'cash').toUpperCase()}</span></div>
           <div class="row total"><span>Amount Paid:</span><span>₹${(Number(r.amount) || 0).toLocaleString('en-IN')}</span></div>
           <div class="divider"></div>
           <div class="center" style="font-size: 10px; margin-top: 12px;">Thank you for your timely payment!</div>
-          <div class="center" style="font-size: 9px; color: #666;">கடன் தவணை நிதி மேலாண்மை</div>
+          <div class="center" style="font-size: 9px; color: #647C95;">கடன் தவணை நிதி மேலாண்மை</div>
           <script>
             window.onload = function() { window.print(); window.close(); }
           </script>
@@ -129,7 +163,8 @@ export const EMIReceipts = () => {
       alert('Customer mobile number is not available');
       return;
     }
-    const msg = `*VK BANKER'S & FINANCE | தவணை ரசீது*\n\n` +
+    const msg =
+      `*VK BANKER'S & FINANCE | தவணை ரசீது*\n\n` +
       `அன்புள்ள *${r.customerName}*,\n` +
       `தங்களின் EMI கடன் எண்: *${r.loanNo}*\n` +
       `ரசீது எண்: *${r.receiptNo || 'N/A'}*\n` +
@@ -142,157 +177,210 @@ export const EMIReceipts = () => {
   };
 
   return (
-    <div
-      className="space-y-5 pb-12 -mx-2 sm:-mx-4 lg:-mx-6 px-3 sm:px-6 py-4 rounded-3xl"
-      style={{
-        background: 'linear-gradient(180deg, #FFF8F5 0%, #FFF3EC 60%, #F8FAFD 100%)',
-      }}
-    >
+    <div className="space-y-5 pb-12">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 text-xs font-bold border border-orange-200">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#EAF5FF] text-[#0878D1] text-xs font-bold border border-[#D5E9FA]">
               {lang === 'ta' ? 'தவணை ரசீதுகள்' : 'EMI Receipts'}
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+          <h2 className="text-xl sm:text-2xl font-black text-[#183653] mt-1">
             {lang === 'ta' ? 'EMI தவணை வசூல் ரசீதுகள்' : 'Monthly EMI Receipts & Collection Log'}
           </h2>
-          <p className="text-xs text-slate-500">
-            {lang === 'ta' ? 'அனைத்து EMI தவணை ரசீதுகளின் பட்டியல், அச்சிடுதல் மற்றும் வாட்ஸ்அப் பகிர்வு' : 'View, search, print thermal slips, and share receipts via WhatsApp'}
+          <p className="text-xs text-[#647C95]">
+            {lang === 'ta'
+              ? 'அனைத்து EMI தவணை ரசீதுகளின் பட்டியல், அச்சிடுதல் மற்றும் வாட்ஸ்அப் பகிர்வு'
+              : 'View, search, print slips, reverse, and share receipts via WhatsApp'}
           </p>
         </div>
       </div>
 
       {/* Metric Mini-Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="p-4 rounded-2xl bg-white/80 backdrop-blur-md border border-orange-100 shadow-xs">
-          <span className="text-[10px] font-bold uppercase text-slate-400">Total Collected</span>
-          <div className="text-xl sm:text-2xl font-black text-orange-600 mt-0.5">
+        <div className="glass-card p-4">
+          <span className="text-[10px] font-bold uppercase text-[#647C95]">Total Collected (Valid)</span>
+          <div className="text-xl sm:text-2xl font-black text-[#0878D1] mt-0.5 tabular-nums">
             ₹{totalCollected.toLocaleString('en-IN')}
           </div>
-          <span className="text-[11px] text-slate-500">{filteredReceipts.length} receipt(s)</span>
+          <span className="text-[11px] text-[#647C95]">{validReceipts.length} valid receipt(s)</span>
         </div>
-        <div className="p-4 rounded-2xl bg-white/80 backdrop-blur-md border border-emerald-100 shadow-xs">
-          <span className="text-[10px] font-bold uppercase text-slate-400">Cash Collections</span>
-          <div className="text-xl sm:text-2xl font-black text-emerald-600 mt-0.5">
+        <div className="glass-card p-4">
+          <span className="text-[10px] font-bold uppercase text-[#647C95]">Cash Collections</span>
+          <div className="text-xl sm:text-2xl font-black text-[#18A879] mt-0.5 tabular-nums">
             ₹{totalCash.toLocaleString('en-IN')}
           </div>
-          <span className="text-[11px] text-slate-500">Physical Cash Handover</span>
+          <span className="text-[11px] text-[#647C95]">Physical Cash Handover</span>
         </div>
-        <div className="p-4 rounded-2xl bg-white/80 backdrop-blur-md border border-sky-100 shadow-xs">
-          <span className="text-[10px] font-bold uppercase text-slate-400">UPI / Online</span>
-          <div className="text-xl sm:text-2xl font-black text-sky-600 mt-0.5">
+        <div className="glass-card p-4">
+          <span className="text-[10px] font-bold uppercase text-[#647C95]">UPI / Online</span>
+          <div className="text-xl sm:text-2xl font-black text-[#064B8E] mt-0.5 tabular-nums">
             ₹{totalUpi.toLocaleString('en-IN')}
           </div>
-          <span className="text-[11px] text-slate-500">GPay, PhonePe, Bank Transfer</span>
+          <span className="text-[11px] text-[#647C95]">GPay, PhonePe, Bank Transfer</span>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-2xl bg-white/80 backdrop-blur-md border border-slate-200/80 shadow-xs">
+      <div className="glass-card p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[#0878D1] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={lang === 'ta' ? 'ரசீது எண், வாடிக்கையாளர் பெயர், தொலைபேசி...' : 'Search by receipt #, customer name, phone...'}
-            className="w-full h-10 pl-9 pr-4 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-orange-400"
+            placeholder={
+              lang === 'ta'
+                ? 'ரசீது எண், வாடிக்கையாளர் பெயர், தொலைபேசி...'
+                : 'Search by receipt #, customer name, phone...'
+            }
+            className="w-full h-10 pl-9 pr-4 rounded-xl bg-[#F3F9FF] border border-[#D5E9FA] text-xs font-semibold text-[#183653] outline-none focus:border-[#0878D1]"
           />
         </div>
 
         <div className="flex items-center space-x-2">
-          {['all', 'cash', 'upi'].map((m) => (
+          {['all', 'cash', 'upi', 'cheque'].map((m) => (
             <button
               key={m}
+              type="button"
               onClick={() => setModeFilter(m)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition ${
                 modeFilter === m
-                  ? 'bg-orange-500 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-gradient-to-r from-[#0878D1] to-[#064B8E] text-white shadow-xs'
+                  : 'bg-[#F3F9FF] text-[#647C95] hover:bg-[#EAF5FF] border border-[#D5E9FA]'
               }`}
             >
-              {m === 'all' ? 'All Modes' : m.toUpperCase()}
+              {m === 'all' ? 'All' : m.toUpperCase()}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Receipts Table / Card List */}
-      <div className="rounded-2xl border border-white/90 bg-white/80 backdrop-blur-md overflow-hidden shadow-xs">
+      {/* Receipts List */}
+      <div className="glass-card overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-xs text-slate-400 font-bold">
-            <div className="w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <div className="py-16 text-center text-xs text-[#647C95] font-bold">
+            <div className="w-8 h-8 border-3 border-[#0878D1] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
             Loading EMI Receipts...
           </div>
         ) : filteredReceipts.length === 0 ? (
-          <div className="py-16 text-center text-xs text-slate-400 font-bold">
-            <Receipt className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+          <div className="py-16 text-center text-xs text-[#647C95] font-bold">
+            <Receipt className="w-8 h-8 text-[#D5E9FA] mx-auto mb-2" />
             No EMI receipts found matching current filters.
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
-            {filteredReceipts.map((r, idx) => (
-              <div
-                key={r._id || idx}
-                className="p-3.5 sm:p-4 hover:bg-orange-50/40 transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
-              >
-                <div className="flex items-start space-x-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 font-bold text-xs">
-                    <Receipt className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-black text-sm text-slate-900 truncate">
-                        {r.customerName}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-100 text-slate-700">
-                        {r.loanNo}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                        (r.mode || 'cash') === 'cash' ? 'bg-emerald-100 text-emerald-800' : 'bg-sky-100 text-sky-800'
-                      }`}>
-                        {(r.mode || 'cash').toUpperCase()}
-                      </span>
+          <div className="divide-y divide-[#EAF5FF]">
+            {filteredReceipts.map((r, idx) => {
+              const isReversed = r.status === 'reversed';
+              const instLabel =
+                Array.isArray(r.installmentNos) && r.installmentNos.length > 0
+                  ? r.installmentNos.join(', ')
+                  : r.installmentNo || '1';
+              const targetLoanId = r.emiLoanId?._id || r.emiLoanId;
+
+              return (
+                <div
+                  key={r._id || idx}
+                  className={`p-3.5 sm:p-4 transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                    isReversed ? 'bg-slate-50/70 opacity-65' : 'hover:bg-[#F3F9FF]/70'
+                  }`}
+                >
+                  <div className="flex items-start space-x-3 min-w-0">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-xs ${
+                        isReversed
+                          ? 'bg-rose-100 text-rose-600'
+                          : 'bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]'
+                      }`}
+                    >
+                      <Receipt className="w-5 h-5" />
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5 font-mono">
-                      Receipt: <span className="font-bold text-slate-700">{r.receiptNo || 'N/A'}</span> • Inst #{r.installmentNo || '1'} • {new Date(r.paymentDate || r.createdAt).toLocaleDateString('en-IN')}
-                    </p>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span
+                          onClick={() => targetLoanId && onViewLoan && onViewLoan(targetLoanId)}
+                          className={`font-black text-sm text-[#183653] truncate ${
+                            targetLoanId && onViewLoan ? 'cursor-pointer hover:text-[#0878D1] hover:underline' : ''
+                          } ${isReversed ? 'line-through' : ''}`}
+                        >
+                          {r.customerName}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]">
+                          {r.loanNo}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            (r.mode || 'cash') === 'cash'
+                              ? 'bg-emerald-50 text-[#18A879] border border-emerald-200'
+                              : 'bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]'
+                          }`}
+                        >
+                          {(r.mode || 'cash').toUpperCase()}
+                        </span>
+                        {isReversed && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-700">
+                            REVERSED
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#647C95] mt-0.5 font-mono">
+                        Receipt: <span className="font-bold text-[#183653]">{r.receiptNo || 'N/A'}</span> • Inst #{instLabel} •{' '}
+                        {new Date(r.paymentDate || r.createdAt).toLocaleDateString('en-IN')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3 self-end sm:self-center">
+                    <div className="text-right">
+                      <span
+                        className={`text-base sm:text-lg font-black block tabular-nums ${
+                          isReversed ? 'line-through text-rose-500' : 'text-[#183653]'
+                        }`}
+                      >
+                        ₹{(Number(r.amount) || 0).toLocaleString('en-IN')}
+                      </span>
+                      {!isReversed && (
+                        <span className="text-[10px] font-bold text-[#18A879] flex items-center justify-end space-x-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>Verified</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center space-x-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handlePrintSlip(r)}
+                        title="Print Thermal Slip"
+                        className="p-2 rounded-xl bg-[#F3F9FF] hover:bg-[#EAF5FF] border border-[#D5E9FA] text-[#0878D1] transition active:scale-95"
+                      >
+                        <Printer className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleWhatsAppReceipt(r)}
+                        title="Share via WhatsApp"
+                        className="p-2 rounded-xl bg-[#18A879] hover:bg-[#138861] text-white transition active:scale-95 shadow-xs"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </button>
+                      {isOwner && !isReversed && (
+                        <button
+                          type="button"
+                          disabled={reversingId === r._id}
+                          onClick={() => handleReverseReceipt(r)}
+                          title="Reverse Receipt"
+                          className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 transition active:scale-95 disabled:opacity-50"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                <div className="flex items-center space-x-3 self-end sm:self-center">
-                  <div className="text-right">
-                    <span className="text-base sm:text-lg font-black text-slate-900 block">
-                      ₹{(Number(r.amount) || 0).toLocaleString('en-IN')}
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-600 flex items-center justify-end space-x-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      <span>Verified</span>
-                    </span>
-                  </div>
-
-                  <div className="flex items-center space-x-1.5">
-                    <button
-                      onClick={() => handlePrintSlip(r)}
-                      title="Print Thermal Slip"
-                      className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition active:scale-95"
-                    >
-                      <Printer className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleWhatsAppReceipt(r)}
-                      title="Share via WhatsApp"
-                      className="p-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white transition active:scale-95 shadow-xs"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -301,4 +389,3 @@ export const EMIReceipts = () => {
 };
 
 export default EMIReceipts;
-

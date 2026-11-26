@@ -2564,6 +2564,128 @@ export const api = {
     throw new Error(res.error || res.data?.message || 'Failed to register customer');
   },
 
+  updateEMICustomer: async (id, customerData) => {
+    const res = await safeFetchJson(`/api/emi/customers/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(customerData),
+    });
+    if (res.ok && res.data?.customer) {
+      return { success: true, customer: res.data.customer, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to update borrower');
+  },
+
+  deleteEMICustomer: async (id, force = false) => {
+    const res = await safeFetchJson(`/api/emi/customers/${id}${force ? '?force=true' : ''}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (res.ok && res.data?.success) {
+      return { success: true, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to delete borrower');
+  },
+
+  updateEMILoan: async (id, data) => {
+    const res = await safeFetchJson(`/api/emi/loans/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (res.ok && res.data?.loan) {
+      return { success: true, loan: res.data.loan, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to update EMI loan');
+  },
+
+  deleteEMILoan: async (id) => {
+    const res = await safeFetchJson(`/api/emi/loans/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (res.ok && res.data?.success) {
+      return { success: true, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to delete EMI loan');
+  },
+
+  getEMIPayments: async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.loanId) query.append('loanId', params.loanId);
+    if (params.mode && params.mode !== 'all') query.append('mode', params.mode);
+    if (params.status && params.status !== 'all') query.append('status', params.status);
+    if (params.search) query.append('search', params.search);
+
+    const res = await safeFetchJson(`/api/emi/payments?${query.toString()}`, { headers: getHeaders() });
+    if (res.ok && Array.isArray(res.data?.payments)) {
+      return { success: true, payments: res.data.payments };
+    }
+    return { success: false, payments: [], error: res.error };
+  },
+
+  clearEMIData: async () => {
+    const res = await safeFetchJson('/api/emi/clear-all-data', {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (res.ok && res.data?.success) {
+      return { success: true, message: res.data.message };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to clear EMI data');
+  },
+
+  exportEMIExcel: async () => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `VK_Bankers_EMI_Report_${dateStr}.xlsx`;
+    try {
+      const baseUrl = getApiBaseUrl();
+      if (baseUrl) {
+        const resp = await fetch(`${baseUrl}/api/emi/export/excel`, {
+          method: 'GET',
+          headers: getHeaders(),
+        });
+        if (resp.ok) {
+          const blob = await resp.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+          return { success: true };
+        }
+      }
+    } catch (e) {
+      console.warn('Backend EMI Excel export fallback:', e.message);
+    }
+
+    // Client-side fallback using SheetJS (XLSX)
+    const loansRes = await api.getEMILoans({});
+    const loans = loansRes?.loans || [];
+    const rows = loans.map((l) => ({
+      'EMI No': l.emiNo,
+      'Customer Name': l.customerName,
+      Phone: l.customerPhone || '',
+      Area: l.customerArea || '',
+      'Principal (₹)': l.principal || 0,
+      'Interest %': l.interestRatePercent || 0,
+      'Tenure (Months)': l.tenureMonths || 0,
+      'Monthly EMI (₹)': l.installmentAmount || 0,
+      'Total Payable (₹)': l.totalPayable || 0,
+      'Collected (₹)': l.totalCollected || 0,
+      'Pending Balance (₹)': l.remainingBalance || 0,
+      Status: (l.status || 'active').toUpperCase(),
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows.length > 0 ? rows : [{ Info: 'No EMI loans recorded yet' }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'EMI Portfolio');
+    XLSX.writeFile(wb, filename);
+    return { success: true };
+  },
+
   // ==========================================
   // AGENT MANAGEMENT (Owner only)
   // ==========================================

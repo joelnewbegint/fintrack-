@@ -1,17 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import api from '../../services/api';
 import {
   FileSpreadsheet,
-  Download,
-  Calendar,
-  TrendingUp,
-  Wallet,
-  ShieldCheck,
-  CheckCircle2,
-  Clock,
   Printer,
+  Wallet,
+  Banknote,
+  QrCode,
+  CreditCard,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -24,141 +20,251 @@ import {
 } from 'recharts';
 
 export const EMIReports = () => {
-  const { isOwner } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang } = useLanguage();
 
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [chartRange, setChartRange] = useState('monthly'); // 'monthly' | 'weekly'
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const res = await api.getEMIDashboardStats('all');
+      if (res.success) {
+        setStats(res.stats);
+      }
+    } catch (e) {
+      console.warn('EMI Reports fetch note:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        setLoading(true);
-        const res = await api.getEMIDashboardStats('all');
-        if (res.success) {
-          setStats(res.stats);
-        }
-      } catch (e) {
-        console.warn('EMI Reports fetch note:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchReports();
+    const handleRefresh = () => fetchReports();
+    window.addEventListener('fintrack:emi-updated', handleRefresh);
+    return () => window.removeEventListener('fintrack:emi-updated', handleRefresh);
   }, []);
 
-  const handleExportExcel = () => {
-    const url = `${api.getApiBaseUrl()}/api/emi/export/excel`;
-    window.open(url, '_blank');
+  const handleExportExcel = async () => {
+    try {
+      setExporting(true);
+      await api.exportEMIExcel();
+    } catch (e) {
+      alert(e.message || 'Excel export failed');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handlePrintSummary = () => {
     window.print();
   };
 
+  const chartData =
+    chartRange === 'monthly'
+      ? stats?.monthlyChart || stats?.weeklyChart || []
+      : stats?.weeklyChart || [];
+
+  const modeBreakdown = stats?.modeBreakdown || { cash: 0, upi: 0, cheque: 0 };
+
   return (
-    <div
-      className="space-y-6 pb-12 -mx-2 sm:-mx-4 lg:-mx-6 px-3 sm:px-6 py-4 rounded-3xl"
-      style={{
-        background: 'linear-gradient(180deg, #FFF8F5 0%, #FFF3EC 60%, #F8FAFD 100%)',
-      }}
-    >
+    <div className="space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 text-xs font-bold border border-orange-200">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#EAF5FF] text-[#0878D1] text-xs font-bold border border-[#D5E9FA]">
               {lang === 'ta' ? 'அறிக்கைகள்' : 'EMI Reports'}
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+          <h2 className="text-xl sm:text-2xl font-black text-[#183653] mt-1">
             {lang === 'ta' ? 'மாத தவணை நிதி அறிக்கைகள் & எக்செல்' : 'Monthly EMI Performance & Financial Reports'}
           </h2>
-          <p className="text-xs text-slate-500">
-            {lang === 'ta' ? 'முழுமையான நிதி அறிக்கை, மாதாந்திர வசூல் மற்றும் தணிக்கை ஆவணம்' : 'Complete portfolio audit, monthly repayment trajectories, and Excel export'}
+          <p className="text-xs text-[#647C95]">
+            {lang === 'ta'
+              ? 'முழுமையான நிதி அறிக்கை, மாதாந்திர வசூல் மற்றும் தணிக்கை ஆவணம்'
+              : 'Complete portfolio audit, monthly repayment trajectories, and Excel export'}
           </p>
         </div>
 
         <div className="flex items-center space-x-2">
           <button
+            type="button"
             onClick={handlePrintSummary}
-            className="h-10 px-3.5 rounded-xl bg-white/80 hover:bg-white border border-slate-200 text-xs font-bold text-slate-700 transition flex items-center space-x-1.5 shadow-xs"
+            className="h-10 px-3.5 rounded-xl bg-white/85 hover:bg-[#EAF5FF] border border-[#D5E9FA] text-xs font-bold text-[#183653] transition flex items-center space-x-1.5 shadow-xs"
           >
-            <Printer className="w-4 h-4 text-slate-500" />
+            <Printer className="w-4 h-4 text-[#0878D1]" />
             <span>Print Report</span>
           </button>
           <button
+            type="button"
             onClick={handleExportExcel}
-            className="h-10 px-4 rounded-xl font-bold text-xs text-white shadow-md transition flex items-center space-x-1.5 active:scale-95"
-            style={{
-              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-            }}
+            disabled={exporting}
+            className="h-10 px-4 rounded-xl bg-[#18A879] hover:bg-[#138861] font-bold text-xs text-white shadow-md transition flex items-center space-x-1.5 active:scale-95 disabled:opacity-50"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span>Download Excel (.xlsx)</span>
+            <span>{exporting ? 'Exporting...' : 'Download Excel (.xlsx)'}</span>
           </button>
         </div>
       </div>
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="p-4 sm:p-5 rounded-2xl bg-white/85 backdrop-blur-md border border-white/90 shadow-xs">
-          <span className="text-[10px] font-bold uppercase text-slate-400">Total Financed</span>
-          <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+        <div className="glass-card p-4 sm:p-5">
+          <span className="text-[10px] font-bold uppercase text-[#647C95]">Total Financed</span>
+          <div className="text-xl sm:text-2xl font-black text-[#183653] mt-1 tabular-nums">
             ₹{(stats?.totalPrincipalLent || 0).toLocaleString('en-IN')}
           </div>
-          <p className="text-[11px] text-slate-500 mt-0.5">Active Principal Deployed</p>
+          <p className="text-[11px] text-[#647C95] mt-0.5">Active Principal Deployed</p>
         </div>
 
-        <div className="p-4 sm:p-5 rounded-2xl bg-white/85 backdrop-blur-md border border-white/90 shadow-xs">
-          <span className="text-[10px] font-bold uppercase text-slate-400">Total Repayable</span>
-          <div className="text-xl sm:text-2xl font-black text-orange-600 mt-1">
+        <div className="glass-card p-4 sm:p-5">
+          <span className="text-[10px] font-bold uppercase text-[#647C95]">Total Repayable</span>
+          <div className="text-xl sm:text-2xl font-black text-[#0878D1] mt-1 tabular-nums">
             ₹{(stats?.totalPayable || 0).toLocaleString('en-IN')}
           </div>
-          <p className="text-[11px] text-slate-500 mt-0.5">Principal + Interest</p>
+          <p className="text-[11px] text-[#647C95] mt-0.5">Principal + Interest</p>
         </div>
 
-        <div className="p-4 sm:p-5 rounded-2xl bg-white/85 backdrop-blur-md border border-white/90 shadow-xs">
-          <span className="text-[10px] font-bold uppercase text-slate-400">Total Recovered</span>
-          <div className="text-xl sm:text-2xl font-black text-emerald-600 mt-1">
+        <div className="glass-card p-4 sm:p-5">
+          <span className="text-[10px] font-bold uppercase text-[#647C95]">Total Recovered</span>
+          <div className="text-xl sm:text-2xl font-black text-[#18A879] mt-1 tabular-nums">
             ₹{(stats?.totalCollected || 0).toLocaleString('en-IN')}
           </div>
-          <p className="text-[11px] text-slate-500 mt-0.5">Collections Realized</p>
+          <p className="text-[11px] text-[#647C95] mt-0.5">Collections Realized</p>
         </div>
 
-        <div className="p-4 sm:p-5 rounded-2xl bg-white/85 backdrop-blur-md border border-white/90 shadow-xs">
-          <span className="text-[10px] font-bold uppercase text-slate-400">Outstanding Balance</span>
-          <div className="text-xl sm:text-2xl font-black text-rose-600 mt-1">
+        <div className="glass-card p-4 sm:p-5">
+          <span className="text-[10px] font-bold uppercase text-[#647C95]">Outstanding Balance</span>
+          <div className="text-xl sm:text-2xl font-black text-rose-600 mt-1 tabular-nums">
             ₹{(stats?.pendingBalance || 0).toLocaleString('en-IN')}
           </div>
-          <p className="text-[11px] text-slate-500 mt-0.5">Pending Market Credit</p>
+          <p className="text-[11px] text-[#647C95] mt-0.5">Pending Market Credit</p>
         </div>
       </div>
 
-      {/* Monthly Recovery Bar Chart */}
-      <div className="p-5 rounded-2xl bg-white/85 backdrop-blur-md border border-white/90 shadow-xs space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-black text-sm text-slate-900">
-              {lang === 'ta' ? 'மாதாந்திர தவணை வசூல் போக்கு' : 'Monthly Recovery Trajectory'}
-            </h3>
-            <p className="text-[11px] text-slate-500">Last 6 Months Collections History</p>
+      {/* Mode Breakdown Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="glass-card p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#18A879] border border-emerald-200 flex items-center justify-center">
+              <Banknote className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase text-[#647C95] block">Cash Inflow</span>
+              <span className="text-base font-black text-[#183653] tabular-nums">
+                ₹{(modeBreakdown.cash || 0).toLocaleString('en-IN')}
+              </span>
+            </div>
           </div>
-          <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-orange-100 text-orange-800 border border-orange-200">
-            6 Months
-          </span>
+        </div>
+
+        <div className="glass-card p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] flex items-center justify-center">
+              <QrCode className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase text-[#647C95] block">UPI / GPay</span>
+              <span className="text-base font-black text-[#183653] tabular-nums">
+                ₹{(modeBreakdown.upi || 0).toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="glass-card p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#F3F9FF] text-[#064B8E] border border-[#D5E9FA] flex items-center justify-center">
+              <CreditCard className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase text-[#647C95] block">Cheque / Bank</span>
+              <span className="text-base font-black text-[#183653] tabular-nums">
+                ₹{(modeBreakdown.cheque || 0).toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recovery Trajectory Bar Chart */}
+      <div className="glass-card p-5 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="font-black text-sm text-[#183653]">
+              {chartRange === 'monthly'
+                ? lang === 'ta'
+                  ? 'மாதாந்திர தவணை வசூல் போக்கு'
+                  : 'Monthly Recovery Trajectory'
+                : lang === 'ta'
+                ? 'வாராந்திர தவணை வசூல் போக்கு'
+                : 'Last 7 Days Recovery'}
+            </h3>
+            <p className="text-[11px] text-[#647C95]">
+              {chartRange === 'monthly' ? 'Last 6 Months Collections History' : 'Daily inflow over the last 7 days'}
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-1 p-1 rounded-xl bg-[#F3F9FF] border border-[#D5E9FA]">
+            <button
+              type="button"
+              onClick={() => setChartRange('monthly')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                chartRange === 'monthly'
+                  ? 'bg-[#0878D1] text-white shadow-xs'
+                  : 'text-[#647C95] hover:text-[#183653]'
+              }`}
+            >
+              6 Months
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartRange('weekly')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                chartRange === 'weekly'
+                  ? 'bg-[#0878D1] text-white shadow-xs'
+                  : 'text-[#647C95] hover:text-[#183653]'
+              }`}
+            >
+              7 Days
+            </button>
+          </div>
         </div>
 
         <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={stats?.weeklyChart || []}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(val) => `₹${val / 1000}k`} />
-              <Tooltip formatter={(val) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Collected']} />
-              <Bar dataKey="amount" fill="#F97316" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {loading ? (
+            <div className="h-full flex items-center justify-center text-xs text-[#647C95]">
+              Loading charts...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#D5E9FA" />
+                <XAxis dataKey="day" stroke="#647C95" fontSize={11} tickLine={false} />
+                <YAxis
+                  stroke="#647C95"
+                  fontSize={11}
+                  tickLine={false}
+                  tickFormatter={(val) => `₹${val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val}`}
+                />
+                <Tooltip
+                  formatter={(val) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Collected']}
+                  contentStyle={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+                    borderRadius: '14px',
+                    border: '1px solid #D5E9FA',
+                    fontSize: '12px',
+                    color: '#183653',
+                  }}
+                />
+                <Bar dataKey="amount" fill="#0878D1" radius={[8, 8, 0, 0]} maxBarSize={48} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
     </div>
@@ -166,4 +272,3 @@ export const EMIReports = () => {
 };
 
 export default EMIReports;
-

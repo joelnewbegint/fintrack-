@@ -69,6 +69,11 @@ export const clearAllData = async (req, res, next) => {
     const Payment = (await import('../models/Payment.js')).default;
     const Expense = (await import('../models/Expense.js')).default;
     const Investment = (await import('../models/Investment.js')).default;
+    const EMICustomer = (await import('../models/EMICustomer.js')).default;
+    const EMILoan = (await import('../models/EMILoan.js')).default;
+    const EMIPayment = (await import('../models/EMIPayment.js')).default;
+    const EMIAuditLog = (await import('../models/EMIAuditLog.js')).default;
+    const EMIDailyClosing = (await import('../models/EMIDailyClosing.js')).default;
 
     await Promise.all([
       Customer.deleteMany({}),
@@ -76,11 +81,16 @@ export const clearAllData = async (req, res, next) => {
       Payment.deleteMany({}),
       Expense.deleteMany({}),
       Investment.deleteMany({}),
+      EMICustomer.deleteMany({}),
+      EMILoan.deleteMany({}),
+      EMIPayment.deleteMany({}),
+      EMIAuditLog.deleteMany({}),
+      EMIDailyClosing.deleteMany({}),
     ]);
 
     res.status(200).json({
       success: true,
-      message: 'All financial data successfully cleared. Brand new clean site.',
+      message: 'All financial and EMI data successfully cleared. Brand new clean site.',
     });
   } catch (error) {
     next(error);

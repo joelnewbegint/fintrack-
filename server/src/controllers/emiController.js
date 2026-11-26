@@ -154,7 +154,7 @@ export const getEMIDashboardStats = async (req, res, next) => {
         const d = new Date(inst.dueDate);
         d.setHours(0, 0, 0, 0);
 
-        if (d.getTime() === today.getTime()) {
+        if (d.getTime() === today.getTime() && inst.status !== 'paid') {
           const pending = (inst.amount || 0) - (inst.paidAmount || 0);
           if (pending > 0) {
             todayDueAmount += pending;
@@ -166,8 +166,10 @@ export const getEMIDashboardStats = async (req, res, next) => {
               customerPhone: loan.customerPhone,
               customerArea: loan.customerArea,
               installmentNo: inst.installmentNo,
-              amount: inst.amount,
+              amount: pending,
+              installmentAmount: inst.amount,
               pendingAmount: pending,
+              remainingBalance: loan.remainingBalance,
               dueDate: inst.dueDate,
               status: inst.status,
             });
@@ -183,8 +185,10 @@ export const getEMIDashboardStats = async (req, res, next) => {
               customerPhone: loan.customerPhone,
               customerArea: loan.customerArea,
               installmentNo: inst.installmentNo,
-              amount: inst.amount,
+              amount: pending,
+              installmentAmount: inst.amount,
               pendingAmount: pending,
+              remainingBalance: loan.remainingBalance,
               dueDate: inst.dueDate,
               status: inst.status,
             });
@@ -197,13 +201,21 @@ export const getEMIDashboardStats = async (req, res, next) => {
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
 
-    const recentPayments = await EMIPayment.find({
-      ...(req.user.isOwner
-        ? (req.query.agentId && req.query.agentId !== 'all' ? { collectedBy: req.query.agentId } : {})
-        : { collectedBy: req.user._id }),
-      paymentDate: { $gte: sevenDaysAgo },
+    // 4. Monthly Trends (Last 6 Months) & Mode Breakdown
+    const sixMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 5, 1);
+    const paymentScopeFilter = req.user.isOwner
+      ? (req.query.agentId && req.query.agentId !== 'all' ? { collectedBy: req.query.agentId } : {})
+      : { collectedBy: req.user._id };
+
+    const sixMonthPayments = await EMIPayment.find({
+      ...paymentScopeFilter,
+      paymentDate: { $gte: sixMonthsAgo },
       status: 'valid',
     });
+
+    const recentPayments = sixMonthPayments.filter(
+      (p) => new Date(p.paymentDate) >= sevenDaysAgo
+    );
 
     const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const weeklyChart = [];
@@ -217,7 +229,7 @@ export const getEMIDashboardStats = async (req, res, next) => {
 
       const dayTotal = recentPayments
         .filter(p => new Date(p.paymentDate) >= dayStart && new Date(p.paymentDate) <= dayEnd)
-        .reduce((sum, p) => sum + p.amount, 0);
+        .reduce((sum, p) => sum + (p.amount || 0), 0);
 
       weeklyChart.push({
         day: dayLabels[d.getDay()],
@@ -225,6 +237,31 @@ export const getEMIDashboardStats = async (req, res, next) => {
         amount: dayTotal,
       });
     }
+
+    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthlyChart = [];
+    for (let i = 5; i >= 0; i--) {
+      const mStart = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const mEnd = new Date(today.getFullYear(), today.getMonth() - i + 1, 0, 23, 59, 59, 999);
+      const monthTotal = sixMonthPayments
+        .filter((p) => new Date(p.paymentDate) >= mStart && new Date(p.paymentDate) <= mEnd)
+        .reduce((sum, p) => sum + (p.amount || 0), 0);
+      monthlyChart.push({
+        day: `${monthLabels[mStart.getMonth()]} ${mStart.getFullYear().toString().slice(-2)}`,
+        month: monthLabels[mStart.getMonth()],
+        amount: monthTotal,
+      });
+    }
+
+    const allValidPayments = await EMIPayment.find({
+      ...paymentScopeFilter,
+      status: 'valid',
+    });
+    const modeBreakdown = {
+      cash: allValidPayments.filter((p) => p.mode === 'cash').reduce((s, p) => s + (p.amount || 0), 0),
+      upi: allValidPayments.filter((p) => p.mode === 'upi').reduce((s, p) => s + (p.amount || 0), 0),
+      cheque: allValidPayments.filter((p) => p.mode === 'cheque').reduce((s, p) => s + (p.amount || 0), 0),
+    };
 
     const totalIssuedCount = await EMILoan.countDocuments(agentFilter);
     const activeCount = loans.length;
@@ -242,19 +279,21 @@ export const getEMIDashboardStats = async (req, res, next) => {
         collectedCashToday,
         collectedUpiToday,
         todayTarget: todayDueAmount,
-        targetProgressPercent: todayDueAmount > 0 ? Math.min(100, Math.round((collectedToday / todayDueAmount) * 100)) : 100,
+        targetProgressPercent: todayDueAmount > 0 ? Math.min(100, Math.round((collectedToday / todayDueAmount) * 100)) : 0,
         todayDueCount: todayDueList.length,
         todayDueList,
         overdueCount: overdueList.length,
-        overdueList: overdueList.slice(0, 10), // Top 10 overdue
+        overdueList: overdueList.slice(0, 15),
         activeLoansCount: activeCount,
-        customersCount: customersCount || activeCount,
+        customersCount,
         loansIssuedCount: totalIssuedCount,
         totalPrincipalLent,
         totalPayable: totalPayableSum,
         totalCollected: totalCollectedSum,
         pendingBalance: remainingBalanceSum,
         weeklyChart,
+        monthlyChart,
+        modeBreakdown,
       },
     });
   } catch (error) {
@@ -396,30 +435,55 @@ export const createEMILoan = async (req, res, next) => {
       notes = '',
     } = req.body;
 
-    if (!customerId || !principal || !interestRatePercent || !tenureMonths) {
+    if (!principal || interestRatePercent === undefined || !tenureMonths) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide customer, principal, interest rate, and tenure months.',
+        message: 'Please provide principal, interest rate, and tenure months.',
       });
     }
 
-    // Lookup customer
-    let cust = await EMICustomer.findById(customerId);
-    if (!cust) {
+    // Lookup existing customer or auto-create a valid EMICustomer when entered manually
+    let cust = null;
+    if (customerId && mongoose.Types.ObjectId.isValid(customerId)) {
+      cust = await EMICustomer.findById(customerId);
+    }
+    if (!cust && customerId && customerId !== 'temp_cust') {
       cust = await EMICustomer.findOne({ clientId: customerId });
     }
+    if (!cust && customerPhone) {
+      cust = await EMICustomer.findOne({ phone: customerPhone.trim() });
+    }
 
-    const finalCustomerName = customerName || (cust ? cust.name : 'Valued Customer');
-    const finalCustomerPhone = customerPhone || (cust ? cust.phone : '');
-    const finalCustomerArea = customerArea || (cust ? cust.area : 'Main Area');
+    const finalCustomerName = (customerName || (cust ? cust.name : '') || '').trim();
+    if (!finalCustomerName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer name is required.',
+      });
+    }
+    const finalCustomerPhone = (customerPhone || (cust ? cust.phone : '') || '0000000000').trim();
+    const finalCustomerArea = (customerArea || (cust ? cust.area : '') || 'Main Area').trim();
 
     let agent = null;
-    if (assignedAgentId) {
+    if (assignedAgentId && mongoose.Types.ObjectId.isValid(assignedAgentId)) {
       agent = await User.findById(assignedAgentId);
     } else if (!req.user.isOwner) {
       agent = req.user;
     } else {
       agent = await User.findOne({ role: 'emi_agent', status: 'active' });
+    }
+
+    if (!cust) {
+      cust = await EMICustomer.create({
+        clientId: `emi_cust_${Date.now()}`,
+        createdBy: req.user._id,
+        assignedAgentId: agent ? agent._id : (req.user.isOwner ? null : req.user._id),
+        name: finalCustomerName,
+        phone: finalCustomerPhone,
+        address: finalCustomerArea,
+        area: finalCustomerArea,
+        status: 'active',
+      });
     }
 
     // Calculate Amortization Schedule
@@ -526,20 +590,46 @@ export const recordEMIPayment = async (req, res, next) => {
     const payNum = Number(amount);
     let remainingToDistribute = payNum;
     const paidInstallmentNos = [];
+    const receiptNo = `RCP-EMI-${new Date().getFullYear().toString().slice(-2)}-${Math.floor(10000 + Math.random() * 90000)}`;
 
-    // Distribute collection across schedule installments
+    // Distribute collection across schedule installments (prioritize specific installment if requested)
+    if (installmentNo) {
+      const targetInst = loan.schedule.find((s) => s.installmentNo === Number(installmentNo));
+      if (targetInst && targetInst.status !== 'paid') {
+        const instDue = Math.max(0, (targetInst.amount || 0) - (targetInst.paidAmount || 0));
+        if (remainingToDistribute >= instDue) {
+          targetInst.paidAmount = targetInst.amount;
+          targetInst.status = 'paid';
+          targetInst.paidDate = new Date(paymentDate);
+          targetInst.paymentMode = mode;
+          targetInst.receiptNo = receiptNo;
+          remainingToDistribute -= instDue;
+          paidInstallmentNos.push(targetInst.installmentNo);
+        } else {
+          targetInst.paidAmount = (targetInst.paidAmount || 0) + remainingToDistribute;
+          targetInst.status = 'partial';
+          targetInst.paidDate = new Date(paymentDate);
+          targetInst.paymentMode = mode;
+          targetInst.receiptNo = receiptNo;
+          remainingToDistribute = 0;
+          paidInstallmentNos.push(targetInst.installmentNo);
+        }
+      }
+    }
+
     for (let i = 0; i < loan.schedule.length; i++) {
       if (remainingToDistribute <= 0) break;
       const inst = loan.schedule[i];
 
       if (inst.status !== 'paid') {
-        const instDue = (inst.amount || 0) - (inst.paidAmount || 0);
+        const instDue = Math.max(0, (inst.amount || 0) - (inst.paidAmount || 0));
 
         if (remainingToDistribute >= instDue) {
           inst.paidAmount = inst.amount;
           inst.status = 'paid';
           inst.paidDate = new Date(paymentDate);
           inst.paymentMode = mode;
+          inst.receiptNo = receiptNo;
           remainingToDistribute -= instDue;
           paidInstallmentNos.push(inst.installmentNo);
         } else {
@@ -547,6 +637,7 @@ export const recordEMIPayment = async (req, res, next) => {
           inst.status = 'partial';
           inst.paidDate = new Date(paymentDate);
           inst.paymentMode = mode;
+          inst.receiptNo = receiptNo;
           remainingToDistribute = 0;
           paidInstallmentNos.push(inst.installmentNo);
         }
@@ -559,19 +650,23 @@ export const recordEMIPayment = async (req, res, next) => {
 
     if (loan.remainingBalance <= 0) {
       loan.status = 'completed';
+    } else {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const stillOverdue = loan.schedule.some(
+        (s) => s.status !== 'paid' && new Date(s.dueDate) < todayStart
+      );
+      loan.status = stillOverdue ? 'overdue' : 'active';
     }
 
     await loan.save();
-
-    // Generate unique receipt number
-    const receiptNo = `RCP-EMI-${new Date().getFullYear().toString().slice(-2)}-${Math.floor(10000 + Math.random() * 90000)}`;
 
     const payment = await EMIPayment.create({
       receiptNo,
       emiLoanId: loan._id,
       customerId: loan.customerId,
       customerName: loan.customerName,
-      installmentNos: paidInstallmentNos.length > 0 ? paidInstallmentNos : [installmentNo || 1],
+      installmentNos: paidInstallmentNos.length > 0 ? paidInstallmentNos : [Number(installmentNo) || 1],
       amount: payNum,
       penaltyPortion: Number(penaltyAmount) || 0,
       paymentDate: new Date(paymentDate),
@@ -628,21 +723,29 @@ export const reverseEMIPayment = async (req, res, next) => {
 
     // Revert amounts on loan
     loan.totalCollected = Math.max(0, (loan.totalCollected || 0) - payment.amount);
-    loan.remainingBalance = (loan.remainingBalance || 0) + payment.amount;
+    loan.remainingBalance = Math.min(loan.totalPayable || Infinity, (loan.remainingBalance || 0) + payment.amount);
 
-    if (loan.status === 'completed' && loan.remainingBalance > 0) {
-      loan.status = 'active';
-    }
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
-    // Rollback installments that were marked paid by this collection
+    // Rollback installments that were marked paid or partial by this collection
     const targetNos = payment.installmentNos || [];
     loan.schedule.forEach((inst) => {
-      if (targetNos.includes(inst.installmentNo) && inst.status === 'paid') {
-        inst.status = 'pending';
+      if (targetNos.includes(inst.installmentNo) && (inst.status === 'paid' || inst.status === 'partial')) {
+        inst.status = new Date(inst.dueDate) < todayStart ? 'overdue' : 'pending';
         inst.paidAmount = 0;
         inst.paidDate = null;
+        inst.paymentMode = '';
+        inst.receiptNo = '';
       }
     });
+
+    if (loan.remainingBalance > 0) {
+      const hasOverdue = loan.schedule.some(
+        (s) => s.status !== 'paid' && new Date(s.dueDate) < todayStart
+      );
+      loan.status = hasOverdue ? 'overdue' : 'active';
+    }
 
     await loan.save();
 
@@ -979,9 +1082,19 @@ export const exportEMIExcelReport = async (req, res, next) => {
     ];
 
     sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8B7BD0' } };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0878D1' } };
 
-    const loans = await EMILoan.find({}).sort({ createdAt: -1 });
+    let query = {};
+    if (!req.user.isOwner) {
+      query = {
+        $or: [
+          { assignedAgentId: req.user._id },
+          { assignedAgentId: null },
+          { assignedAgentId: { $exists: false } },
+        ],
+      };
+    }
+    const loans = await EMILoan.find(query).sort({ createdAt: -1 });
 
     loans.forEach((l) => {
       sheet.addRow({
@@ -1011,6 +1124,208 @@ export const exportEMIExcelReport = async (req, res, next) => {
 
     await workbook.xlsx.write(res);
     res.end();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 9. GET ALL EMI PAYMENTS / RECEIPTS
+ */
+export const getEMIPayments = async (req, res, next) => {
+  try {
+    const { loanId, mode, status, search, limit = 200 } = req.query;
+    const andConditions = [];
+
+    if (!req.user.isOwner) {
+      andConditions.push({ collectedBy: req.user._id });
+    }
+    if (loanId && mongoose.Types.ObjectId.isValid(loanId)) {
+      andConditions.push({ emiLoanId: loanId });
+    }
+    if (mode && mode !== 'all') {
+      andConditions.push({ mode });
+    }
+    if (status && status !== 'all') {
+      andConditions.push({ status });
+    }
+    if (search && search.trim()) {
+      const s = search.trim();
+      andConditions.push({
+        $or: [
+          { customerName: new RegExp(s, 'i') },
+          { receiptNo: new RegExp(s, 'i') },
+        ],
+      });
+    }
+
+    const query = andConditions.length > 0 ? { $and: andConditions } : {};
+    const payments = await EMIPayment.find(query)
+      .populate('emiLoanId', 'emiNo principal installmentAmount customerPhone customerArea remainingBalance')
+      .sort({ paymentDate: -1, createdAt: -1 })
+      .limit(Number(limit));
+
+    const formatted = payments.map((p) => {
+      const obj = p.toObject();
+      return {
+        ...obj,
+        loanNo: obj.emiLoanId?.emiNo || 'EMI',
+        customerPhone: obj.emiLoanId?.customerPhone || '',
+        customerArea: obj.emiLoanId?.customerArea || '',
+        installmentNo: Array.isArray(obj.installmentNos) && obj.installmentNos.length > 0 ? obj.installmentNos.join(', ') : '1',
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      count: formatted.length,
+      payments: formatted,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 10. UPDATE & DELETE EMI LOAN (Owner Only)
+ */
+export const updateEMILoan = async (req, res, next) => {
+  try {
+    const loan = await EMILoan.findById(req.params.id);
+    if (!loan) {
+      return res.status(404).json({ success: false, message: 'EMI loan not found' });
+    }
+
+    const { customerName, customerPhone, customerArea, assignedAgentId, notes, status } = req.body;
+    if (customerName !== undefined) loan.customerName = customerName;
+    if (customerPhone !== undefined) loan.customerPhone = customerPhone;
+    if (customerArea !== undefined) loan.customerArea = customerArea;
+    if (notes !== undefined) loan.notes = notes;
+    if (status !== undefined) loan.status = status;
+    if (assignedAgentId !== undefined) {
+      if (assignedAgentId && mongoose.Types.ObjectId.isValid(assignedAgentId)) {
+        const agent = await User.findById(assignedAgentId);
+        loan.assignedAgentId = agent ? agent._id : null;
+        loan.assignedAgentName = agent ? agent.name : 'Unassigned';
+      } else {
+        loan.assignedAgentId = null;
+        loan.assignedAgentName = 'Unassigned';
+      }
+    }
+
+    await loan.save();
+    res.status(200).json({ success: true, message: 'EMI loan updated', loan });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteEMILoan = async (req, res, next) => {
+  try {
+    const loan = await EMILoan.findById(req.params.id);
+    if (!loan) {
+      return res.status(404).json({ success: false, message: 'EMI loan not found' });
+    }
+
+    await EMIPayment.deleteMany({ emiLoanId: loan._id });
+    await EMILoan.findByIdAndDelete(loan._id);
+
+    await EMIAuditLog.create({
+      action: 'DELETE_EMI_LOAN',
+      actorId: req.user._id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      emiLoanId: loan._id,
+      details: { emiNo: loan.emiNo, customerName: loan.customerName, principal: loan.principal },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `EMI Loan ${loan.emiNo} deleted successfully`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 11. UPDATE & DELETE EMI CUSTOMER
+ */
+export const updateEMICustomer = async (req, res, next) => {
+  try {
+    const customer = await EMICustomer.findById(req.params.id);
+    if (!customer) {
+      return res.status(404).json({ success: false, message: 'EMI customer not found' });
+    }
+
+    const { name, tamilName, phone, altPhone, address, area, idProofType, idProofNumber, guarantor, notes } = req.body;
+    if (name !== undefined) customer.name = name.trim();
+    if (tamilName !== undefined) customer.tamilName = tamilName.trim();
+    if (phone !== undefined) customer.phone = phone.trim();
+    if (altPhone !== undefined) customer.altPhone = altPhone.trim();
+    if (address !== undefined) customer.address = address.trim();
+    if (area !== undefined) customer.area = area.trim();
+    if (idProofType !== undefined) customer.idProofType = idProofType;
+    if (idProofNumber !== undefined) customer.idProofNumber = idProofNumber.trim();
+    if (guarantor !== undefined) customer.guarantor = guarantor;
+    if (notes !== undefined) customer.notes = notes;
+
+    await customer.save();
+    res.status(200).json({ success: true, message: 'Borrower updated', customer });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteEMICustomer = async (req, res, next) => {
+  try {
+    const customer = await EMICustomer.findById(req.params.id);
+    if (!customer) {
+      return res.status(404).json({ success: false, message: 'EMI customer not found' });
+    }
+
+    const loans = await EMILoan.find({ customerId: customer._id });
+    const hasActive = loans.some((l) => l.status === 'active' || l.status === 'overdue');
+    if (hasActive && req.query.force !== 'true') {
+      return res.status(400).json({
+        success: false,
+        message: 'Borrower has active EMI loans. Close or delete those loans first, or confirm full deletion.',
+      });
+    }
+
+    const loanIds = loans.map((l) => l._id);
+    if (loanIds.length > 0) {
+      await EMIPayment.deleteMany({ emiLoanId: { $in: loanIds } });
+      await EMILoan.deleteMany({ _id: { $in: loanIds } });
+    }
+    await EMICustomer.findByIdAndDelete(customer._id);
+
+    res.status(200).json({
+      success: true,
+      message: `Borrower ${customer.name} removed successfully`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 12. CLEAR ALL EMI DATA (Owner Only - removes sample/unwanted EMI records)
+ */
+export const clearEMIData = async (req, res, next) => {
+  try {
+    await Promise.all([
+      EMICustomer.deleteMany({}),
+      EMILoan.deleteMany({}),
+      EMIPayment.deleteMany({}),
+      EMIAuditLog.deleteMany({}),
+      EMIDailyClosing.deleteMany({}),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: 'All EMI accounts, borrowers, and receipts have been cleared cleanly.',
+    });
   } catch (error) {
     next(error);
   }
