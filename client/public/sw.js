@@ -10,7 +10,7 @@
  * 5. Automatic cache purge on version updates.
  */
 
-const CACHE_NAME = 'vk-bankers-pwa-v6.0.2';
+const CACHE_NAME = 'vk-bankers-pwa-v6.0.4';
 
 const STATIC_SHELL_ASSETS = [
   '/manifest.webmanifest',
@@ -54,13 +54,13 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // 1. Never cache non-GET requests (POST, PUT, DELETE)
-  if (request.method !== 'GET') {
+  // 1. Never cache non-GET requests (POST, PUT, DELETE) or live online connectivity probes
+  if (request.method !== 'GET' || url.searchParams.has('online_check')) {
     return;
   }
 
-  // 2. PRIVACY & SECURITY: NEVER cache backend API requests or sensitive financial data
-  if (url.pathname.startsWith('/api/') || request.headers.has('Authorization')) {
+  // 2. PRIVACY & SECURITY: NEVER cache backend API requests, online connectivity probes, or sensitive financial data
+  if (url.pathname.startsWith('/api/') || url.searchParams.has('online_check') || request.headers.has('Authorization')) {
     event.respondWith(fetch(request));
     return;
   }

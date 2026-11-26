@@ -10,6 +10,7 @@ import { ComfortProvider } from './context/ComfortContext';
 import { DeviceModeProvider } from './context/DeviceModeContext';
 import { PWAProvider } from './context/PWAContext';
 import { ToastProvider } from './components/common/Toast';
+import OnlineOnlyGate from './components/common/OnlineOnlyGate';
 
 export const getApiBase = () => {
   if (typeof window !== 'undefined') {
@@ -139,7 +140,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               <AuthProvider>
                 <PWAProvider>
                   <ToastProvider>
-                    <App />
+                    <OnlineOnlyGate>
+                      <App />
+                    </OnlineOnlyGate>
                   </ToastProvider>
                 </PWAProvider>
               </AuthProvider>

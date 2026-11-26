@@ -110,10 +110,13 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const login = async (identifier, password, rememberMe = true) => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      throw new Error('Internet connection required to log in. App cannot open offline.');
+    }
+
     const cleanId = (identifier || '').trim().toLowerCase();
     const cleanPass = (password || '').trim();
 
-    let apiSuccess = false;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       try {
@@ -161,86 +164,19 @@ export const AuthProvider = ({ children }) => {
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('fintrack:auth-success', { detail: data.user }));
           }
-          apiSuccess = true;
           return data.user;
-        } else if (res.status === 400 || res.status === 401 || res.status === 403) {
-          throw new Error(data.message || 'Invalid username/email or password');
         }
+        throw new Error(data.message || 'Invalid username/email or password');
       }
+      throw new Error('Unable to reach server. Please ensure internet connection is active.');
     } catch (apiErr) {
-      if (apiErr.message.includes('Invalid') || apiErr.message.includes('locked') || apiErr.message.includes('Account')) {
-        throw apiErr;
+      if (apiErr?.name === 'AbortError' || controller.signal.aborted) {
+        throw new Error('Server connection timed out. Please check your internet and try again.');
       }
-      console.warn('Server API not responding directly, checking offline authorization...', apiErr.message);
+      throw new Error(apiErr?.message || 'Unable to connect to server. App requires internet connection.');
     } finally {
       clearTimeout(timeoutId);
     }
-
-    if (apiSuccess) return;
-
-    // Failsafe Local Authorized Authentication (Offline or Standalone Demo)
-    const isOwnerMatch =
-      (cleanId === 'owner@fintrack.com' || cleanId === 'owner' || cleanId === 'vasantha') &&
-      cleanPass === 'admin123';
-    const isLoanAgentMatch =
-      (cleanId === 'loanagent@fintrack.com' || cleanId === 'agent@fintrack.com' || cleanId === 'loanagent' || cleanId === 'agent') &&
-      (cleanPass === 'loan123' || cleanPass === 'agent123');
-    const isEmiAgentMatch =
-      (cleanId === 'emiagent@fintrack.com' || cleanId === 'emiagent') &&
-      cleanPass === 'emi123';
-
-    if (isOwnerMatch) {
-      const ownerUser = {
-        id: 'auth_owner_001',
-        _id: 'auth_owner_001',
-        name: 'Vasantha Kumar K (Owner)',
-        username: 'owner',
-        email: 'owner@fintrack.com',
-        phone: '9842112345',
-        role: 'owner',
-        assignedAreas: ['Gandhipuram', 'RS Puram', 'Ukkadam', 'Town Hall', 'Singanallur', 'Simmakkal'],
-        isAuthorizedLocal: true,
-      };
-      const sessionToken = 'fintrack_auth_owner_' + Date.now();
-      saveSession(sessionToken, ownerUser, rememberMe);
-      return ownerUser;
-    }
-
-    if (isLoanAgentMatch) {
-      const loanAgentUser = {
-        id: 'auth_loan_agent_001',
-        _id: 'auth_loan_agent_001',
-        name: 'K. Saravanan (Loan Agent)',
-        username: 'loanagent',
-        email: 'loanagent@fintrack.com',
-        phone: '9842199887',
-        role: 'loan_agent',
-        assignedAreas: ['Gandhipuram', 'RS Puram', 'Town Hall'],
-        isAuthorizedLocal: true,
-      };
-      const sessionToken = 'fintrack_auth_loanagent_' + Date.now();
-      saveSession(sessionToken, loanAgentUser, rememberMe);
-      return loanAgentUser;
-    }
-
-    if (isEmiAgentMatch) {
-      const emiAgentUser = {
-        id: 'auth_emi_agent_001',
-        _id: 'auth_emi_agent_001',
-        name: 'R. Vignesh (EMI Agent)',
-        username: 'emiagent',
-        email: 'emiagent@fintrack.com',
-        phone: '9789123456',
-        role: 'emi_agent',
-        assignedAreas: ['Ukkadam', 'Singanallur', 'Simmakkal'],
-        isAuthorizedLocal: true,
-      };
-      const sessionToken = 'fintrack_auth_emiagent_' + Date.now();
-      saveSession(sessionToken, emiAgentUser, rememberMe);
-      return emiAgentUser;
-    }
-
-    throw new Error('Invalid credentials. Use: owner (admin123), loanagent (loan123), or emiagent (emi123).');
   };
 
   const saveSession = (tok, usr, remember) => {
