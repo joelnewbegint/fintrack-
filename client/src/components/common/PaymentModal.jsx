@@ -953,6 +953,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
       }
 
       let lastRecorded = null;
+      let updatedServerLoan = null;
 
       if (useMultiDate && multiDates.length > 0) {
         for (const item of multiDates) {
@@ -977,6 +978,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
           notes,
         });
         lastRecorded = res?.payments?.[0] || res?.payment;
+        updatedServerLoan = res?.loan || null;
       }
 
       const paymentId = lastRecorded?._id || lastRecorded?.id || `pay_${Date.now()}`;
@@ -988,7 +990,7 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
         [String(loanId)]: {
           paymentId,
           amount: payNum,
-          remainingBalance: balanceAfterPayment,
+          remainingBalance: updatedServerLoan?.remainingBalance ?? balanceAfterPayment,
           collectedBy: user?._id || 'owner',
           isOffline,
         },
@@ -1000,8 +1002,9 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
           l._id === loanId || l.loanId === loanId
             ? {
                 ...l,
-                remainingBalance: balanceAfterPayment,
-                totalCollected: (l.totalCollected || 0) + payNum,
+                ...(updatedServerLoan || {}),
+                remainingBalance: updatedServerLoan?.remainingBalance ?? balanceAfterPayment,
+                totalCollected: updatedServerLoan?.totalCollected ?? (l.totalCollected || 0) + payNum,
               }
             : l
         )
@@ -2104,6 +2107,12 @@ export const PaymentModal = ({ loanItem = null, onClose, onSuccess }) => {
                                   <div className="flex items-center justify-between text-[#0878D1] dark:text-[#55B8F5] font-black pt-0.5 border-t border-[#D5E9FA]/60 dark:border-slate-700/60">
                                     <span>New Pending Due / மீதி நிலுவை:</span>
                                     <span className="tabular-nums">{formatCurrency(newPendingDue)}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[11px] font-bold text-[#647C95] dark:text-slate-400">
+                                    <span>Remaining Dates / மீதி தவணைகள்:</span>
+                                    <span className="text-[#183653] dark:text-white tabular-nums">
+                                      {due > 0 ? Math.ceil(newPendingDue / due) : 0} × {formatCurrency(due)}
+                                    </span>
                                   </div>
                                 </>
                               );

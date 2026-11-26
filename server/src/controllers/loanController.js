@@ -1079,35 +1079,38 @@ export const recordInstallmentAction = async (req, res, next) => {
       inst.paidAmount = 0;
       inst.paidDate = null;
 
-      // Find and delete/adjust matching payment document
+      // Find and delete/adjust matching payment document(s) (handles split Installment + Principal rows)
       const matchingPayments = await Payment.find({
         loanId: loan._id,
-      }).sort({ date: -1 });
+      }).sort({ date: -1, createdAt: -1 });
 
-      let paymentDeleted = null;
+      let remainingToRevert = revAmt;
+      let anyDeleted = false;
       for (const p of matchingPayments) {
+        if (remainingToRevert <= 0) break;
         const pNotes = p.notes || '';
         const matchesInst = new RegExp(`(?:installment|inst)\\s*#?${inst.installmentNo}\\b|#${inst.installmentNo}\\b`, 'i').test(pNotes);
         if (matchesInst) {
-          if (p.amount === revAmt) {
+          const pAmt = Number(p.amount) || 0;
+          if (pAmt <= remainingToRevert) {
             await Payment.findByIdAndDelete(p._id);
-            paymentDeleted = p._id;
-            break;
-          } else if (p.amount > revAmt) {
-            p.amount -= revAmt;
+            remainingToRevert -= pAmt;
+            anyDeleted = true;
+          } else {
+            p.amount = pAmt - remainingToRevert;
             await p.save();
-            paymentDeleted = p._id;
-            break;
+            remainingToRevert = 0;
+            anyDeleted = true;
           }
         }
       }
 
-      // If no notes match, find by amount and date
-      if (!paymentDeleted) {
+      // If no notes match, find by amount
+      if (!anyDeleted) {
         for (const p of matchingPayments) {
           if (Number(p.amount) === revAmt) {
             await Payment.findByIdAndDelete(p._id);
-            paymentDeleted = p._id;
+            anyDeleted = true;
             break;
           }
         }
@@ -1115,6 +1118,59 @@ export const recordInstallmentAction = async (req, res, next) => {
 
       loan.totalCollected = Math.max(0, (loan.totalCollected || 0) - revAmt);
       loan.remainingBalance = Math.min(loan.totalPayable, (loan.totalPayable || 0) - loan.totalCollected);
+
+      // Restore any reduced tail dates so unpaid schedule sum matches remainingBalance at the same installment amount
+      const baseInstAmt = Math.max(1, Number(loan.installmentAmount) || Number(inst.amount) || 200);
+      const unpaidRows = loan.schedule.filter(
+        (s) => s.status !== 'paid' && s.status !== 'holiday' && s.status !== 'leave' && s.status !== 'missed'
+      );
+      const unpaidSum = unpaidRows.reduce(
+        (acc, s) => acc + Math.max(0, (Number(s.amount) || 0) - (Number(s.paidAmount) || 0)),
+        0
+      );
+      let deficit = Math.max(0, loan.remainingBalance - unpaidSum);
+
+      if (deficit > 0) {
+        for (const s of unpaidRows) {
+          if (deficit <= 0) break;
+          const curDue = Math.max(0, (Number(s.amount) || 0) - (Number(s.paidAmount) || 0));
+          if (curDue < baseInstAmt) {
+            const topUp = Math.min(deficit, baseInstAmt - curDue);
+            s.amount = (Number(s.amount) || 0) + topUp;
+            deficit -= topUp;
+          }
+        }
+      }
+
+      const getNextDueDate = (prevDate, type) => {
+        const d = new Date(prevDate);
+        if (type === 'weekly') d.setDate(d.getDate() + 7);
+        else if (type === 'monthly') d.setMonth(d.getMonth() + 1);
+        else d.setDate(d.getDate() + 1);
+        return d;
+      };
+
+      while (deficit > 0) {
+        const lastRow = loan.schedule[loan.schedule.length - 1];
+        const nextNo = (lastRow?.installmentNo || loan.schedule.length) + 1;
+        const nextDue = getNextDueDate(lastRow?.dueDate || new Date(), loan.financeType);
+        const slotAmt = Math.min(deficit, baseInstAmt);
+        loan.schedule.push({
+          installmentNo: nextNo,
+          dueDate: nextDue,
+          amount: slotAmt,
+          paidAmount: 0,
+          status: nextDue < new Date() ? 'overdue' : 'pending',
+          paidDate: null,
+        });
+        deficit -= slotAmt;
+      }
+
+      loan.duration = loan.schedule.length;
+      if (loan.schedule.length > 0) {
+        loan.endDate = loan.schedule[loan.schedule.length - 1].dueDate;
+      }
+
       loan.status = loan.remainingBalance <= 0
         ? 'completed'
         : loan.schedule.some((s) => s.status === 'overdue')
@@ -1335,8 +1391,8 @@ export const recordInstallmentAction = async (req, res, next) => {
       });
       createdPayments.push(p2);
 
-      // Mark this installment paid
-      inst.paidAmount = (Number(inst.paidAmount) || 0) + effectiveInstDue;
+      // Show full collected amount (installment + extra) on this corresponding date's row
+      inst.paidAmount = (Number(inst.paidAmount) || 0) + payNum;
       inst.status = 'paid';
       inst.paidDate = paymentDate;
 
@@ -1345,40 +1401,53 @@ export const recordInstallmentAction = async (req, res, next) => {
       const newRemainingBalance = Math.max(0, currentPendingDue - payNum);
       loan.remainingBalance = newRemainingBalance;
 
-      // Distribute remaining pending due evenly across remaining unpaid installments (without marking future dues paid unless full payoff)
-      const remainingUnpaid = loan.schedule.filter(
-        (s) =>
-          s.installmentNo !== inst.installmentNo &&
-          s.status !== 'paid' &&
-          s.status !== 'holiday' &&
-          s.status !== 'leave' &&
-          s.status !== 'missed'
-      );
-      const remainingCount = remainingUnpaid.length;
+      // Keep installment amount the same and reduce remaining tail dates from the end of schedule
+      const baseInstAmt = Math.max(1, Number(loan.installmentAmount) || Number(inst.amount) || 200);
+      const remainingUnpaid = loan.schedule
+        .filter(
+          (s) =>
+            s.installmentNo !== inst.installmentNo &&
+            s.status !== 'paid' &&
+            s.status !== 'holiday' &&
+            s.status !== 'leave' &&
+            s.status !== 'missed'
+        )
+        .sort((a, b) => a.installmentNo - b.installmentNo);
 
-      if (remainingCount > 0) {
-        if (newRemainingBalance <= 0) {
-          remainingUnpaid.forEach((s) => {
-            s.amount = Number(s.paidAmount) || 0;
-            s.status = 'paid';
-            s.paidDate = paymentDate;
-          });
-          loan.installmentAmount = 0;
-        } else {
-          const baseDue = Math.floor(newRemainingBalance / remainingCount);
-          const remainder = newRemainingBalance - baseDue * remainingCount;
-          for (let i = 0; i < remainingCount; i++) {
-            const s = remainingUnpaid[i];
-            const alreadyPaid = Number(s.paidAmount) || 0;
-            const duePart = baseDue + (i >= remainingCount - remainder ? 1 : 0);
-            s.amount = alreadyPaid + duePart;
-            if (duePart === 0) {
-              s.status = 'paid';
-              s.paidDate = paymentDate;
-            }
-          }
-          loan.installmentAmount = baseDue > 0 ? baseDue : 1;
+      let leftToAssign = newRemainingBalance;
+      const keepNos = new Set();
+
+      for (let i = 0; i < remainingUnpaid.length; i++) {
+        const s = remainingUnpaid[i];
+        if (leftToAssign <= 0) break;
+        const alreadyPaid = Number(s.paidAmount) || 0;
+        const normalDue = alreadyPaid > 0 ? Math.max(1, baseInstAmt - alreadyPaid) : baseInstAmt;
+        const assignedDue = Math.min(leftToAssign, normalDue);
+        s.amount = alreadyPaid + assignedDue;
+        leftToAssign -= assignedDue;
+        keepNos.add(s.installmentNo);
+      }
+
+      if (leftToAssign > 0 && keepNos.size > 0) {
+        const lastKept = remainingUnpaid.filter((s) => keepNos.has(s.installmentNo)).pop();
+        if (lastKept) {
+          lastKept.amount = (Number(lastKept.amount) || 0) + leftToAssign;
         }
+      }
+
+      const dropNos = new Set(
+        remainingUnpaid
+          .filter((s) => !keepNos.has(s.installmentNo))
+          .map((s) => s.installmentNo)
+      );
+
+      if (dropNos.size > 0) {
+        loan.schedule = loan.schedule.filter((s) => !dropNos.has(s.installmentNo));
+      }
+
+      loan.duration = loan.schedule.length;
+      if (loan.schedule.length > 0) {
+        loan.endDate = loan.schedule[loan.schedule.length - 1].dueDate;
       }
     }
 

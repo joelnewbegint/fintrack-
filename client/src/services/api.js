@@ -1320,8 +1320,63 @@ export const api = {
               ? Number(targetLoan.remainingBalance)
               : Math.max(0, (Number(targetLoan.totalPayable) || Number(targetLoan.principal) || 0) - (Number(targetLoan.totalCollected) || 0));
           const payAmt = Number(data.amount) || 0;
+          const newRem = Math.max(0, curRem - payAmt);
           targetLoan.totalCollected = (Number(targetLoan.totalCollected) || 0) + payAmt;
-          targetLoan.remainingBalance = Math.max(0, curRem - payAmt);
+          targetLoan.remainingBalance = newRem;
+
+          if (Array.isArray(targetLoan.schedule) && targetLoan.schedule.length > 0) {
+            const targetInst =
+              targetLoan.schedule.find((s) => Number(s.installmentNo) === Number(data.installmentNo)) ||
+              targetLoan.schedule.find((s) => s.status !== 'paid');
+            if (targetInst) {
+              const instDue = Math.max(0, Number(targetInst.amount || 0) - Number(targetInst.paidAmount || 0));
+              const effectiveDue = Math.min(instDue, curRem);
+              targetInst.paidAmount = (Number(targetInst.paidAmount) || 0) + payAmt;
+              if (targetInst.paidAmount >= targetInst.amount || newRem <= 0) {
+                targetInst.status = 'paid';
+              } else {
+                targetInst.status = 'partial';
+              }
+              targetInst.paidDate = data.paidDate || new Date().toISOString();
+              targetInst.isOffline = true;
+
+              if (payAmt > effectiveDue) {
+                const baseInstAmt = Math.max(1, Number(targetLoan.installmentAmount) || Number(targetInst.amount) || 200);
+                const remainingUnpaid = targetLoan.schedule
+                  .filter(
+                    (s) =>
+                      s.installmentNo !== targetInst.installmentNo &&
+                      s.status !== 'paid' &&
+                      s.status !== 'holiday' &&
+                      s.status !== 'leave' &&
+                      s.status !== 'missed'
+                  )
+                  .sort((a, b) => a.installmentNo - b.installmentNo);
+                let leftToAssign = newRem;
+                const keepNos = new Set();
+                for (let i = 0; i < remainingUnpaid.length; i++) {
+                  const s = remainingUnpaid[i];
+                  if (leftToAssign <= 0) break;
+                  const alreadyPaid = Number(s.paidAmount) || 0;
+                  const normalDue = alreadyPaid > 0 ? Math.max(1, baseInstAmt - alreadyPaid) : baseInstAmt;
+                  const assignedDue = Math.min(leftToAssign, normalDue);
+                  s.amount = alreadyPaid + assignedDue;
+                  leftToAssign -= assignedDue;
+                  keepNos.add(s.installmentNo);
+                }
+                const dropNos = new Set(
+                  remainingUnpaid.filter((s) => !keepNos.has(s.installmentNo)).map((s) => s.installmentNo)
+                );
+                if (dropNos.size > 0) {
+                  targetLoan.schedule = targetLoan.schedule.filter((s) => !dropNos.has(s.installmentNo));
+                }
+                targetLoan.duration = targetLoan.schedule.length;
+                if (targetLoan.schedule.length > 0) {
+                  targetLoan.endDate = targetLoan.schedule[targetLoan.schedule.length - 1].dueDate;
+                }
+              }
+            }
+          }
           setStored(STORAGE_KEYS.LOANS, loans);
         }
       }

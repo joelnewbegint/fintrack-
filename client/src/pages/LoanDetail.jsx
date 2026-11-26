@@ -402,8 +402,8 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
     if (isPaid) {
       const paidAmt =
-        Number(associatedPayment?.amount) ||
         Number(inst.paidAmount) ||
+        Number(associatedPayment?.amount) ||
         Number(inst.amount) ||
         Number(loan?.installmentAmount) ||
         200;
@@ -509,7 +509,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
     try {
       setPencilSubmitting(true);
-      await api.recordInstallmentAction(loan._id, {
+      const res = await api.recordInstallmentAction(loan._id, {
         action: pencilActionTab,
         installmentNo: instNo,
         amount: payNum,
@@ -519,6 +519,10 @@ export const LoanDetail = ({ loanId, onBack }) => {
         skipOption: pencilSkipOption,
         reason: pencilNotes.trim(),
       });
+
+      if (res?.loan) {
+        setLoan(res.loan);
+      }
 
       if (pencilActionTab === 'pay') {
         try {
@@ -791,7 +795,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
         };
 
   const parsedName = parseCustomerName(customer.name);
-  const totalInstallmentsCount = loan.duration || loan.schedule?.length || 0;
+  const totalInstallmentsCount = loan.schedule?.length || loan.duration || 0;
 
   return (
     <div className="space-y-3.5 sm:space-y-4 max-w-7xl mx-auto">
@@ -1296,7 +1300,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
                         </p>
                         <p className="text-[11px] text-[#647C95] dark:text-slate-400 font-mono">
                           {isPaid
-                            ? `✓ Paid on ${formatDate(inst.paidDate || inst.dueDate)}`
+                            ? `✓ Paid ${formatCurrency(inst.paidAmount || inst.amount)} on ${formatDate(inst.paidDate || inst.dueDate)}`
                             : isHoliday
                             ? `🏖️ Holiday: ${inst.holidayReason || 'Shop / Area'}`
                             : isLeave
@@ -1308,8 +1312,13 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
                     <div className="text-right shrink-0">
                       <p className="text-sm font-black tabular-nums text-[#183653] dark:text-white">
-                        {formatCurrency(inst.amount)}
+                        {formatCurrency(isPaid ? (inst.paidAmount || inst.amount) : inst.amount)}
                       </p>
+                      {isPaid && Number(inst.paidAmount || 0) > Number(inst.amount || 0) && (
+                        <p className="text-[10px] font-bold text-[#0878D1] dark:text-[#55B8F5] tabular-nums">
+                          Due {formatCurrency(inst.amount)} + {formatCurrency(Number(inst.paidAmount) - Number(inst.amount))} extra
+                        </p>
+                      )}
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase inline-block ${
                           isPaid
@@ -1457,7 +1466,12 @@ export const LoanDetail = ({ loanId, onBack }) => {
                       </td>
 
                       <td className="py-2.5 px-3 text-right font-black tabular-nums text-[#18A879]">
-                        {formatCurrency(inst.paidAmount || 0)}
+                        <div>{formatCurrency(inst.paidAmount || 0)}</div>
+                        {Number(inst.paidAmount || 0) > Number(inst.amount || 0) && (
+                          <div className="text-[9px] font-bold text-[#0878D1] dark:text-[#55B8F5]">
+                            +{formatCurrency(Number(inst.paidAmount) - Number(inst.amount))} extra
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-2.5 px-3">
@@ -1717,6 +1731,20 @@ export const LoanDetail = ({ loanId, onBack }) => {
                           const instPart = Math.min(amt, effectiveDue);
                           const extra = Math.max(0, amt - effectiveDue);
                           const newPendingDue = Math.max(0, pendingDue - instPart - extra);
+                          const baseInstAmt = Math.max(
+                            1,
+                            Number(loan?.installmentAmount) || Number(pencilInst.amount) || 200
+                          );
+                          const curRemainingDates = (loan?.schedule || []).filter(
+                            (s) =>
+                              s.installmentNo !== pencilInst.installmentNo &&
+                              s.status !== 'paid' &&
+                              s.status !== 'holiday' &&
+                              s.status !== 'leave' &&
+                              s.status !== 'missed'
+                          ).length;
+                          const newRemainingDates = newPendingDue > 0 ? Math.ceil(newPendingDue / baseInstAmt) : 0;
+                          const reducedDates = Math.max(0, curRemainingDates - newRemainingDates);
                           const dateLabel = pencilDate ? formatDate(pencilDate) : 'Today';
 
                           return (
@@ -1743,6 +1771,15 @@ export const LoanDetail = ({ loanId, onBack }) => {
                                 <span>New Pending Due / மீதி நிலுவை:</span>
                                 <span className="tabular-nums">{formatCurrency(newPendingDue)}</span>
                               </div>
+                              {amt > 0 && (
+                                <div className="flex items-center justify-between text-[11px] font-bold text-[#647C95] dark:text-slate-400">
+                                  <span>Remaining Dates / மீதி தவணைகள்:</span>
+                                  <span className="text-[#183653] dark:text-white tabular-nums">
+                                    {newRemainingDates} × {formatCurrency(baseInstAmt)}
+                                    {reducedDates > 0 ? ` (-${reducedDates} dates reduced)` : ''}
+                                  </span>
+                                </div>
+                              )}
                             </>
                           );
                         })()}
