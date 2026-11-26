@@ -5,6 +5,7 @@ import EMILoan from '../models/EMILoan.js';
 import EMIPayment from '../models/EMIPayment.js';
 import EMIDailyClosing from '../models/EMIDailyClosing.js';
 import EMIAuditLog from '../models/EMIAuditLog.js';
+import EMIProduct from '../models/EMIProduct.js';
 import User from '../models/User.js';
 
 // Helper: Calculate Reducing Balance EMI
@@ -19,42 +20,85 @@ export const calculateReducingEMI = (principal, annualRatePercent, months) => {
   }
 
   const emi = Math.round((p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1));
-  const totalPayable = emi * n;
+  let currBal = p;
+  let totalPayable = 0;
+  for (let i = 1; i <= n; i++) {
+    const intPart = Math.round(currBal * r);
+    const prinPart = i === n ? currBal : Math.min(currBal, Math.max(0, emi - intPart));
+    totalPayable += prinPart + intPart;
+    currBal = Math.max(0, currBal - prinPart);
+  }
   const totalInterest = totalPayable - p;
   return { emi, totalPayable, totalInterest };
 };
 
 // Helper: Calculate Flat Interest EMI
-export const calculateFlatEMI = (principal, annualRatePercent, months) => {
+export const calculateFlatEMI = (principal, annualRatePercent, months, fixedTotalInterest = null) => {
   const p = Number(principal);
-  const totalInterest = Math.round((p * (Number(annualRatePercent) / 100) * (Number(months) / 12)));
+  const n = Number(months);
+  const totalInterest = fixedTotalInterest !== null
+    ? Math.max(0, Math.round(Number(fixedTotalInterest) || 0))
+    : Math.round((p * (Number(annualRatePercent) / 100) * (n / 12)));
   const totalPayable = p + totalInterest;
-  const emi = Math.round(totalPayable / Number(months));
+  const emi = Math.round(totalPayable / n);
   return { emi, totalPayable, totalInterest };
 };
 
-// Helper: Generate Amortization Schedule
-export const generateEMISchedule = (principal, annualRatePercent, months, type = 'reducing', startDate = new Date()) => {
+// Helper: Generate Amortization Schedule (Flat Adjusted Last Row / Manual Fixed Interest / Reducing Balance)
+export const generateEMISchedule = (
+  principal,
+  annualRatePercent,
+  months,
+  type = 'reducing',
+  startDate = new Date(),
+  options = {}
+) => {
   const p = Number(principal);
   const n = Number(months);
   const start = new Date(startDate);
   const schedule = [];
+  const { interestMode = 'rate', interestAmount = 0, interestBasis = 'total' } = options;
 
-  if (type === 'flat') {
-    const { emi, totalInterest } = calculateFlatEMI(p, annualRatePercent, n);
-    const monthlyInterest = Math.round(totalInterest / n);
-    const monthlyPrincipal = emi - monthlyInterest;
+  const isFlat = interestMode === 'amount' || type === 'flat';
+  if (isFlat) {
+    const fixedInt = interestMode === 'amount'
+      ? (interestBasis === 'monthly' ? Math.round(Number(interestAmount || 0) * n) : Math.round(Number(interestAmount || 0)))
+      : null;
+
+    const { emi, totalInterest, totalPayable } = calculateFlatEMI(p, annualRatePercent, n, fixedInt);
+    const baseMonthlyInterest = Math.round(totalInterest / n);
+    let runningEMI = 0;
+    let runningInt = 0;
+    let runningPrin = 0;
 
     for (let i = 1; i <= n; i++) {
       const dueDate = new Date(start);
       dueDate.setMonth(dueDate.getMonth() + i);
 
+      let instAmount;
+      let instInt;
+      let instPrin;
+
+      if (i === n) {
+        instAmount = Math.max(0, totalPayable - runningEMI);
+        instPrin = Math.max(0, p - runningPrin);
+        instInt = instAmount - instPrin;
+      } else {
+        instAmount = emi;
+        instInt = Math.min(baseMonthlyInterest, instAmount);
+        instPrin = instAmount - instInt;
+      }
+
+      runningEMI += instAmount;
+      runningInt += instInt;
+      runningPrin += instPrin;
+
       schedule.push({
         installmentNo: i,
         dueDate,
-        amount: emi,
-        principalPart: monthlyPrincipal,
-        interestPart: monthlyInterest,
+        amount: instAmount,
+        principalPart: instPrin,
+        interestPart: instInt,
         paidAmount: 0,
         penaltyAmount: 0,
         status: 'pending',
@@ -72,14 +116,15 @@ export const generateEMISchedule = (principal, annualRatePercent, months, type =
     const dueDate = new Date(start);
     dueDate.setMonth(dueDate.getMonth() + i);
 
-    const interestPart = Math.round(currentBalance * r);
-    const principalPart = i === n ? currentBalance : (emi - interestPart);
+    const interestPart = r === 0 ? 0 : Math.round(currentBalance * r);
+    const principalPart = i === n ? currentBalance : Math.min(currentBalance, Math.max(0, emi - interestPart));
+    const amount = principalPart + interestPart;
     currentBalance = Math.max(0, currentBalance - principalPart);
 
     schedule.push({
       installmentNo: i,
       dueDate,
-      amount: emi,
+      amount,
       principalPart,
       interestPart,
       paidAmount: 0,
@@ -419,30 +464,96 @@ export const getEMILoanById = async (req, res, next) => {
 };
 
 export const createEMILoan = async (req, res, next) => {
+  let createdCustomerId = null;
+  let createdProductId = null;
+
   try {
     const {
       customerId,
+      customerMode = 'existing',
+      customerEdited = false,
+      customer: customerPayload = null,
       customerName,
       customerPhone,
       customerArea,
       assignedAgentId,
+      product = null,
+      saveProduct = false,
+      charges = [],
+      chargeDeductionMethod = 'collect_separately',
+      interestMode = 'rate',
+      interestAmount = 0,
+      interestBasis = 'total',
+      rate,
+      tenure,
+      method,
       principal,
       interestRatePercent,
       interestCalculationType = 'reducing',
       tenureMonths,
       documentationCharges = 0,
+      latePenaltyPerDay = 0,
+      foreclosurePercent = 0,
       startDate = new Date(),
       notes = '',
     } = req.body;
 
-    if (!principal || interestRatePercent === undefined || !tenureMonths) {
+    const finalTenure = Number(tenure || tenureMonths) || 0;
+    const finalMethod = interestMode === 'amount' ? 'flat' : (method || interestCalculationType || 'reducing');
+    const finalRate = rate !== undefined ? Number(rate) : Number(interestRatePercent || 0);
+
+    // Product EMI support: calculate effective principal from product financeAmount or legacy principal
+    const productPrice = Number(product?.price) || 0;
+    const productDown = Math.max(0, Number(product?.downPayment) || 0);
+    const baseFinance = product?.name
+      ? Math.max(0, productPrice - productDown)
+      : Number(principal || 0);
+
+    // Compute sanction fee charges total & conditional rates
+    const safeCharges = Array.isArray(charges) ? charges : [];
+    const sanctionChargesTotal = safeCharges.reduce((sum, c) => {
+      if (!c?.enabled) return sum;
+      if (c.key === 'late_fee' || c.key === 'foreclosure' || c.isConditionalRate) return sum;
+      return sum + Math.max(0, Number(c.amount) || 0);
+    }, 0) || (Number(documentationCharges) || 0);
+
+    const effectivePrincipal =
+      chargeDeductionMethod === 'add_to_finance'
+        ? baseFinance + sanctionChargesTotal
+        : baseFinance;
+
+    const netDisbursed =
+      chargeDeductionMethod === 'upfront'
+        ? Math.max(0, baseFinance - sanctionChargesTotal)
+        : baseFinance;
+
+    if (!effectivePrincipal || effectivePrincipal <= 0 || !finalTenure || finalTenure < 1) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide principal, interest rate, and tenure months.',
+        message: 'Please provide valid finance amount (> 0) and tenure (>= 1 month).',
       });
     }
 
-    // Lookup existing customer or auto-create a valid EMICustomer when entered manually
+    if (product && (!product.name || !String(product.name).trim() || productPrice <= 0 || baseFinance <= 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product name, price (> 0), and finance amount (> 0) are required.',
+      });
+    }
+
+    if (interestMode === 'amount' && Number(interestAmount) < 0) {
+      return res.status(400).json({ success: false, message: 'Interest amount cannot be negative.' });
+    }
+    if (interestMode === 'rate' && finalRate < 0) {
+      return res.status(400).json({ success: false, message: 'Interest rate cannot be negative.' });
+    }
+
+    const cData = customerPayload || {};
+    const cName = (cData.name || customerName || '').trim();
+    const cPhoneRaw = (cData.phone || customerPhone || '').replace(/\D/g, '');
+    const cArea = (cData.area || customerArea || '').trim();
+
+    // Lookup existing customer cleanly (or create new atomic inside try/rollback)
     let cust = null;
     if (customerId && mongoose.Types.ObjectId.isValid(customerId)) {
       cust = await EMICustomer.findById(customerId);
@@ -450,77 +561,152 @@ export const createEMILoan = async (req, res, next) => {
     if (!cust && customerId && customerId !== 'temp_cust') {
       cust = await EMICustomer.findOne({ clientId: customerId });
     }
-    if (!cust && customerPhone) {
-      cust = await EMICustomer.findOne({ phone: customerPhone.trim() });
+    if (!cust && cPhoneRaw && customerMode !== 'new') {
+      cust = await EMICustomer.findOne({ phone: cPhoneRaw });
     }
 
-    const finalCustomerName = (customerName || (cust ? cust.name : '') || '').trim();
-    if (!finalCustomerName) {
+    const finalCustomerName = (cName || (cust ? cust.name : '') || '').trim();
+    const finalCustomerPhone = (cPhoneRaw || (cust ? cust.phone : '') || '').trim();
+    const finalCustomerArea = (cArea || (cust ? cust.area : '') || '').trim();
+
+    if (!finalCustomerName || !finalCustomerPhone || !finalCustomerArea) {
       return res.status(400).json({
         success: false,
-        message: 'Customer name is required.',
+        message: 'Customer name, 10-digit phone number, and area are required.',
       });
     }
-    const finalCustomerPhone = (customerPhone || (cust ? cust.phone : '') || '0000000000').trim();
-    const finalCustomerArea = (customerArea || (cust ? cust.area : '') || 'Main Area').trim();
 
     let agent = null;
     if (assignedAgentId && mongoose.Types.ObjectId.isValid(assignedAgentId)) {
       agent = await User.findById(assignedAgentId);
-    } else if (!req.user.isOwner) {
+    } else if (!req.user.isOwner && !assignedAgentId) {
       agent = req.user;
-    } else {
-      agent = await User.findOne({ role: 'emi_agent', status: 'active' });
     }
+
+    // Build composed address from door/street/village if provided
+    const composedAddress = [cData.doorNo, cData.street, cData.villageTown, finalCustomerArea]
+      .filter((part) => part && String(part).trim())
+      .join(', ');
 
     if (!cust) {
       cust = await EMICustomer.create({
-        clientId: `emi_cust_${Date.now()}`,
+        clientId: `emi_cust_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         createdBy: req.user._id,
         assignedAgentId: agent ? agent._id : (req.user.isOwner ? null : req.user._id),
         name: finalCustomerName,
         phone: finalCustomerPhone,
-        address: finalCustomerArea,
+        altPhone: (cData.altPhone || '').trim(),
+        fatherOrSpouseName: (cData.fatherOrSpouseName || '').trim(),
+        doorNo: (cData.doorNo || '').trim(),
+        street: (cData.street || '').trim(),
+        villageTown: (cData.villageTown || '').trim(),
+        address: (cData.address || composedAddress || finalCustomerArea).trim(),
         area: finalCustomerArea,
+        occupation: (cData.occupation || '').trim(),
+        photoUrl: cData.photoUrl || '',
+        idProofType: cData.idProofType || 'Aadhaar Card',
+        idProofNumber: (cData.idProofNumber || '').trim(),
+        idProofUrl: cData.idProofUrl || '',
+        guarantor: {
+          name: (cData.guarantor?.name || '').trim(),
+          phone: (cData.guarantor?.phone || '').trim(),
+          relationship: (cData.guarantor?.relationship || '').trim(),
+        },
         status: 'active',
       });
+      createdCustomerId = cust._id;
+    } else if (customerEdited && customerPayload) {
+      cust.name = finalCustomerName;
+      cust.phone = finalCustomerPhone;
+      if (cData.altPhone !== undefined) cust.altPhone = String(cData.altPhone || '').trim();
+      if (cData.fatherOrSpouseName !== undefined) cust.fatherOrSpouseName = String(cData.fatherOrSpouseName || '').trim();
+      if (cData.doorNo !== undefined) cust.doorNo = String(cData.doorNo || '').trim();
+      if (cData.street !== undefined) cust.street = String(cData.street || '').trim();
+      if (cData.villageTown !== undefined) cust.villageTown = String(cData.villageTown || '').trim();
+      cust.area = finalCustomerArea;
+      cust.address = (cData.address || composedAddress || finalCustomerArea).trim();
+      if (cData.occupation !== undefined) cust.occupation = String(cData.occupation || '').trim();
+      if (cData.photoUrl !== undefined && cData.photoUrl) cust.photoUrl = cData.photoUrl;
+      if (cData.idProofNumber !== undefined && !String(cData.idProofNumber).includes('XXXX')) {
+        cust.idProofNumber = String(cData.idProofNumber || '').trim();
+      }
+      if (cData.idProofUrl !== undefined && cData.idProofUrl) cust.idProofUrl = cData.idProofUrl;
+      if (cData.guarantor) {
+        cust.guarantor = {
+          ...(cust.guarantor || {}),
+          name: (cData.guarantor.name || '').trim(),
+          phone: (cData.guarantor.phone || '').trim(),
+          relationship: (cData.guarantor.relationship || '').trim(),
+        };
+      }
+      await cust.save();
     }
 
-    // Calculate Amortization Schedule
+    // Generate schedule using requested rate/amount parameters
     const schedule = generateEMISchedule(
-      principal,
-      interestRatePercent,
-      tenureMonths,
-      interestCalculationType,
-      startDate
+      effectivePrincipal,
+      finalRate,
+      finalTenure,
+      finalMethod,
+      startDate,
+      { interestMode, interestAmount, interestBasis }
     );
 
-    const calcResult = interestCalculationType === 'flat'
-      ? calculateFlatEMI(principal, interestRatePercent, tenureMonths)
-      : calculateReducingEMI(principal, interestRatePercent, tenureMonths);
+    const totalPayable = schedule.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+    const totalInterest = Math.max(0, totalPayable - effectivePrincipal);
+    const emiAmt = schedule.length > 0 ? schedule[0].amount : 0;
+    const computedFlatRate = effectivePrincipal > 0 && finalTenure > 0
+      ? Number((((totalInterest / effectivePrincipal) / (finalTenure / 12)) * 100).toFixed(2))
+      : 0;
+    const storedRate = interestMode === 'amount' ? computedFlatRate : finalRate;
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const emiNo = `EMI-${new Date().getFullYear().toString().slice(-2)}-${randomSuffix}`;
     const endDate = schedule[schedule.length - 1].dueDate;
 
+    const lateFeeCard = safeCharges.find((c) => c.key === 'late_fee' && c.enabled);
+    const foreclosureCard = safeCharges.find((c) => c.key === 'foreclosure' && c.enabled);
+
     const emiLoan = await EMILoan.create({
       emiNo,
-      customerId: cust ? cust._id : customerId,
+      customerId: cust._id,
       customerName: finalCustomerName,
       customerPhone: finalCustomerPhone,
       customerArea: finalCustomerArea,
-      assignedAgentId: agent ? agent._id : (req.user.isOwner ? null : req.user._id),
-      assignedAgentName: agent ? agent.name : (req.user.isOwner ? 'Unassigned' : req.user.name),
-      principal: Number(principal),
-      interestRatePercent: Number(interestRatePercent),
-      interestCalculationType,
-      tenureMonths: Number(tenureMonths),
-      documentationCharges: Number(documentationCharges) || 0,
-      installmentAmount: calcResult.emi,
-      totalPayable: calcResult.totalPayable,
-      totalInterest: calcResult.totalInterest,
+      assignedAgentId: agent ? agent._id : null,
+      assignedAgentName: agent ? agent.name : 'Unassigned (office)',
+      principal: effectivePrincipal,
+      interestRatePercent: storedRate,
+      interestCalculationType: finalMethod,
+      interestMode,
+      interestAmount: Number(interestAmount) || 0,
+      interestBasis,
+      method: finalMethod,
+      product: product
+        ? {
+            name: String(product.name || '').trim(),
+            brandModel: String(product.brandModel || '').trim(),
+            category: String(product.category || '').trim(),
+            serialImei: String(product.serialImei || '').trim(),
+            serialPhotoUrl: product.serialPhotoUrl || '',
+            price: productPrice,
+            downPayment: productDown,
+            financeAmount: baseFinance,
+          }
+        : undefined,
+      charges: safeCharges,
+      totalCharges: sanctionChargesTotal,
+      chargeDeductionMethod,
+      netDisbursed,
+      foreclosurePercent: Number(foreclosurePercent || foreclosureCard?.amount || 0),
+      latePenaltyPerDay: Number(latePenaltyPerDay || lateFeeCard?.amount || 0),
+      tenureMonths: finalTenure,
+      documentationCharges: sanctionChargesTotal,
+      installmentAmount: emiAmt,
+      totalPayable,
+      totalInterest,
       totalCollected: 0,
-      remainingBalance: calcResult.totalPayable,
+      remainingBalance: totalPayable,
       startDate: new Date(startDate),
       endDate,
       status: 'active',
@@ -529,20 +715,106 @@ export const createEMILoan = async (req, res, next) => {
       createdBy: req.user._id,
     });
 
+    if (saveProduct && product?.name) {
+      const cleanName = String(product.name).trim();
+      const cleanBrand = String(product.brandModel || '').trim();
+      const existingProd = await EMIProduct.findOne({
+        name: new RegExp(`^${cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+        brandModel: cleanBrand,
+      });
+      if (existingProd) {
+        existingProd.category = String(product.category || existingProd.category || '').trim();
+        existingProd.price = productPrice > 0 ? productPrice : existingProd.price;
+        existingProd.lastUsedAt = new Date();
+        await existingProd.save();
+      } else {
+        const savedProd = await EMIProduct.create({
+          name: cleanName,
+          brandModel: cleanBrand,
+          category: String(product.category || '').trim(),
+          price: productPrice,
+          createdBy: req.user._id,
+          lastUsedAt: new Date(),
+        });
+        createdProductId = savedProd._id;
+      }
+    }
+
     await EMIAuditLog.create({
       action: 'CREATE_EMI',
       actorId: req.user._id,
       actorName: req.user.name,
       actorRole: req.user.role,
       emiLoanId: emiLoan._id,
-      details: { emiNo, principal, tenureMonths, interestRatePercent },
+      details: {
+        emiNo,
+        principal: effectivePrincipal,
+        tenureMonths: finalTenure,
+        interestRatePercent: storedRate,
+        interestMode,
+        productName: product?.name || '',
+      },
     });
+
+    const populatedLoan = await EMILoan.findById(emiLoan._id)
+      .populate('customerId')
+      .populate('assignedAgentId', 'name username phone');
 
     res.status(201).json({
       success: true,
       message: 'New EMI loan sanctioned successfully',
-      loan: emiLoan,
+      loan: populatedLoan || emiLoan,
+      customer: cust,
     });
+  } catch (error) {
+    // Atomic rollback if any step failed after creating customer/product
+    try {
+      if (createdCustomerId) await EMICustomer.findByIdAndDelete(createdCustomerId);
+      if (createdProductId) await EMIProduct.findByIdAndDelete(createdProductId);
+    } catch (rollbackErr) {
+      console.error('[EMI Atomic Rollback Error]:', rollbackErr);
+    }
+    next(error);
+  }
+};
+
+export const getEMIProducts = async (req, res, next) => {
+  try {
+    const products = await EMIProduct.find({}).sort({ lastUsedAt: -1, createdAt: -1 }).limit(200);
+    res.status(200).json({ success: true, products });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const saveEMIProduct = async (req, res, next) => {
+  try {
+    const { name, brandModel = '', category = '', price = 0 } = req.body;
+    const cleanName = String(name || '').trim();
+    if (!cleanName) {
+      return res.status(400).json({ success: false, message: 'Product name is required' });
+    }
+    const cleanBrand = String(brandModel || '').trim();
+    const existing = await EMIProduct.findOne({
+      name: new RegExp(`^${cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      brandModel: cleanBrand,
+    });
+    if (existing) {
+      existing.category = String(category || existing.category || '').trim();
+      if (Number(price) > 0) existing.price = Number(price);
+      existing.lastUsedAt = new Date();
+      await existing.save();
+      return res.status(200).json({ success: true, product: existing });
+    }
+    const product = await EMIProduct.create({
+      name: cleanName,
+      brandModel: cleanBrand,
+      category: String(category || '').trim(),
+      price: Number(price) || 0,
+      createdBy: req.user._id,
+      lastUsedAt: new Date(),
+    });
+    res.status(201).json({ success: true, product });
   } catch (error) {
     next(error);
   }
@@ -1161,7 +1433,7 @@ export const getEMIPayments = async (req, res, next) => {
 
     const query = andConditions.length > 0 ? { $and: andConditions } : {};
     const payments = await EMIPayment.find(query)
-      .populate('emiLoanId', 'emiNo principal installmentAmount customerPhone customerArea remainingBalance')
+      .populate('emiLoanId', 'emiNo principal installmentAmount customerPhone customerArea remainingBalance product')
       .sort({ paymentDate: -1, createdAt: -1 })
       .limit(Number(limit));
 
@@ -1170,6 +1442,7 @@ export const getEMIPayments = async (req, res, next) => {
       return {
         ...obj,
         loanNo: obj.emiLoanId?.emiNo || 'EMI',
+        product: obj.emiLoanId?.product || null,
         customerPhone: obj.emiLoanId?.customerPhone || '',
         customerArea: obj.emiLoanId?.customerArea || '',
         installmentNo: Array.isArray(obj.installmentNos) && obj.installmentNos.length > 0 ? obj.installmentNos.join(', ') : '1',

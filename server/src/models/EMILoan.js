@@ -105,7 +105,7 @@ const emiLoanSchema = new mongoose.Schema(
     principal: {
       type: Number,
       required: true,
-      min: 500,
+      min: 1,
     },
     interestRatePercent: {
       type: Number,
@@ -116,6 +116,63 @@ const emiLoanSchema = new mongoose.Schema(
       type: String,
       enum: ['reducing', 'flat'],
       default: 'reducing',
+    },
+    interestMode: {
+      type: String,
+      enum: ['rate', 'amount'],
+      default: 'rate',
+    },
+    interestAmount: {
+      type: Number,
+      default: 0,
+    },
+    interestBasis: {
+      type: String,
+      enum: ['total', 'monthly'],
+      default: 'total',
+    },
+    method: {
+      type: String,
+      enum: ['reducing', 'flat'],
+      default: 'reducing',
+    },
+    product: {
+      name: { type: String, trim: true, default: '' },
+      brandModel: { type: String, trim: true, default: '' },
+      category: { type: String, trim: true, default: '' },
+      serialImei: { type: String, trim: true, default: '' },
+      serialPhotoUrl: { type: String, default: '' },
+      price: { type: Number, default: 0 },
+      downPayment: { type: Number, default: 0 },
+      financeAmount: { type: Number, default: 0 },
+    },
+    charges: [
+      {
+        key: { type: String, default: '' },
+        label: { type: String, default: '' },
+        labelTa: { type: String, default: '' },
+        amount: { type: Number, default: 0 },
+        inputValue: { type: Number, default: 0 },
+        chargeType: { type: String, enum: ['fixed', 'percent'], default: 'fixed' },
+        enabled: { type: Boolean, default: false },
+      },
+    ],
+    totalCharges: {
+      type: Number,
+      default: 0,
+    },
+    chargeDeductionMethod: {
+      type: String,
+      enum: ['upfront', 'add_to_finance', 'collect_separately'],
+      default: 'collect_separately',
+    },
+    netDisbursed: {
+      type: Number,
+      default: 0,
+    },
+    foreclosurePercent: {
+      type: Number,
+      default: 0,
     },
     tenureMonths: {
       type: Number,

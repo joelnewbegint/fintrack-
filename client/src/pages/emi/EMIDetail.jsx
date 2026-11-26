@@ -84,6 +84,8 @@ export const EMIDetail = ({
     const printWindow = window.open('', '_blank', 'width=350,height=550');
     if (!printWindow) return;
     const instLabel = formatInstNos(p);
+    const prod = loan?.product;
+    const prodLabel = prod?.name ? `${prod.name}${prod.brandModel ? ` (${prod.brandModel})` : ''}` : '';
     printWindow.document.write(`
       <html>
         <head>
@@ -107,6 +109,8 @@ export const EMIDetail = ({
           <div class="row"><span>EMI No:</span><span class="bold">${loan?.emiNo || 'N/A'}</span></div>
           <div class="row"><span>Customer:</span><span class="bold">${loan?.customerName || 'N/A'}</span></div>
           <div class="row"><span>Phone:</span><span>${loan?.customerPhone || 'N/A'}</span></div>
+          ${prodLabel ? `<div class="row"><span>Product:</span><span class="bold">${prodLabel}</span></div>` : ''}
+          ${prod?.serialImei ? `<div class="row"><span>Serial/IMEI:</span><span>${prod.serialImei}</span></div>` : ''}
           <div class="divider"></div>
           <div class="row"><span>Installment:</span><span>#${instLabel}</span></div>
           <div class="row"><span>Payment Mode:</span><span class="bold" style="text-transform:uppercase;">${p.mode || 'cash'}</span></div>
@@ -131,12 +135,16 @@ export const EMIDetail = ({
       return;
     }
     const instLabel = formatInstNos(p);
+    const prod = loan?.product;
+    const prodLine = prod?.name
+      ? `• *Product:* ${prod.name}${prod.brandModel ? ` (${prod.brandModel})` : ''}\n`
+      : '';
     const msg = `🧾 *VK BANKER'S & FINANCE - EMI RECEIPT*
 ──────────────────────
 • *Receipt No:* ${p.receiptNo || 'N/A'}
 • *Loan No:* ${loan.emiNo}
 • *Customer:* ${loan.customerName}
-• *Installment:* #${instLabel}
+${prodLine}• *Installment:* #${instLabel}
 • *Paid Amount:* ₹${Number(p.amount || 0).toLocaleString('en-IN')}
 • *Mode:* ${(p.mode || 'cash').toUpperCase()}
 • *Date:* ${new Date(p.paymentDate).toLocaleDateString()}
@@ -717,13 +725,70 @@ VK Banker's & Finance, Coimbatore`;
                 <span className="font-bold text-[#0878D1] uppercase">{loan.interestCalculationType || 'reducing'}</span>
               </div>
               <div className="flex justify-between py-1.5">
-                <span className="text-[#647C95]">Doc Charges:</span>
+                <span className="text-[#647C95]">Doc / Total Charges:</span>
                 <span className="font-bold text-[#183653] tabular-nums">
-                  ₹{(loan.documentationCharges || 0).toLocaleString('en-IN')}
+                  ₹{(loan.totalCharges ?? loan.documentationCharges ?? 0).toLocaleString('en-IN')}
                 </span>
               </div>
             </div>
           </div>
+
+          {loan.product?.name && (
+            <div className="glass-card rounded-[24px] p-5 border border-[#D5E9FA]/80 space-y-3">
+              <h3 className="text-xs font-bold text-[#183653] uppercase tracking-wider">
+                Product Information / பொருள் விவரம்
+              </h3>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between py-1.5 border-b border-[#D5E9FA]/60">
+                  <span className="text-[#647C95]">Product:</span>
+                  <span className="font-bold text-[#183653] text-right">
+                    {loan.product.name}
+                    {loan.product.brandModel ? ` (${loan.product.brandModel})` : ''}
+                  </span>
+                </div>
+                {loan.product.category && (
+                  <div className="flex justify-between py-1.5 border-b border-[#D5E9FA]/60">
+                    <span className="text-[#647C95]">Category:</span>
+                    <span className="font-semibold text-[#183653]">{loan.product.category}</span>
+                  </div>
+                )}
+                {loan.product.serialImei && (
+                  <div className="flex justify-between py-1.5 border-b border-[#D5E9FA]/60">
+                    <span className="text-[#647C95]">Serial / IMEI:</span>
+                    <span className="font-mono font-bold text-[#0878D1]">{loan.product.serialImei}</span>
+                  </div>
+                )}
+                <div className="flex justify-between py-1.5 border-b border-[#D5E9FA]/60">
+                  <span className="text-[#647C95]">Product Price:</span>
+                  <span className="font-bold text-[#183653] tabular-nums">
+                    ₹{(loan.product.price || 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-[#D5E9FA]/60">
+                  <span className="text-[#647C95]">Down Payment:</span>
+                  <span className="font-bold text-[#18A879] tabular-nums">
+                    ₹{(loan.product.downPayment || 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-[#647C95]">Finance Amount:</span>
+                  <span className="font-black text-[#0878D1] tabular-nums">
+                    ₹{(loan.product.financeAmount || loan.principal || 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
+                {loan.product.serialPhotoUrl && (
+                  <div className="pt-2 border-t border-[#D5E9FA]/60">
+                    <img
+                      src={loan.product.serialPhotoUrl}
+                      alt="Serial / Product"
+                      className="w-full max-h-36 object-cover rounded-xl border border-[#D5E9FA]"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1002,6 +1067,15 @@ VK Banker's & Finance, Coimbatore`;
                 <span>Loan Account:</span>
                 <span className="font-mono font-bold text-[#0878D1]">{loan.emiNo}</span>
               </div>
+              {loan.product?.name && (
+                <div className="flex justify-between text-[#647C95]">
+                  <span>Product:</span>
+                  <span className="font-bold text-[#183653]">
+                    {loan.product.name}
+                    {loan.product.brandModel ? ` (${loan.product.brandModel})` : ''}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between text-[#647C95]">
                 <span>Installment:</span>
                 <span className="font-semibold text-[#183653]">#{formatInstNos(selectedReceiptForPopup)}</span>

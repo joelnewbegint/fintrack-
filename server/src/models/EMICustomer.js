@@ -41,16 +41,41 @@ const emiCustomerSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    fatherOrSpouseName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    doorNo: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    street: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    villageTown: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     address: {
       type: String,
-      required: [true, 'Address is required'],
       trim: true,
+      default: '',
     },
     area: {
       type: String,
       required: [true, 'Area / Location is required'],
       trim: true,
       index: true,
+    },
+    occupation: {
+      type: String,
+      trim: true,
+      default: '',
     },
     photoUrl: {
       type: String,

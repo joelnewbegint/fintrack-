@@ -627,18 +627,20 @@ export function App() {
           )}
 
           {/* EMI Modals */}
-          <NewEMILoanModal
-            isOpen={showNewEMILoanModal}
-            onClose={() => setShowNewEMILoanModal(false)}
-            onSuccess={() => {
-              setShowNewEMILoanModal(false);
-              setEmiListFilter('active');
-              navigateEmiTab('list');
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('fintrack:emi-updated'));
-              }
-            }}
-          />
+          {showNewEMILoanModal && (
+            <NewEMILoanModal
+              isOpen={showNewEMILoanModal}
+              onClose={() => setShowNewEMILoanModal(false)}
+              onSuccess={() => {
+                setShowNewEMILoanModal(false);
+                setEmiListFilter('active');
+                navigateEmiTab('list');
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('fintrack:emi-updated'));
+                }
+              }}
+            />
+          )}
 
           <CollectEMIModal
             isOpen={showGlobalEmiPayModal}
@@ -978,16 +980,7 @@ export function App() {
         />
       )}
 
-      {/* EMI Modals */}
-      <NewEMILoanModal
-        isOpen={showNewEMILoanModal}
-        onClose={() => setShowNewEMILoanModal(false)}
-        onSuccess={() => {
-          setShowNewEMILoanModal(false);
-          setActiveTab('emiList');
-        }}
-      />
-
+      {/* EMI Collection Modal */}
       <CollectEMIModal
         isOpen={showGlobalEmiPayModal}
         loanItem={globalEmiPayItem}

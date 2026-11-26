@@ -16,6 +16,8 @@ import {
   createEMICustomer,
   updateEMICustomer,
   deleteEMICustomer,
+  getEMIProducts,
+  saveEMIProduct,
   clearEMIData,
   exportEMIExcelReport,
 } from '../controllers/emiController.js';
@@ -35,6 +37,10 @@ router.get('/customers', getEMICustomers);
 router.post('/customers', createEMICustomer);
 router.put('/customers/:id', updateEMICustomer);
 router.delete('/customers/:id', restrictTo('owner'), deleteEMICustomer);
+
+// Saved Products Catalog (for Product EMI autocomplete)
+router.get('/products', getEMIProducts);
+router.post('/products', saveEMIProduct);
 
 // EMI Loans
 router.get('/loans', getEMILoans);

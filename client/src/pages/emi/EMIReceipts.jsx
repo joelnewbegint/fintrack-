@@ -118,6 +118,8 @@ export const EMIReceipts = ({ onViewLoan }) => {
       Array.isArray(r.installmentNos) && r.installmentNos.length > 0
         ? r.installmentNos.join(', ')
         : r.installmentNo || '1';
+    const prod = r.product || r.emiLoanId?.product;
+    const prodLabel = prod?.name ? `${prod.name}${prod.brandModel ? ` (${prod.brandModel})` : ''}` : '';
     printWindow.document.write(`
       <html>
         <head>
@@ -142,6 +144,8 @@ export const EMIReceipts = ({ onViewLoan }) => {
           <div class="row"><span>Customer:</span><span class="bold">${r.customerName}</span></div>
           <div class="row"><span>Phone:</span><span>${r.customerPhone || '-'}</span></div>
           <div class="row"><span>Area:</span><span>${r.customerArea || '-'}</span></div>
+          ${prodLabel ? `<div class="row"><span>Product:</span><span class="bold">${prodLabel}</span></div>` : ''}
+          ${prod?.serialImei ? `<div class="row"><span>Serial/IMEI:</span><span>${prod.serialImei}</span></div>` : ''}
           <div class="divider"></div>
           <div class="row"><span>Installment No:</span><span>#${instLabel}</span></div>
           <div class="row"><span>Payment Mode:</span><span class="bold">${(r.mode || 'cash').toUpperCase()}</span></div>
@@ -163,10 +167,13 @@ export const EMIReceipts = ({ onViewLoan }) => {
       alert('Customer mobile number is not available');
       return;
     }
+    const prod = r.product || r.emiLoanId?.product;
+    const prodLine = prod?.name ? `பொருள் / Product: *${prod.name}${prod.brandModel ? ` (${prod.brandModel})` : ''}*\n` : '';
     const msg =
       `*VK BANKER'S & FINANCE | தவணை ரசீது*\n\n` +
       `அன்புள்ள *${r.customerName}*,\n` +
       `தங்களின் EMI கடன் எண்: *${r.loanNo}*\n` +
+      prodLine +
       `ரசீது எண்: *${r.receiptNo || 'N/A'}*\n` +
       `செலுத்திய தொகை: *₹${(Number(r.amount) || 0).toLocaleString('en-IN')}* (${(r.mode || 'cash').toUpperCase()})\n` +
       `தேதி: *${new Date(r.paymentDate || r.createdAt).toLocaleDateString('en-IN')}*\n\n` +
@@ -278,6 +285,7 @@ export const EMIReceipts = ({ onViewLoan }) => {
                   ? r.installmentNos.join(', ')
                   : r.installmentNo || '1';
               const targetLoanId = r.emiLoanId?._id || r.emiLoanId;
+              const receiptProduct = r.product || r.emiLoanId?.product;
 
               return (
                 <div
@@ -327,6 +335,7 @@ export const EMIReceipts = ({ onViewLoan }) => {
                       <p className="text-[11px] text-[#647C95] mt-0.5 font-mono">
                         Receipt: <span className="font-bold text-[#183653]">{r.receiptNo || 'N/A'}</span> • Inst #{instLabel} •{' '}
                         {new Date(r.paymentDate || r.createdAt).toLocaleDateString('en-IN')}
+                        {receiptProduct?.name ? ` • ${receiptProduct.name}` : ''}
                       </p>
                     </div>
                   </div>

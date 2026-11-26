@@ -95,18 +95,29 @@ export const generateEMIAgreementPdf = (loan, customer = {}) => {
     styles: { fontSize: 9, cellPadding: 5 },
   });
 
-  // 2. Loan & EMI Terms Table
+  // 2. Product, Loan & EMI Terms Table
+  const productRows = loan.product?.name
+    ? [
+        ['Product Name / பொருள்', `${loan.product.name}${loan.product.brandModel ? ` (${loan.product.brandModel})` : ''}`],
+        ...(loan.product.category ? [['Category / வகை', loan.product.category]] : []),
+        ...(loan.product.serialImei ? [['Serial / IMEI', loan.product.serialImei]] : []),
+        ['Product Price / பொருள் விலை', formatPdfCurrency(loan.product.price || 0)],
+        ['Down Payment / முன்பணம்', formatPdfCurrency(loan.product.downPayment || 0)],
+      ]
+    : [];
+
   const finalY1 = doc.lastAutoTable.finalY + 15;
   doc.autoTable({
     startY: finalY1,
     head: [['Loan Parameter / கடன் விதிமுறை', 'Agreed Terms / நிர்ணயிக்கப்பட்ட தொகை']],
     body: [
-      ['Principal Sanctioned / அசல் தொகை', principal],
+      ...productRows,
+      ['Finance / Principal Sanctioned / கடன் தொகை', principal],
       ['Interest Rate / வட்டி விகிதம்', rate],
       ['Tenure / தவணை காலம்', tenure],
       ['Monthly Installment (EMI) / மாத தவணை', emiAmount],
       ['Total Repayable / மொத்த திருப்பிச் செலுத்தும் தொகை', totalPayable],
-      ['Documentation & Processing Fee / ஆவணக் கட்டணம்', formatPdfCurrency(loan.documentationCharges || 0)],
+      ['Total Charges / கட்டணங்கள்', formatPdfCurrency(loan.totalCharges ?? loan.documentationCharges ?? 0)],
     ],
     theme: 'grid',
     headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' },

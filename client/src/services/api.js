@@ -2535,6 +2535,34 @@ export const api = {
     return { success: false, loan: null, error: res.error };
   },
 
+  getEMIProducts: async () => {
+    const res = await safeFetchJson('/api/emi/products', { headers: getHeaders() });
+    if (res.ok && Array.isArray(res.data?.products)) {
+      try {
+        localStorage.setItem('fintrack_emi_products', JSON.stringify(res.data.products));
+      } catch (e) {}
+      return { success: true, products: res.data.products };
+    }
+    try {
+      const cached = JSON.parse(localStorage.getItem('fintrack_emi_products') || '[]');
+      return { success: true, products: Array.isArray(cached) ? cached : [] };
+    } catch (e) {
+      return { success: false, products: [] };
+    }
+  },
+
+  saveEMIProduct: async (productData) => {
+    const res = await safeFetchJson('/api/emi/products', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(productData),
+    });
+    if (res.ok && res.data?.product) {
+      return { success: true, product: res.data.product };
+    }
+    throw new Error(res.error || res.data?.message || 'Failed to save product');
+  },
+
   createEMILoan: async (loanData) => {
     const res = await safeFetchJson('/api/emi/loans', {
       method: 'POST',
@@ -2542,7 +2570,25 @@ export const api = {
       body: JSON.stringify(loanData),
     });
     if (res.ok && res.data?.loan) {
-      return { success: true, loan: res.data.loan, message: res.data.message };
+      if (loanData.saveProduct && loanData.product?.name) {
+        try {
+          const cached = JSON.parse(localStorage.getItem('fintrack_emi_products') || '[]');
+          const next = [
+            {
+              _id: `prod_${Date.now()}`,
+              name: loanData.product.name,
+              brandModel: loanData.product.brandModel || '',
+              category: loanData.product.category || '',
+              price: Number(loanData.product.price) || 0,
+            },
+            ...(Array.isArray(cached) ? cached : []).filter(
+              (p) => (p.name || '').toLowerCase() !== loanData.product.name.toLowerCase()
+            ),
+          ];
+          localStorage.setItem('fintrack_emi_products', JSON.stringify(next.slice(0, 200)));
+        } catch (e) {}
+      }
+      return { success: true, loan: res.data.loan, customer: res.data.customer, message: res.data.message };
     }
     throw new Error(res.error || res.data?.message || 'Failed to create EMI loan');
   },
