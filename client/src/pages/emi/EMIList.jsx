@@ -13,8 +13,10 @@ import {
   CheckCircle,
   User,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import { openWhatsApp, generateEMIWhatsAppMessage } from '../../utils/emiWhatsapp';
+import ImportEMICSVModal from './ImportEMICSVModal';
 
 export const EMIList = ({
   initialTab = 'active',
@@ -32,6 +34,7 @@ export const EMIList = ({
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [counts, setCounts] = useState({ due_today: 0, active: 0, overdue: 0, completed: 0, all: 0 });
 
   useEffect(() => {
@@ -150,7 +153,16 @@ export const EMIList = ({
           </h1>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="h-10 px-3.5 rounded-xl bg-white/85 hover:bg-[#EAF5FF] border border-[#D5E9FA] text-xs font-bold text-[#0A4FA3] transition flex items-center space-x-1.5 shadow-xs"
+          >
+            <Upload className="w-4 h-4 text-[#0878D1]" />
+            <span>Import CSV</span>
+          </button>
+
           <button
             type="button"
             onClick={handleExportExcel}
@@ -484,6 +496,15 @@ export const EMIList = ({
           })}
         </div>
       )}
+
+      <ImportEMICSVModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={() => {
+          fetchLoans(false);
+          fetchCounts();
+        }}
+      />
     </div>
   );
 };
