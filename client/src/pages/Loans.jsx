@@ -724,7 +724,7 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
                   className="text-sky-600 hover:text-sky-700 hover:underline flex items-center space-x-1 font-bold"
                 >
                   <Archive className="w-3.5 h-3.5" />
-                  <span>{lang === 'ta' ? 'முடிந்த கடன்கள் காப்பகம்' : 'Closed Loans Archive'} ({overallSummary?.overall?.closedLoansCount ?? 0}) →</span>
+                  <span>{lang === 'ta' ? 'முடிந்த & தீர்க்கப்பட்ட கடன்கள்' : 'Closed & Settled'} ({overallSummary?.overall?.closedLoansCount ?? 0}) →</span>
                 </button>
               </div>
 
@@ -1061,7 +1061,7 @@ export const Loans = ({ initialType = 'all', onViewLoan, onSelectScheme }) => {
             title="View Closed Loans Archive"
           >
             <Archive className="w-3.5 h-3.5 text-slate-500" />
-            <span>{lang === 'ta' ? 'முடிந்த கடன்கள்' : 'Closed Loans'} ({overallSummary?.overall?.closedLoansCount ?? chipCounts.closed}) →</span>
+            <span>{lang === 'ta' ? 'முடிந்த & தீர்க்கப்பட்டவை' : 'Closed & Settled'} ({overallSummary?.overall?.closedLoansCount ?? chipCounts.closed}) →</span>
           </button>
 
           <div className="text-xs text-slate-500 dark:text-slate-400 ml-auto">

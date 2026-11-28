@@ -195,8 +195,8 @@ export const Sidebar = ({
     },
     {
       id: 'closed',
-      en: 'Closed Loans',
-      ta: 'முடிந்த கடன்கள்',
+      en: 'Closed & Settled',
+      ta: 'முடிந்த & தீர்க்கப்பட்டவை',
       icon: Archive,
       count: loanCounts.closed,
       isActive: activeTab === 'closed-loans',

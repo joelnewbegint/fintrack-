@@ -793,7 +793,7 @@ export function App() {
                   onOpenNewCustomer={() => setShowGlobalCustomerModal(true)}
                   onOpenInvestment={() => setShowGlobalInvestmentModal(true)}
                   onOpenExpenses={() => setActiveTab('expenses')}
-                  onNavigateTab={(tab) => setActiveTab(tab)}
+                  onNavigateTab={handleTabChange}
                 />
               )}
 
@@ -833,7 +833,10 @@ export function App() {
                     try { window.history.pushState({}, '', '/loans'); } catch (e) {}
                     setActiveTab('loans');
                   }}
-                  onViewLoan={(id) => setSelectedLoanId(id)}
+                  onViewLoan={(id) => {
+                    setSelectedLoanId(id);
+                    try { window.history.pushState({}, '', `/loans/${id}`); } catch (e) {}
+                  }}
                 />
               )}
 

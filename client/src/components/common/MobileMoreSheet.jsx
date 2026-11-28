@@ -247,7 +247,7 @@ export const MobileMoreSheet = ({
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-900 dark:text-white">
-                      {lang === 'ta' ? 'முடிந்த கடன்கள் (Closed)' : 'Closed Loans Archive'}
+                      {lang === 'ta' ? 'முடிந்த & தீர்க்கப்பட்டவை' : 'Closed & Settled Loans'}
                     </p>
                     <p className="text-[10px] text-slate-400">/loans/closed</p>
                   </div>
