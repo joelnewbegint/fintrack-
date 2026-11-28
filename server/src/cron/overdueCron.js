@@ -3,6 +3,7 @@ import Loan from '../models/Loan.js';
 import Settings from '../models/Settings.js';
 import AuditLog from '../models/AuditLog.js';
 import { emailBackup } from '../services/backupService.js';
+import { getEffectiveDueDate, isInstallmentPayable } from '../utils/installmentHelpers.js';
 
 export const checkOverdueLoans = async () => {
   try {
@@ -26,8 +27,9 @@ export const checkOverdueLoans = async () => {
       let loanPenalties = 0;
 
       for (const inst of loan.schedule) {
-        if (inst.status !== 'paid' && inst.status !== 'holiday' && inst.status !== 'missed') {
-          const dueDate = new Date(inst.dueDate);
+        if (isInstallmentPayable(inst)) {
+          const dueDate = getEffectiveDueDate(inst);
+          if (!dueDate) continue;
           const graceDueDate = new Date(dueDate);
           graceDueDate.setDate(graceDueDate.getDate() + graceDays);
 

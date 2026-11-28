@@ -309,22 +309,90 @@ export const api = {
     const collectedToday = todayPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
     const expectedToday = activeLoans.reduce((sum, l) => sum + (l.installmentAmount || 0), 0);
-    const overdueLoans = activeLoans.filter((l) => (l.overdueDays || 0) > 0);
-    const overdueAmount = overdueLoans.reduce((sum, l) => sum + (l.installmentAmount || 0) * (l.overdueDays || 1), 0);
+    const isInstExempt = (inst) => inst?.status === 'holiday' || inst?.status === 'leave' || inst?.status === 'missed';
+    const isInstPayable = (inst) => inst && inst.status !== 'paid' && !isInstExempt(inst);
+    const getEffDueStr = (inst) => {
+      const raw = inst?.rescheduled_due_date || inst?.dueDate;
+      return raw ? String(raw).slice(0, 10) : '';
+    };
 
-    const todayDueFormatted = activeLoans.map((l) => ({
-      loanId: l._id,
-      loanNo: l.loanNo,
-      customerName: l.customerName,
-      customerPhone: l.customerPhone,
-      customerArea: l.area,
-      installmentAmount: l.installmentAmount,
-      dueAmount: l.installmentAmount,
-      financeType: l.financeType || 'daily',
-      status: l.status,
-      isPaidToday: todayPayments.some((p) => p.loanId === l._id),
-      dueDate: new Date().toISOString(),
-    }));
+    let fallbackTotalDue = 0;
+    let fallbackOverdueCount = 0;
+    let fallbackNextCollection = null;
+    const todayDueFormatted = [];
+    const derivedOverdueLoans = [];
+
+    activeLoans.forEach((l) => {
+      let hasOverdueInst = false;
+      const sched = Array.isArray(l.schedule) ? l.schedule : [];
+      if (sched.length > 0) {
+        sched.forEach((inst) => {
+          if (!isInstPayable(inst)) return;
+          const effStr = getEffDueStr(inst);
+          const pendingAmt = Math.max(0, (Number(inst.amount) || 0) - (Number(inst.paidAmount) || 0));
+          const isOver = effStr && effStr < todayStr;
+          const isToday = effStr === todayStr;
+
+          if (!isOver && pendingAmt > 0 && effStr) {
+            if (!fallbackNextCollection || effStr < String(fallbackNextCollection.dueDate).slice(0, 10)) {
+              fallbackNextCollection = {
+                loanId: l._id,
+                loanNo: l.loanNo,
+                customerName: l.customerName,
+                installmentNo: inst.installmentNo,
+                dueDate: inst.rescheduled_due_date || inst.dueDate,
+                amount: pendingAmt,
+              };
+            }
+          }
+          if (isOver) {
+            hasOverdueInst = true;
+            fallbackOverdueCount += 1;
+          }
+          if (isToday || isOver) {
+            fallbackTotalDue += pendingAmt;
+            todayDueFormatted.push({
+              loanId: l._id,
+              loanNo: l.loanNo,
+              customerName: l.customerName,
+              customerPhone: l.customerPhone,
+              customerArea: l.area,
+              installmentNo: inst.installmentNo,
+              installmentAmount: inst.amount || l.installmentAmount,
+              dueAmount: pendingAmt,
+              financeType: l.financeType || 'daily',
+              status: inst.status,
+              isOverdue: isOver,
+              dueDate: inst.rescheduled_due_date || inst.dueDate,
+            });
+          }
+        });
+      } else {
+        fallbackTotalDue += Number(l.installmentAmount) || 0;
+        if ((l.overdueDays || 0) > 0) {
+          hasOverdueInst = true;
+          fallbackOverdueCount += 1;
+        }
+        todayDueFormatted.push({
+          loanId: l._id,
+          loanNo: l.loanNo,
+          customerName: l.customerName,
+          customerPhone: l.customerPhone,
+          customerArea: l.area,
+          installmentAmount: l.installmentAmount,
+          dueAmount: l.installmentAmount,
+          financeType: l.financeType || 'daily',
+          status: l.status,
+          isOverdue: (l.overdueDays || 0) > 0,
+          isPaidToday: todayPayments.some((p) => p.loanId === l._id),
+          dueDate: new Date().toISOString(),
+        });
+      }
+      if (hasOverdueInst) derivedOverdueLoans.push(l);
+    });
+
+    const overdueLoans = derivedOverdueLoans;
+    const overdueAmount = overdueLoans.reduce((sum, l) => sum + (l.installmentAmount || 0) * (l.overdueDays || 1), 0);
 
     const expenses = getStored(STORAGE_KEYS.EXPENSES, initialExpenses);
     const totalExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
@@ -452,6 +520,16 @@ export const api = {
         activeLoans: activeLoans.length,
         overdueLoans: overdueLoans.length,
         completedLoans: completedLoans.length,
+        totalDue: fallbackTotalDue,
+      },
+      todayStats: {
+        collectedToday,
+        todayPaymentsCount: todayPayments.length,
+        dueCount: todayDueFormatted.length,
+        totalDue: fallbackTotalDue,
+        overdueCount: fallbackOverdueCount,
+        overdueLoansCount: overdueLoans.length,
+        nextCollection: fallbackNextCollection,
       },
       financeTypes: financeTypesMap,
       financeTypeSplit: [

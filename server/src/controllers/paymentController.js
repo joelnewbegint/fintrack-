@@ -3,6 +3,13 @@ import Payment from '../models/Payment.js';
 import Loan from '../models/Loan.js';
 import Customer from '../models/Customer.js';
 import AuditLog from '../models/AuditLog.js';
+import {
+  computeLoanStatusFromSchedule,
+  getEffectiveDueDate,
+  getISTDateStr,
+  isInstallmentExempt,
+  isInstallmentPayable,
+} from '../utils/installmentHelpers.js';
 
 export const recordPayment = async (req, res, next) => {
   try {
@@ -82,7 +89,7 @@ export const recordPayment = async (req, res, next) => {
       if (unallocated <= 0) break;
       const inst = loan.schedule[i];
 
-      if (inst.status !== 'paid') {
+      if (isInstallmentPayable(inst)) {
         const required = inst.amount - (inst.paidAmount || 0);
         if (unallocated >= required) {
           inst.paidAmount = inst.amount;
@@ -101,16 +108,7 @@ export const recordPayment = async (req, res, next) => {
     loan.totalCollected = (loan.totalCollected || 0) + payAmount;
     loan.remainingBalance = Math.max(0, loan.totalPayable - loan.totalCollected);
 
-    if (loan.remainingBalance === 0) {
-      loan.status = 'completed';
-    } else {
-      // Check if any remaining schedule items are overdue
-      const now = new Date();
-      const hasOverdue = loan.schedule.some(
-        (s) => s.status !== 'paid' && new Date(s.dueDate) < now
-      );
-      loan.status = hasOverdue ? 'overdue' : 'active';
-    }
+    loan.status = computeLoanStatusFromSchedule(loan);
 
     await loan.save();
 
@@ -238,10 +236,13 @@ export const deletePayment = async (req, res, next) => {
       _id: { $ne: payment._id },
     }).sort({ date: 1 });
 
-    // Reset schedule
+    // Reset schedule (preserve Holiday / Leave / Missed exemptions)
+    const todayStrDel = getISTDateStr(new Date());
     loan.schedule.forEach((inst) => {
+      if (isInstallmentExempt(inst)) return;
       inst.paidAmount = 0;
-      inst.status = new Date(inst.dueDate) < new Date() ? 'overdue' : 'pending';
+      const effStr = getISTDateStr(getEffectiveDueDate(inst));
+      inst.status = effStr && effStr < todayStrDel ? 'overdue' : 'pending';
       inst.paidDate = null;
     });
 
@@ -250,6 +251,7 @@ export const deletePayment = async (req, res, next) => {
     for (let i = 0; i < loan.schedule.length; i++) {
       if (runningPool <= 0) break;
       const inst = loan.schedule[i];
+      if (isInstallmentExempt(inst)) continue;
       if (runningPool >= inst.amount) {
         inst.paidAmount = inst.amount;
         inst.status = 'paid';
@@ -262,15 +264,7 @@ export const deletePayment = async (req, res, next) => {
       }
     }
 
-    if (loan.remainingBalance === 0) {
-      loan.status = 'completed';
-    } else {
-      const now = new Date();
-      const hasOverdue = loan.schedule.some(
-        (s) => s.status !== 'paid' && new Date(s.dueDate) < now
-      );
-      loan.status = hasOverdue ? 'overdue' : 'active';
-    }
+    loan.status = computeLoanStatusFromSchedule(loan);
 
     await loan.save();
     await Payment.findByIdAndDelete(payment._id);
@@ -344,10 +338,13 @@ export const updatePayment = async (req, res, next) => {
     loan.totalCollected = allPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
     loan.remainingBalance = Math.max(0, loan.totalPayable - loan.totalCollected);
 
-    // Reset schedule
+    // Reset schedule (preserve Holiday / Leave / Missed exemptions)
+    const todayStrUpd = getISTDateStr(new Date());
     loan.schedule.forEach((inst) => {
+      if (isInstallmentExempt(inst)) return;
       inst.paidAmount = 0;
-      inst.status = new Date(inst.dueDate) < new Date() ? 'overdue' : 'pending';
+      const effStr = getISTDateStr(getEffectiveDueDate(inst));
+      inst.status = effStr && effStr < todayStrUpd ? 'overdue' : 'pending';
       inst.paidDate = null;
     });
 
@@ -356,6 +353,7 @@ export const updatePayment = async (req, res, next) => {
     for (let i = 0; i < loan.schedule.length; i++) {
       if (runningPool <= 0) break;
       const inst = loan.schedule[i];
+      if (isInstallmentExempt(inst)) continue;
       if (runningPool >= inst.amount) {
         inst.paidAmount = inst.amount;
         inst.status = 'paid';
@@ -368,15 +366,7 @@ export const updatePayment = async (req, res, next) => {
       }
     }
 
-    if (loan.remainingBalance === 0) {
-      loan.status = 'completed';
-    } else {
-      const now = new Date();
-      const hasOverdue = loan.schedule.some(
-        (s) => s.status !== 'paid' && new Date(s.dueDate) < now
-      );
-      loan.status = hasOverdue ? 'overdue' : 'active';
-    }
+    loan.status = computeLoanStatusFromSchedule(loan);
 
     await loan.save();
 

@@ -3,6 +3,14 @@ import Loan from '../models/Loan.js';
 import Customer from '../models/Customer.js';
 import Payment from '../models/Payment.js';
 import AuditLog from '../models/AuditLog.js';
+import {
+  computeLoanStatusFromSchedule,
+  computeNextPeriodDueDate,
+  getEffectiveDueDate,
+  getISTDateStr,
+  getScheduleMaxDueDate,
+  isInstallmentOverdue,
+} from '../utils/installmentHelpers.js';
 
 export const createLoan = async (req, res, next) => {
   try {
@@ -338,12 +346,7 @@ async function repairLegacyScheduleIfNeeded(loan) {
   rebalanceTailSchedule(loan, firstAmt, newRemaining, null);
 
   const now = new Date();
-  loan.status =
-    loan.remainingBalance <= 0
-      ? 'completed'
-      : loan.schedule.some((s) => s.status !== 'paid' && s.status !== 'holiday' && s.status !== 'leave' && new Date(s.dueDate) < now)
-      ? 'overdue'
-      : 'active';
+  loan.status = computeLoanStatusFromSchedule(loan, now);
 
   await loan.save();
   return true;
@@ -1068,10 +1071,19 @@ export const removeLoanHoliday = async (req, res, next) => {
       loan.schedule.forEach((inst) => {
         const instDate = inst.dueDate ? new Date(inst.dueDate).toISOString().split('T')[0] : '';
         if ((installmentNo && inst.installmentNo === Number(installmentNo)) || instDate === dateStr) {
-          if (inst.status === 'holiday' || inst.status === 'missed') {
-            const isOverdue = new Date(inst.dueDate) < now;
-            inst.status = isOverdue ? 'overdue' : 'pending';
+          if (inst.status === 'holiday' || inst.status === 'leave' || inst.status === 'missed') {
+            if (inst.original_due_date) {
+              inst.dueDate = inst.original_due_date;
+            }
+            const effStr = getISTDateStr(getEffectiveDueDate(inst));
+            const todayStr = getISTDateStr(now);
+            inst.status = effStr && effStr < todayStr ? 'overdue' : 'pending';
             inst.holidayReason = '';
+            inst.holiday_reason = '';
+            inst.original_due_date = null;
+            inst.rescheduled_due_date = null;
+            inst.adjusted_by = '';
+            inst.adjusted_at = null;
           }
         }
       });
@@ -1343,7 +1355,282 @@ export const recordInstallmentAction = async (req, res, next) => {
     }
 
     // ---------------------------------------------------------------------------
-    // ACTION: HOLIDAY / LEAVE
+    // ACTION: UNDO HOLIDAY / LEAVE
+    // ---------------------------------------------------------------------------
+    if (action === 'undo_holiday_leave') {
+      if (inst.status !== 'holiday' && inst.status !== 'leave') {
+        return res.status(400).json({
+          success: false,
+          message: `Installment #${inst.installmentNo} is not marked as Holiday or Leave.`,
+        });
+      }
+
+      const prevStatus = inst.status;
+      const beforeSnapshot = {
+        installmentNo: inst.installmentNo,
+        status: inst.status,
+        dueDate: inst.dueDate,
+        original_due_date: inst.original_due_date || null,
+        rescheduled_due_date: inst.rescheduled_due_date || null,
+        holiday_reason: inst.holiday_reason || inst.holidayReason || '',
+        duration: loan.duration,
+        scheduleLength: loan.schedule.length,
+      };
+
+      if (prevStatus === 'leave') {
+        const linkedIdx = loan.schedule.findIndex(
+          (s) => Number(s.appended_for_inst_no) === Number(inst.installmentNo)
+        );
+        if (linkedIdx !== -1) {
+          if (loan.schedule[linkedIdx].status === 'paid') {
+            return res.status(400).json({
+              success: false,
+              message: `Cannot undo Leave: appended installment #${loan.schedule[linkedIdx].installmentNo} has already been paid.`,
+            });
+          }
+          loan.schedule.splice(linkedIdx, 1);
+        } else if (loan.schedule.length > 1) {
+          const lastIdx = loan.schedule.length - 1;
+          const lastItem = loan.schedule[lastIdx];
+          if (
+            lastItem.installmentNo !== inst.installmentNo &&
+            lastItem.status !== 'paid' &&
+            Number(lastItem.amount) === Number(inst.amount)
+          ) {
+            loan.schedule.splice(lastIdx, 1);
+          }
+        }
+        loan.duration = loan.schedule.length;
+        const maxDateAfter = getScheduleMaxDueDate(loan.schedule);
+        if (maxDateAfter) loan.endDate = maxDateAfter;
+      }
+
+      if (inst.original_due_date) {
+        inst.dueDate = inst.original_due_date;
+      }
+      inst.original_due_date = null;
+      inst.rescheduled_due_date = null;
+      inst.holiday_reason = '';
+      inst.holidayReason = '';
+      inst.adjusted_by = '';
+      inst.adjusted_at = null;
+
+      const todayStr = getISTDateStr(new Date());
+      const restoredStr = getISTDateStr(inst.dueDate);
+      inst.status = restoredStr && restoredStr < todayStr
+        ? 'overdue'
+        : Number(inst.paidAmount) > 0
+        ? 'partial'
+        : 'pending';
+
+      const maxDate = getScheduleMaxDueDate(loan.schedule);
+      if (maxDate) loan.endDate = maxDate;
+      loan.status = computeLoanStatusFromSchedule(loan);
+
+      await loan.save();
+
+      try {
+        await AuditLog.create({
+          userId: req.user?._id || null,
+          userName: req.user?.name || 'Owner',
+          action: 'INSTALLMENT_HOLIDAY_LEAVE_UNDO',
+          entity: 'Loan',
+          entityId: loan._id.toString(),
+          before: beforeSnapshot,
+          after: {
+            installmentNo: inst.installmentNo,
+            status: inst.status,
+            dueDate: inst.dueDate,
+            duration: loan.duration,
+            scheduleLength: loan.schedule.length,
+          },
+        });
+      } catch (auditErr) {
+        console.warn('AuditLog create warning (undo_holiday_leave):', auditErr.message);
+      }
+
+      await loan.populate('customerId', 'name phone area address photoUrl photo');
+      return res.status(200).json({
+        success: true,
+        message: `Installment #${inst.installmentNo} restored (${prevStatus} undone).`,
+        loan,
+      });
+    }
+
+    // ---------------------------------------------------------------------------
+    // ACTION: PER-INSTALLMENT HOLIDAY (NEW DUE DATE) OR LEAVE (APPEND AT END)
+    // ---------------------------------------------------------------------------
+    const reqNewDueDate = req.body.newDueDate;
+    const reqRescheduleMode = req.body.rescheduleMode;
+    if (
+      (action === 'holiday' && reqNewDueDate !== undefined) ||
+      reqRescheduleMode === 'single_holiday' ||
+      (action === 'leave' && reqRescheduleMode === 'leave_append')
+    ) {
+      if (inst.status === 'paid') {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot apply Holiday / Leave on an already Paid installment.',
+        });
+      }
+
+      const noteReason = (reason || notes || '').trim();
+      const actorName = req.user?.name || String(req.user?._id || 'Owner');
+      const nowTime = new Date();
+      const todayStr = getISTDateStr(nowTime);
+      const origDue = inst.original_due_date || inst.dueDate;
+      const beforeSnapshot = {
+        installmentNo: inst.installmentNo,
+        status: inst.status,
+        dueDate: inst.dueDate,
+        duration: loan.duration,
+        scheduleLength: loan.schedule.length,
+      };
+
+      if (action === 'holiday') {
+        if (!reqNewDueDate) {
+          return res.status(400).json({
+            success: false,
+            message: 'New due date is required for Holiday.',
+          });
+        }
+        const parsedNewDue = new Date(reqNewDueDate);
+        if (Number.isNaN(parsedNewDue.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid new due date.',
+          });
+        }
+
+        const newDueStr = getISTDateStr(parsedNewDue);
+        const origStr = getISTDateStr(origDue);
+
+        if (newDueStr < todayStr) {
+          return res.status(400).json({
+            success: false,
+            message: 'New due date cannot be earlier than today.',
+          });
+        }
+        if (origStr && newDueStr <= origStr) {
+          return res.status(400).json({
+            success: false,
+            message: 'New due date must be after the original due date.',
+          });
+        }
+
+        inst.original_due_date = origDue;
+        inst.rescheduled_due_date = parsedNewDue;
+        inst.dueDate = parsedNewDue;
+        inst.status = 'holiday';
+        inst.holiday_reason = noteReason;
+        inst.holidayReason = noteReason;
+        inst.adjusted_by = actorName;
+        inst.adjusted_at = nowTime;
+
+        const maxDate = getScheduleMaxDueDate(loan.schedule);
+        if (maxDate) loan.endDate = maxDate;
+        loan.status = computeLoanStatusFromSchedule(loan, nowTime);
+
+        await loan.save();
+
+        try {
+          await AuditLog.create({
+            userId: req.user?._id || null,
+            userName: actorName,
+            action: 'INSTALLMENT_HOLIDAY_APPLY',
+            entity: 'Loan',
+            entityId: loan._id.toString(),
+            before: beforeSnapshot,
+            after: {
+              installmentNo: inst.installmentNo,
+              status: inst.status,
+              original_due_date: inst.original_due_date,
+              rescheduled_due_date: inst.rescheduled_due_date,
+              holiday_reason: inst.holiday_reason,
+              adjusted_by: actorName,
+              adjusted_at: nowTime,
+            },
+          });
+        } catch (auditErr) {
+          console.warn('AuditLog create warning (holiday):', auditErr.message);
+        }
+
+        await loan.populate('customerId', 'name phone area address photoUrl photo');
+        return res.status(200).json({
+          success: true,
+          message: `Installment #${inst.installmentNo} marked Holiday & moved to ${newDueStr}.`,
+          loan,
+        });
+      }
+
+      // action === 'leave' (append new installment at end of schedule)
+      if (inst.status === 'leave') {
+        return res.status(400).json({
+          success: false,
+          message: `Installment #${inst.installmentNo} is already marked as Leave.`,
+        });
+      }
+
+      inst.original_due_date = origDue;
+      inst.rescheduled_due_date = null;
+      inst.status = 'leave';
+      inst.holiday_reason = noteReason;
+      inst.holidayReason = noteReason;
+      inst.adjusted_by = actorName;
+      inst.adjusted_at = nowTime;
+
+      const maxInstNo = loan.schedule.reduce((m, s) => Math.max(m, Number(s.installmentNo) || 0), 0);
+      const lastScheduleDue = getScheduleMaxDueDate(loan.schedule) || inst.dueDate || nowTime;
+      const appendedDue = computeNextPeriodDueDate(lastScheduleDue, loan.financeType);
+
+      loan.schedule.push({
+        installmentNo: maxInstNo + 1,
+        dueDate: appendedDue,
+        amount: inst.amount,
+        paidAmount: 0,
+        status: 'pending',
+        appended_for_inst_no: inst.installmentNo,
+      });
+
+      loan.duration = loan.schedule.length;
+      loan.endDate = appendedDue;
+      loan.status = computeLoanStatusFromSchedule(loan, nowTime);
+
+      await loan.save();
+
+      try {
+        await AuditLog.create({
+          userId: req.user?._id || null,
+          userName: actorName,
+          action: 'INSTALLMENT_LEAVE_APPLY',
+          entity: 'Loan',
+          entityId: loan._id.toString(),
+          before: beforeSnapshot,
+          after: {
+            installmentNo: inst.installmentNo,
+            status: inst.status,
+            holiday_reason: inst.holiday_reason,
+            adjusted_by: actorName,
+            adjusted_at: nowTime,
+            appendedInstallmentNo: maxInstNo + 1,
+            appendedDueDate: appendedDue,
+            duration: loan.duration,
+          },
+        });
+      } catch (auditErr) {
+        console.warn('AuditLog create warning (leave):', auditErr.message);
+      }
+
+      await loan.populate('customerId', 'name phone area address photoUrl photo');
+      return res.status(200).json({
+        success: true,
+        message: `Installment #${inst.installmentNo} marked Leave & installment #${maxInstNo + 1} added at end of schedule.`,
+        loan,
+      });
+    }
+
+    // ---------------------------------------------------------------------------
+    // ACTION: HOLIDAY / LEAVE (LEGACY PENCIL MODAL FLOW)
     // ---------------------------------------------------------------------------
     if (action === 'holiday' || action === 'leave') {
       const modeType = action; // 'holiday' or 'leave'
@@ -1395,11 +1682,7 @@ export const recordInstallmentAction = async (req, res, next) => {
       });
 
       // Status check (excluding holiday/leave from overdue)
-      const now = new Date();
-      const hasOverdue = loan.schedule.some(
-        (s) => s.status !== 'paid' && s.status !== 'holiday' && s.status !== 'leave' && new Date(s.dueDate) < now
-      );
-      loan.status = loan.remainingBalance <= 0 ? 'completed' : hasOverdue ? 'overdue' : 'active';
+      loan.status = computeLoanStatusFromSchedule(loan);
 
       await loan.save();
 
@@ -1551,11 +1834,7 @@ export const recordInstallmentAction = async (req, res, next) => {
     if (loan.remainingBalance === 0) {
       loan.status = 'completed';
     } else {
-      const now = new Date();
-      const hasOverdue = loan.schedule.some(
-        (s) => s.status !== 'paid' && s.status !== 'holiday' && s.status !== 'leave' && new Date(s.dueDate) < now
-      );
-      loan.status = hasOverdue ? 'overdue' : 'active';
+      loan.status = computeLoanStatusFromSchedule(loan);
     }
 
     await loan.save();

@@ -43,6 +43,7 @@ import {
   MessageCircle,
   FileSpreadsheet,
   Printer,
+  CalendarX2,
 } from 'lucide-react';
 
 export const LoanDetail = ({ loanId, onBack }) => {
@@ -86,6 +87,15 @@ export const LoanDetail = ({ loanId, onBack }) => {
   const [pencilSkipOption, setPencilSkipOption] = useState('move_next'); // 'move_next' | 'extend_end' | 'skip_only'
   const [pencilSubmitting, setPencilSubmitting] = useState(false);
   const [pencilError, setPencilError] = useState('');
+
+  // Dedicated Holiday / Leave Modal & Undo state
+  const [holidayModalInst, setHolidayModalInst] = useState(null);
+  const [holidayModalMode, setHolidayModalMode] = useState('holiday'); // 'holiday' | 'leave'
+  const [holidayModalNewDate, setHolidayModalNewDate] = useState('');
+  const [holidayModalReason, setHolidayModalReason] = useState('');
+  const [holidayModalSubmitting, setHolidayModalSubmitting] = useState(false);
+  const [holidayModalError, setHolidayModalError] = useState('');
+  const [undoingInstNo, setUndoingInstNo] = useState(null);
 
   // Master Collect & Checkbox Selection state
   const [selectedInstNos, setSelectedInstNos] = useState(new Set());
@@ -578,6 +588,157 @@ export const LoanDetail = ({ loanId, onBack }) => {
   };
 
   // ---------------------------------------------------------------------------
+  // HOLIDAY / LEAVE MODAL & UNDO ACTIONS
+  // ---------------------------------------------------------------------------
+  const getHolidayValidation = (inst, mode, newDateStr) => {
+    if (!inst) return { valid: false, error: '', minDate: formatDateForInput() };
+    if (inst.status === 'paid') {
+      return {
+        valid: false,
+        error: 'Cannot apply Holiday / Leave to a Paid installment / கட்டிய தவணைக்கு மாற்ற இயலாது',
+        minDate: formatDateForInput(),
+      };
+    }
+    const todayStr = formatDateForInput();
+    const origRaw = inst.original_due_date || inst.dueDate;
+    const origStr = origRaw ? formatDateForInput(origRaw) : '';
+    let minDate = todayStr;
+    if (origStr) {
+      const nextDay = new Date(`${origStr}T00:00:00`);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const dayAfterOrig = formatDateForInput(nextDay);
+      if (dayAfterOrig > minDate) minDate = dayAfterOrig;
+    }
+
+    if (mode === 'leave') {
+      return { valid: true, error: '', minDate };
+    }
+
+    if (!newDateStr) {
+      return { valid: false, error: '', minDate };
+    }
+    if (newDateStr < todayStr) {
+      return {
+        valid: false,
+        error: 'New due date cannot be earlier than today / இன்றைய தேதிக்கு முன் தேர்வு செய்ய முடியாது',
+        minDate,
+      };
+    }
+    if (origStr && newDateStr <= origStr) {
+      return {
+        valid: false,
+        error: `New due date must be after ${formatDate(origRaw)} / அசல் தேதிக்குப் பின் இருக்க வேண்டும்`,
+        minDate,
+      };
+    }
+    return { valid: true, error: '', minDate };
+  };
+
+  const handleOpenHolidayModal = (inst) => {
+    if (!inst || inst.status === 'paid') return;
+    setHolidayModalInst(inst);
+    setHolidayModalMode('holiday');
+    setHolidayModalNewDate('');
+    setHolidayModalReason('');
+    setHolidayModalError('');
+    setHolidayModalSubmitting(false);
+  };
+
+  const handleApplyHolidayLeave = async (e) => {
+    e.preventDefault();
+    if (!holidayModalInst || !loan?._id) return;
+    if (holidayModalInst.status === 'paid') {
+      setHolidayModalError('Cannot apply Holiday / Leave on a Paid installment');
+      return;
+    }
+
+    const validation = getHolidayValidation(holidayModalInst, holidayModalMode, holidayModalNewDate);
+    if (!validation.valid) {
+      if (validation.error) setHolidayModalError(validation.error);
+      return;
+    }
+
+    const instNo = holidayModalInst.installmentNo;
+    try {
+      setHolidayModalSubmitting(true);
+      setHolidayModalError('');
+
+      const payload =
+        holidayModalMode === 'holiday'
+          ? {
+              action: 'holiday',
+              rescheduleMode: 'single_holiday',
+              installmentNo: instNo,
+              newDueDate: holidayModalNewDate,
+              reason: holidayModalReason.trim(),
+            }
+          : {
+              action: 'leave',
+              rescheduleMode: 'leave_append',
+              installmentNo: instNo,
+              reason: holidayModalReason.trim(),
+            };
+
+      const res = await api.recordInstallmentAction(loan._id, payload);
+      if (res?.loan) {
+        setLoan(res.loan);
+      }
+
+      setHolidayModalInst(null);
+      await fetchLoanData();
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
+
+      showToast({
+        type: 'single',
+        message:
+          holidayModalMode === 'holiday'
+            ? `Installment #${instNo} moved to ${formatDate(holidayModalNewDate)} (Holiday / விடுமுறை)`
+            : `Installment #${instNo} marked Leave & added at end of schedule / விடுப்பு சேர்க்கப்பட்டது`,
+      });
+    } catch (err) {
+      console.error('Failed to apply Holiday / Leave:', err);
+      setHolidayModalError(err.message || 'Failed to apply / சேமிக்க இயலவில்லை');
+    } finally {
+      setHolidayModalSubmitting(false);
+    }
+  };
+
+  const handleUndoHolidayLeave = async (inst) => {
+    if (!inst || !loan?._id) return;
+    const instNo = inst.installmentNo;
+    const prevType = inst.status;
+    try {
+      setUndoingInstNo(instNo);
+      const res = await api.recordInstallmentAction(loan._id, {
+        action: 'undo_holiday_leave',
+        installmentNo: instNo,
+      });
+      if (res?.loan) {
+        setLoan(res.loan);
+      }
+      await fetchLoanData();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('fintrack:data-updated'));
+      }
+      showToast({
+        type: 'single',
+        message:
+          prevType === 'leave'
+            ? `Leave undone for #${instNo} & appended installment removed / விடுப்பு ரத்து செய்யப்பட்டது`
+            : `Holiday undone for #${instNo} & original date restored / விடுமுறை ரத்து செய்யப்பட்டது`,
+      });
+    } catch (err) {
+      console.error('Failed to undo Holiday / Leave:', err);
+      alert(err.message || 'Failed to undo / ரத்து செய்ய இயலவில்லை');
+    } finally {
+      setUndoingInstNo(null);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
   // FINANCIAL CALCULATIONS & MASTER COLLECT BAR HELPERS
   // ---------------------------------------------------------------------------
   const unpaidInstallments = useMemo(() => {
@@ -585,28 +746,37 @@ export const LoanDetail = ({ loanId, onBack }) => {
   }, [loan?.schedule]);
 
   const overdueCount = useMemo(() => {
-    const now = new Date();
-    return unpaidInstallments.filter(
-      (inst) => inst.status === 'overdue' || (inst.status !== 'holiday' && inst.status !== 'leave' && new Date(inst.dueDate) < now)
-    ).length;
+    const todayStr = formatDateForInput();
+    return unpaidInstallments.filter((inst) => {
+      if (inst.status === 'holiday' || inst.status === 'leave' || inst.status === 'missed') return false;
+      const effRaw = inst.rescheduled_due_date || inst.dueDate;
+      const effStr = effRaw ? formatDateForInput(effRaw) : '';
+      return Boolean(effStr && effStr < todayStr);
+    }).length;
   }, [unpaidInstallments]);
 
   const { totalOverdueAmount, nextDueInst } = useMemo(() => {
     let overdueAmt = 0;
     let nextDue = null;
-    const now = new Date();
+    const todayStr = formatDateForInput();
 
     (loan?.schedule || []).forEach((inst) => {
       const isPaid = inst.status === 'paid';
-      const isHoliday = inst.status === 'holiday' || inst.status === 'missed' || inst.status === 'leave';
+      const isExempt = inst.status === 'holiday' || inst.status === 'missed' || inst.status === 'leave';
       const instDue = Number(inst.amount) - (Number(inst.paidAmount) || 0);
 
-      if (!isPaid && !isHoliday) {
-        const d = new Date(inst.dueDate);
-        if (d < now || inst.status === 'overdue') {
+      if (!isPaid && !isExempt) {
+        const effRaw = inst.rescheduled_due_date || inst.dueDate;
+        const effStr = effRaw ? formatDateForInput(effRaw) : '';
+        if (effStr && effStr < todayStr) {
           overdueAmt += Math.max(0, instDue);
-        } else if (!nextDue && d >= now) {
-          nextDue = inst;
+        } else if (effStr && effStr >= todayStr) {
+          if (
+            !nextDue ||
+            effStr < formatDateForInput(nextDue.rescheduled_due_date || nextDue.dueDate)
+          ) {
+            nextDue = inst;
+          }
         }
       }
     });
@@ -624,10 +794,13 @@ export const LoanDetail = ({ loanId, onBack }) => {
   };
 
   const handleSelectOverdue = () => {
-    const now = new Date();
+    const todayStr = formatDateForInput();
     const set = new Set();
     unpaidInstallments.forEach((inst) => {
-      if (inst.status === 'overdue' || (inst.status !== 'holiday' && new Date(inst.dueDate) < now)) {
+      if (inst.status === 'holiday' || inst.status === 'leave' || inst.status === 'missed') return;
+      const effRaw = inst.rescheduled_due_date || inst.dueDate;
+      const effStr = effRaw ? formatDateForInput(effRaw) : '';
+      if (effStr && effStr < todayStr) {
         set.add(inst.installmentNo);
       }
     });
@@ -643,7 +816,8 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
     const set = new Set();
     unpaidInstallments.forEach((inst) => {
-      const d = new Date(inst.dueDate);
+      if (inst.status === 'holiday' || inst.status === 'leave' || inst.status === 'missed') return;
+      const d = new Date(inst.rescheduled_due_date || inst.dueDate);
       if (d >= now && d <= future) {
         set.add(inst.installmentNo);
       }
@@ -1144,7 +1318,7 @@ export const LoanDetail = ({ loanId, onBack }) => {
             Next Due / அடுத்த தவணை
           </span>
           <p className="text-sm sm:text-base font-black text-[#064B8E] dark:text-white truncate mt-0.5">
-            {nextDueInst ? formatDate(nextDueInst.dueDate) : 'All Settled'}
+            {nextDueInst ? formatDate(nextDueInst.rescheduled_due_date || nextDueInst.dueDate) : 'All Settled'}
           </p>
           <p className="text-[10px] text-[#647C95] dark:text-slate-400 truncate mt-0.5 font-medium">
             {nextDueInst ? formatCurrency(nextDueInst.amount - (nextDueInst.paidAmount || 0)) : 'Balance: ₹0'}
@@ -1254,7 +1428,12 @@ export const LoanDetail = ({ loanId, onBack }) => {
               const isHoliday = inst.status === 'holiday';
               const isLeave = inst.status === 'leave';
               const isMissed = inst.status === 'missed';
-              const isOverdue = !isHoliday && !isMissed && !isLeave && (inst.status === 'overdue' || (!isPaid && new Date(inst.dueDate) < new Date()));
+              const effectiveDueRaw = inst.rescheduled_due_date || inst.dueDate;
+              const effectiveDueStr = effectiveDueRaw ? formatDateForInput(effectiveDueRaw) : '';
+              const todayStr = formatDateForInput();
+              const isOverdue = !isPaid && !isHoliday && !isMissed && !isLeave && Boolean(effectiveDueStr && effectiveDueStr < todayStr);
+              const reasonText = (inst.holiday_reason || inst.holidayReason || '').trim();
+              const isUndoing = undoingInstNo === inst.installmentNo;
               const isSelected = selectedInstNos.has(inst.installmentNo);
               const isPendingSync = pendingSyncInstNos.has(inst.installmentNo) || inst.isOffline;
               const isCollecting = collectingInstNo === inst.installmentNo;
@@ -1267,9 +1446,9 @@ export const LoanDetail = ({ loanId, onBack }) => {
                     isPaid
                       ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800'
                       : isHoliday
-                      ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700'
+                      ? 'bg-[#FFFBEB] dark:bg-amber-950/30 border-amber-300 dark:border-amber-700 border-l-4 border-l-[#F59E0B]'
                       : isLeave
-                      ? 'bg-indigo-50/70 dark:bg-indigo-950/30 border-indigo-300 dark:border-indigo-700'
+                      ? 'bg-[#F5F3FF] dark:bg-violet-950/30 border-violet-300 dark:border-violet-700 border-l-4 border-l-[#7C3AED]'
                       : isOverdue
                       ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800 border-l-4 border-l-rose-500'
                       : isSelected
@@ -1296,15 +1475,17 @@ export const LoanDetail = ({ loanId, onBack }) => {
 
                       <div>
                         <p className="font-black text-xs text-[#183653] dark:text-white">
-                          #{inst.installmentNo} · {formatDate(inst.dueDate)}
+                          #{inst.installmentNo} · {formatDate(effectiveDueRaw)}
                         </p>
                         <p className="text-[11px] text-[#647C95] dark:text-slate-400 font-mono">
                           {isPaid
-                            ? `✓ Paid ${formatCurrency(inst.paidAmount || inst.amount)} on ${formatDate(inst.paidDate || inst.dueDate)}`
+                            ? `✓ Paid ${formatCurrency(inst.paidAmount || inst.amount)} on ${formatDate(inst.paidDate || effectiveDueRaw)}`
                             : isHoliday
-                            ? `🏖️ Holiday: ${inst.holidayReason || 'Shop / Area'}`
+                            ? `→ moved to ${formatDate(effectiveDueRaw)}${reasonText ? ` · ${reasonText}` : ''}`
                             : isLeave
-                            ? `👤 Leave: ${inst.holidayReason || 'Customer Leave'}`
+                            ? `→ skipped · added at end of schedule${reasonText ? ` · ${reasonText}` : ''}`
+                            : inst.appended_for_inst_no
+                            ? `Due: ${formatCurrency(inst.amount)} · Added for Leave #${inst.appended_for_inst_no}`
                             : `Due: ${formatCurrency(inst.amount)}`}
                         </p>
                       </div>
@@ -1324,9 +1505,9 @@ export const LoanDetail = ({ loanId, onBack }) => {
                           isPaid
                             ? 'bg-emerald-100 text-[#18A879] dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300'
                             : isHoliday
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300'
+                            ? 'bg-[#FEF3C7] text-[#B45309] dark:bg-amber-950 dark:text-amber-300 border border-[#F59E0B]/40'
                             : isLeave
-                            ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-300'
+                            ? 'bg-[#EDE9FE] text-[#6D28D9] dark:bg-violet-950 dark:text-violet-300 border border-[#7C3AED]/30'
                             : isMissed
                             ? 'bg-orange-100 text-orange-800 border border-orange-300'
                             : isOverdue
@@ -1364,6 +1545,27 @@ export const LoanDetail = ({ loanId, onBack }) => {
                       </button>
                     )}
 
+                    {(isHoliday || isLeave) && (
+                      <button
+                        type="button"
+                        disabled={isUndoing}
+                        onClick={() => handleUndoHolidayLeave(inst)}
+                        title="Undo Holiday / Leave"
+                        className={`min-h-[40px] px-3.5 rounded-xl font-black text-xs flex items-center space-x-1.5 border active:scale-95 transition shadow-2xs disabled:opacity-50 ${
+                          isHoliday
+                            ? 'bg-[#FEF3C7] hover:bg-amber-200/80 text-[#B45309] border-[#F59E0B]'
+                            : 'bg-[#EDE9FE] hover:bg-violet-200/80 text-[#6D28D9] border-[#7C3AED]/50'
+                        }`}
+                      >
+                        {isUndoing ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        )}
+                        <span>Undo</span>
+                      </button>
+                    )}
+
                     {/* Pencil Button (On every row, paid and unpaid) */}
                     <button
                       type="button"
@@ -1373,6 +1575,17 @@ export const LoanDetail = ({ loanId, onBack }) => {
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
+
+                    {!isPaid && !isHoliday && !isLeave && !isMissed && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenHolidayModal(inst)}
+                        title="Holiday / Leave"
+                        className="w-10 h-10 rounded-xl border border-[#F59E0B] bg-[#FEF3C7] hover:bg-amber-200/80 text-[#B45309] flex items-center justify-center shrink-0 active:scale-95 transition shadow-2xs"
+                      >
+                        <CalendarX2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -1413,7 +1626,12 @@ export const LoanDetail = ({ loanId, onBack }) => {
                   const isHoliday = inst.status === 'holiday';
                   const isLeave = inst.status === 'leave';
                   const isMissed = inst.status === 'missed';
-                  const isOverdue = !isHoliday && !isMissed && !isLeave && (inst.status === 'overdue' || (!isPaid && new Date(inst.dueDate) < new Date()));
+                  const effectiveDueRaw = inst.rescheduled_due_date || inst.dueDate;
+                  const effectiveDueStr = effectiveDueRaw ? formatDateForInput(effectiveDueRaw) : '';
+                  const todayStr = formatDateForInput();
+                  const isOverdue = !isPaid && !isHoliday && !isMissed && !isLeave && Boolean(effectiveDueStr && effectiveDueStr < todayStr);
+                  const reasonText = (inst.holiday_reason || inst.holidayReason || '').trim();
+                  const isUndoing = undoingInstNo === inst.installmentNo;
                   const isSelected = selectedInstNos.has(inst.installmentNo);
                   const isPendingSync = pendingSyncInstNos.has(inst.installmentNo) || inst.isOffline;
                   const isCollecting = collectingInstNo === inst.installmentNo;
@@ -1422,13 +1640,20 @@ export const LoanDetail = ({ loanId, onBack }) => {
                     <tr
                       key={inst.installmentNo}
                       id={`inst-row-${inst.installmentNo}`}
+                      style={
+                        isHoliday
+                          ? { boxShadow: 'inset 4px 0 0 #F59E0B' }
+                          : isLeave
+                          ? { boxShadow: 'inset 4px 0 0 #7C3AED' }
+                          : undefined
+                      }
                       className={`transition-colors ${
                         isPaid
                           ? 'bg-emerald-50/40 hover:bg-emerald-50/70 dark:bg-emerald-950/20'
                           : isHoliday
-                          ? 'bg-amber-50/40 hover:bg-amber-50/70 dark:bg-amber-950/20'
+                          ? 'bg-[#FFFBEB] hover:bg-[#FEF3C7]/45 dark:bg-amber-950/25 border-l-4 border-l-[#F59E0B]'
                           : isLeave
-                          ? 'bg-indigo-50/40 hover:bg-indigo-50/70 dark:bg-indigo-950/20'
+                          ? 'bg-[#F5F3FF] hover:bg-[#EDE9FE]/45 dark:bg-violet-950/25 border-l-4 border-l-[#7C3AED]'
                           : isOverdue
                           ? 'bg-rose-50/50 hover:bg-rose-50/80 dark:bg-rose-950/20 border-l-4 border-l-rose-500'
                           : isSelected
@@ -1458,7 +1683,22 @@ export const LoanDetail = ({ loanId, onBack }) => {
                       </td>
 
                       <td className="py-2.5 px-3 font-semibold text-[#183653] dark:text-white">
-                        {formatDate(inst.dueDate)}
+                        <div>{formatDate(effectiveDueRaw)}</div>
+                        {isHoliday && (
+                          <div className="text-[10px] font-bold text-[#B45309] dark:text-amber-300 mt-0.5">
+                            → moved to {formatDate(effectiveDueRaw)}{reasonText ? ` · ${reasonText}` : ''}
+                          </div>
+                        )}
+                        {isLeave && (
+                          <div className="text-[10px] font-bold text-[#6D28D9] dark:text-violet-300 mt-0.5">
+                            → skipped · added at end of schedule{reasonText ? ` · ${reasonText}` : ''}
+                          </div>
+                        )}
+                        {!isHoliday && !isLeave && inst.appended_for_inst_no && (
+                          <div className="text-[10px] font-semibold text-[#6D28D9] dark:text-violet-300 mt-0.5">
+                            Added for Leave #{inst.appended_for_inst_no}
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-2.5 px-3 text-right font-black tabular-nums text-[#183653] dark:text-white">
@@ -1480,9 +1720,9 @@ export const LoanDetail = ({ loanId, onBack }) => {
                             isPaid
                               ? 'bg-emerald-100 text-[#18A879] dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300'
                               : isHoliday
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300'
+                              ? 'bg-[#FEF3C7] text-[#B45309] dark:bg-amber-950 dark:text-amber-300 border border-[#F59E0B]/40'
                               : isLeave
-                              ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-300'
+                              ? 'bg-[#EDE9FE] text-[#6D28D9] dark:bg-violet-950 dark:text-violet-300 border border-[#7C3AED]/30'
                               : isMissed
                               ? 'bg-orange-100 text-orange-800 border border-orange-300'
                               : isOverdue
@@ -1521,6 +1761,27 @@ export const LoanDetail = ({ loanId, onBack }) => {
                             </button>
                           )}
 
+                          {(isHoliday || isLeave) && (
+                            <button
+                              type="button"
+                              disabled={isUndoing}
+                              onClick={() => handleUndoHolidayLeave(inst)}
+                              title="Undo Holiday / Leave"
+                              className={`px-2.5 py-1.5 rounded-xl text-xs font-black border shadow-2xs active:scale-95 transition flex items-center space-x-1 disabled:opacity-50 ${
+                                isHoliday
+                                  ? 'bg-[#FEF3C7] hover:bg-amber-200/80 text-[#B45309] border-[#F59E0B]'
+                                  : 'bg-[#EDE9FE] hover:bg-violet-200/80 text-[#6D28D9] border-[#7C3AED]/50'
+                              }`}
+                            >
+                              {isUndoing ? (
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              )}
+                              <span>Undo</span>
+                            </button>
+                          )}
+
                           {/* Pencil Button (On EVERY row) */}
                           <button
                             type="button"
@@ -1530,6 +1791,17 @@ export const LoanDetail = ({ loanId, onBack }) => {
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
+
+                          {!isPaid && !isHoliday && !isLeave && !isMissed && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenHolidayModal(inst)}
+                              title="Holiday / Leave"
+                              className="w-8 h-8 rounded-xl border border-[#F59E0B] bg-[#FEF3C7] hover:bg-amber-200/80 text-[#B45309] flex items-center justify-center shrink-0 active:scale-95 transition shadow-2xs"
+                            >
+                              <CalendarX2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1905,6 +2177,179 @@ export const LoanDetail = ({ loanId, onBack }) => {
           </div>
         </div>
       )}
+
+      {/* =========================================================================
+          HOLIDAY / LEAVE POPOVER / MODAL (BOTTOM SHEET ON MOBILE)
+      ========================================================================= */}
+      {holidayModalInst && (() => {
+        const valResult = getHolidayValidation(holidayModalInst, holidayModalMode, holidayModalNewDate);
+        const origRaw = holidayModalInst.original_due_date || holidayModalInst.dueDate;
+        const maxScheduleNo = (loan?.schedule || []).reduce(
+          (m, s) => Math.max(m, Number(s.installmentNo) || 0),
+          0
+        );
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-fade-in"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !holidayModalSubmitting) {
+                setHolidayModalInst(null);
+              }
+            }}
+          >
+            <div
+              className="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-[#D5E9FA] dark:border-slate-800 space-y-4 max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-9 h-9 rounded-xl border border-[#F59E0B] bg-[#FEF3C7] text-[#B45309] flex items-center justify-center shrink-0">
+                    <CalendarX2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-[#183653] dark:text-white leading-tight">
+                      Holiday / Leave · Installment #{holidayModalInst.installmentNo}
+                    </h3>
+                    <p className="text-[11px] font-medium text-[#647C95] dark:text-slate-400">
+                      Original date: {formatDate(origRaw)} · {formatCurrency(holidayModalInst.amount)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={holidayModalSubmitting}
+                  onClick={() => setHolidayModalInst(null)}
+                  className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Segmented Toggle: [Holiday · விடுமுறை] [Leave · விடுப்பு] */}
+              <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-[#F3F9FF] dark:bg-slate-800/80 border border-[#D5E9FA] dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHolidayModalMode('holiday');
+                    setHolidayModalError('');
+                  }}
+                  className={`py-2 px-2 rounded-xl text-xs font-black transition flex items-center justify-center ${
+                    holidayModalMode === 'holiday'
+                      ? 'bg-[#FEF3C7] text-[#B45309] border border-[#F59E0B] shadow-2xs'
+                      : 'text-[#647C95] hover:text-[#183653] dark:text-slate-300'
+                  }`}
+                >
+                  Holiday · விடுமுறை
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHolidayModalMode('leave');
+                    setHolidayModalError('');
+                  }}
+                  className={`py-2 px-2 rounded-xl text-xs font-black transition flex items-center justify-center ${
+                    holidayModalMode === 'leave'
+                      ? 'bg-[#EDE9FE] text-[#6D28D9] border border-[#7C3AED]/50 shadow-2xs'
+                      : 'text-[#647C95] hover:text-[#183653] dark:text-slate-300'
+                  }`}
+                >
+                  Leave · விடுப்பு
+                </button>
+              </div>
+
+              {(holidayModalError || valResult.error) && (
+                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center space-x-2">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                  <span>{holidayModalError || valResult.error}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleApplyHolidayLeave} className="space-y-3.5">
+                {holidayModalMode === 'holiday' ? (
+                  <>
+                    <div className="p-3 rounded-2xl bg-[#FFFBEB] dark:bg-amber-950/30 border border-[#F59E0B]/40 text-xs text-[#92400E] dark:text-amber-200 space-y-1">
+                      <p className="font-bold">Shop / Public Holiday (விடுமுறை)</p>
+                      <p className="opacity-90">
+                        Installment amount ({formatCurrency(holidayModalInst.amount)}) stays the same; only the due date shifts to your new date.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[#183653] dark:text-slate-200 mb-1">
+                        New due date / புதிய தேதி <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        min={valResult.minDate}
+                        value={holidayModalNewDate}
+                        onChange={(e) => {
+                          setHolidayModalNewDate(e.target.value);
+                          setHolidayModalError('');
+                        }}
+                        className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-bold text-xs outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/20 transition"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-3 rounded-2xl bg-[#F5F3FF] dark:bg-violet-950/30 border border-[#7C3AED]/30 text-xs text-[#5B21B6] dark:text-violet-200 space-y-1">
+                    <p className="font-bold">Customer Leave / Skip (விடுப்பு)</p>
+                    <p className="opacity-90">
+                      Installment #{holidayModalInst.installmentNo} will be marked Leave and appended as new installment #{maxScheduleNo + 1} ({formatCurrency(holidayModalInst.amount)}) at the end of the schedule.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-[#183653] dark:text-slate-200 mb-1">
+                    Reason / காரணம் <span className="text-[11px] font-medium text-[#647C95]">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={
+                      holidayModalMode === 'holiday'
+                        ? 'e.g. Festival, Sunday, Shop holiday...'
+                        : 'e.g. Out of station, Medical leave...'
+                    }
+                    value={holidayModalReason}
+                    onChange={(e) => setHolidayModalReason(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-[#D5E9FA] dark:border-slate-700 text-[#183653] dark:text-white font-medium text-xs outline-none focus:border-[#0878D1] focus:ring-2 focus:ring-[#0878D1]/20 transition"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center space-x-2">
+                  <button
+                    type="button"
+                    disabled={holidayModalSubmitting}
+                    onClick={() => setHolidayModalInst(null)}
+                    className="flex-1 min-h-[42px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#183653] dark:text-slate-200 font-bold text-xs transition active:scale-95 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!valResult.valid || holidayModalSubmitting}
+                    className="flex-1 min-h-[42px] px-3 rounded-xl bg-[#1FA971] hover:bg-[#198f5f] text-white font-black text-xs shadow-md shadow-[#1FA971]/25 transition flex items-center justify-center space-x-1.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {holidayModalSubmitting ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Applying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>Apply</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* =========================================================================
           DELETE LOAN CONFIRMATION MODAL (CONFIRM BY TYPING LOAN NUMBER)

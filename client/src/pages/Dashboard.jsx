@@ -737,6 +737,21 @@ export const Dashboard = ({
               ? 'Collections to be collected. Disappears automatically once paid.'
               : 'Paid collections saved in archive with official receipts.'}
           </p>
+          {stats?.todayStats && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA]">
+                {lang === 'ta' ? 'மொத்த தவணை நிலுவை' : 'Total Due'}: {formatCurrency(stats.todayStats.totalDue ?? todayDueTotal)}
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                {lang === 'ta' ? 'தாமத தவணைகள்' : 'Overdue'}: {stats.todayStats.overdueCount ?? overdueLoans.length}
+              </span>
+              {stats.todayStats.nextCollection?.dueDate && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {lang === 'ta' ? 'அடுத்த வசூல்' : 'Next Collection'}: {formatDate(stats.todayStats.nextCollection.dueDate)}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Quick Filter */}
@@ -1346,9 +1361,14 @@ export const Dashboard = ({
                       {lang === 'ta' ? 'இன்று' : 'Due'}: {formatCurrency(todayDueTotal)} ({todayDueList.length})
                     </span>
                     <span className="text-[#A8442C] font-semibold">
-                      {lang === 'ta' ? 'நிலுவை' : 'Overdue'}: {formatCurrency(overdueTotal)} ({overdueLoans.length})
+                      {lang === 'ta' ? 'நிலுவை' : 'Overdue'}: {formatCurrency(overdueTotal)} ({stats?.todayStats?.overdueCount ?? overdueLoans.length})
                     </span>
                   </div>
+                  {stats?.todayStats?.nextCollection?.dueDate && (
+                    <p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 mt-1 truncate">
+                      {lang === 'ta' ? 'அடுத்த வசூல்' : 'Next Collection'}: {formatDate(stats.todayStats.nextCollection.dueDate)} • {stats.todayStats.nextCollection.customerName}
+                    </p>
+                  )}
                 </div>
 
                 {/* Available Capital / Investment Card (Minus Loans Disbursed, Add to Lend) */}

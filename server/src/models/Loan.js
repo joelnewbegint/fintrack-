@@ -19,12 +19,36 @@ const installmentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'paid', 'partial', 'overdue', 'holiday', 'missed', 'leave'],
+    enum: ['pending', 'paid', 'partial', 'overdue', 'holiday', 'leave', 'missed'],
     default: 'pending',
   },
   holidayReason: {
     type: String,
     default: '',
+  },
+  original_due_date: {
+    type: Date,
+    default: null,
+  },
+  rescheduled_due_date: {
+    type: Date,
+    default: null,
+  },
+  holiday_reason: {
+    type: String,
+    default: '',
+  },
+  adjusted_by: {
+    type: String,
+    default: '',
+  },
+  adjusted_at: {
+    type: Date,
+    default: null,
+  },
+  appended_for_inst_no: {
+    type: Number,
+    default: null,
   },
   paidDate: {
     type: Date,

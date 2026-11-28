@@ -4,6 +4,11 @@ import Payment from '../models/Payment.js';
 import Customer from '../models/Customer.js';
 import Expense from '../models/Expense.js';
 import Investment from '../models/Investment.js';
+import {
+  getEffectiveDueDate,
+  getISTDateStr,
+  isInstallmentPayable,
+} from '../utils/installmentHelpers.js';
 
 export const getDashboardStats = async (req, res, next) => {
   try {
@@ -303,16 +308,47 @@ export const getDashboardStats = async (req, res, next) => {
     const activeLoans = await Loan.find(activeLoanQuery).populate('customerId', 'name phone area photoUrl');
 
     const todayDueList = [];
-    activeLoans.forEach((loan) => {
-      // Find installments due today or overdue
-      loan.schedule.forEach((inst) => {
-        if (inst.status !== 'paid') {
-          const dueDate = new Date(inst.dueDate);
-          const isDueToday =
-            dueDate >= startOfToday && dueDate <= endOfToday;
-          const isOverdue = dueDate < startOfToday;
+    const derivedOverdueLoans = [];
+    const todayStr = getISTDateStr(today);
+    let totalDueAmount = 0;
+    let overdueInstallmentCount = 0;
+    let nextCollection = null;
 
-          if (isDueToday || isOverdue) {
+    activeLoans.forEach((loan) => {
+      let loanHasOverdueInst = false;
+      // Find installments due today or overdue using rescheduled_due_date when present; ignore holiday/leave
+      loan.schedule.forEach((inst) => {
+        if (!isInstallmentPayable(inst)) return;
+
+        const dueDate = getEffectiveDueDate(inst);
+        if (!dueDate) return;
+        const dueStr = getISTDateStr(dueDate);
+        const isDueToday = dueStr === todayStr;
+        const isOverdue = dueStr < todayStr;
+        const pendingAmt = Math.max(0, (Number(inst.amount) || 0) - (Number(inst.paidAmount) || 0));
+
+        if (!isOverdue && pendingAmt > 0) {
+          if (!nextCollection || dueDate.getTime() < new Date(nextCollection.dueDate).getTime()) {
+            nextCollection = {
+              loanId: loan._id,
+              loanNo: loan.loanNo,
+              customerName: loan.customerId?.name || loan.customerName || 'Unknown',
+              installmentNo: inst.installmentNo,
+              dueDate,
+              amount: pendingAmt,
+            };
+          }
+        }
+
+        if (isOverdue) {
+          loanHasOverdueInst = true;
+          overdueInstallmentCount += 1;
+        }
+        if (isDueToday || isOverdue) {
+          totalDueAmount += pendingAmt;
+        }
+
+        if (isDueToday || isOverdue) {
             todayDueList.push({
               loanId: loan._id,
               loanNo: loan.loanNo,
@@ -331,13 +367,18 @@ export const getDashboardStats = async (req, res, next) => {
               installmentAmount: inst.amount,
               paidAmount: inst.paidAmount || 0,
               dueAmount: inst.amount - (inst.paidAmount || 0),
-              dueDate: inst.dueDate,
+              dueDate,
+              originalDueDate: inst.original_due_date || inst.dueDate,
+              rescheduledDueDate: inst.rescheduled_due_date || null,
               isOverdue,
               status: inst.status,
             });
           }
-        }
       });
+
+      if (loanHasOverdueInst) {
+        derivedOverdueLoans.push(loan);
+      }
     });
 
     // Sort today's list: overdue first, then by customer name
@@ -347,11 +388,10 @@ export const getDashboardStats = async (req, res, next) => {
       return new Date(a.dueDate) - new Date(b.dueDate);
     });
 
-    // 5. Overdue Loans Alerts List (Summary of loans with overdue status)
-    const overdueLoans = await Loan.find({ status: 'overdue' })
-      .populate('customerId', 'name phone area')
-      .sort({ updatedAt: -1 })
-      .limit(10);
+    // 5. Overdue Loans Alerts List (Computed dynamically ignoring Holiday/Leave & using rescheduled_due_date)
+    const overdueLoans = derivedOverdueLoans
+      .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
+      .slice(0, 25);
 
     // 6. Collection Trend Chart (Last 30 Days)
     const thirtyDaysAgo = new Date();
@@ -599,14 +639,19 @@ export const getDashboardStats = async (req, res, next) => {
         profitEarned,
         totalLoans: totalStats.totalLoans,
         activeLoans: totalStats.activeLoans,
-        overdueLoans: totalStats.overdueLoans,
+        overdueLoans: derivedOverdueLoans.length,
         completedLoans: totalStats.completedLoans,
+        totalDue: totalDueAmount,
       },
       financeTypes: financeTypesMap,
       todayStats: {
         collectedToday: todayCollectedAmount,
         todayPaymentsCount: todayPayments.length,
         dueCount: todayDueList.length,
+        totalDue: totalDueAmount,
+        overdueCount: overdueInstallmentCount,
+        overdueLoansCount: derivedOverdueLoans.length,
+        nextCollection,
       },
       todayDueList,
       completedTodayList: todayPayments,
