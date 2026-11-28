@@ -50,9 +50,15 @@
 }
 
 @layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
   html {
     font-family: 'Plus Jakarta Sans', 'Noto Sans Tamil', system-ui, -apple-system, sans-serif;
     -webkit-tap-highlight-color: transparent;
+    width: 100%;
+    max-width: 100%;
     overflow-x: clip;
     color: var(--ink);
   }
@@ -65,8 +71,20 @@
       linear-gradient(180deg, #F3F9FF 0%, #EAF5FF 100%);
     background-attachment: fixed;
     color: #183653;
+    width: 100%;
+    max-width: 100%;
     min-height: 100vh;
     overflow-x: clip;
+  }
+
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  img, video, canvas {
+    max-width: 100%;
   }
 }
 

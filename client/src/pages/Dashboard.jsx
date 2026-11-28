@@ -2071,7 +2071,7 @@ export const Dashboard = ({
                     </div>
 
                     {/* Right: Live Time IST Glass Card */}
-                    <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-2xl p-4 sm:p-5 text-white shadow-inner min-w-[260px] sm:min-w-[290px] shrink-0 self-start lg:self-center">
+                    <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-2xl p-4 sm:p-5 text-white shadow-inner w-full lg:w-auto lg:min-w-[270px] shrink-0 self-start lg:self-center">
                       <div className="flex items-center space-x-1.5 text-xs text-white/80 font-medium mb-1.5">
                         <Clock className="w-3.5 h-3.5 text-[#55B8F5]" />
                         <span>Live time · IST</span>

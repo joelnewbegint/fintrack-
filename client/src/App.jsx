@@ -46,7 +46,7 @@ import api from './services/api';
 
 export function App() {
   const { user, loading, isOwner, isLoanAgent, isEmiAgent, isClient } = useAuth();
-  const { isMobile, isTablet, isLaptop, isRealPhone } = useDeviceMode();
+  const { isMobile, isTablet, isLaptop, isRealPhone, isOverride } = useDeviceMode();
 
   // Role-based activeTab default
   const [activeTab, setActiveTab] = useState(() => {
@@ -360,11 +360,15 @@ export function App() {
   const [customers, setCustomers] = useState([]);
   const [activeLoans, setActiveLoans] = useState([]);
 
-  // Sidebar Minimization State
+  // Sidebar Minimization State (auto-compact on tablet by default)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     try {
       const saved = localStorage.getItem('fintrack_sidebar_collapsed');
       if (saved !== null) return JSON.parse(saved);
+      if (typeof window !== 'undefined') {
+        const w = window.innerWidth;
+        return w >= 768 && w < 1200;
+      }
       return false;
     } catch {
       return false;
@@ -665,7 +669,7 @@ export function App() {
     <ProtectedRoute allowedRoles={['owner', 'admin', 'loan_agent', 'agent', 'client']}>
       <div
         className={`min-h-screen flex flex-col font-sans relative overflow-x-clip ${
-          isMobile && !isRealPhone
+          isMobile && !isRealPhone && isOverride
             ? 'max-w-[440px] mx-auto border-x border-orange-200/40 shadow-2xl'
             : 'w-full'
         }`}
@@ -704,7 +708,7 @@ export function App() {
 
       <div
         className={`flex-1 flex w-full relative z-10 ${
-          isMobile && !isRealPhone ? 'max-w-[440px] mx-auto' : ''
+          isMobile && !isRealPhone && isOverride ? 'max-w-[440px] mx-auto' : ''
         }`}
       >
         {/* Desktop / Tablet Sidebar */}

@@ -241,10 +241,13 @@ export const Navbar = ({
           {/* Brand Name */}
           <div className="flex flex-col justify-center min-w-0">
             <div className="flex items-center space-x-2">
-              <span className="font-black text-sm sm:text-base text-[#183653] tracking-tight leading-tight whitespace-nowrap">
+              <span className="font-black text-sm sm:text-base text-[#183653] tracking-tight leading-tight whitespace-nowrap lg:hidden">
+                {lang === 'ta' ? 'வி.கே. பேங்கர்ஸ்' : "VK BANKER'S"}
+              </span>
+              <span className="font-black text-sm sm:text-base text-[#183653] tracking-tight leading-tight whitespace-nowrap hidden lg:inline">
                 {lang === 'ta' ? 'வி.கே. பேங்கர்ஸ் & பைனான்ஸ்' : "VK BANKER'S & FINANCE"}
               </span>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] tracking-wide hidden md:inline-flex items-center">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#EAF5FF] text-[#0878D1] border border-[#D5E9FA] tracking-wide hidden xl:inline-flex items-center">
                 {lang === 'ta' ? "VK Banker's" : 'வி.கே.'}
               </span>
             </div>
@@ -252,7 +255,7 @@ export const Navbar = ({
         </div>
 
         {/* Center: Search pill & Loans Shortcut */}
-        <div className="flex-1 max-w-xs sm:max-w-md mx-1 sm:mx-2 flex items-center space-x-2">
+        <div className="flex-1 min-w-0 max-w-xs lg:max-w-md mx-1 sm:mx-2 flex items-center space-x-2">
           <button
             onClick={onOpenSearch}
             className="flex-1 h-9 flex items-center justify-between px-3.5 rounded-full bg-white/80 border border-[#D5E9FA] text-xs text-[#647C95] hover:border-[#55B8F5] hover:text-[#183653] transition shadow-xs"
@@ -305,7 +308,7 @@ export const Navbar = ({
             ) : (
               <span className="w-2 h-2 rounded-full bg-[#8A4A1F] shrink-0 animate-pulse" />
             )}
-            <span className="text-[11px] font-bold">{syncState.status === 'synced' ? 'Synced' : 'Offline'}</span>
+            <span className="hidden xl:inline text-[11px] font-bold">{syncState.status === 'synced' ? 'Synced' : 'Offline'}</span>
           </button>
 
           {/* Notification Bell */}

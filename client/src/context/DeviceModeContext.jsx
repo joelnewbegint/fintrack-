@@ -13,23 +13,33 @@ const getScreenDevice = () => {
 };
 
 export const DeviceModeProvider = ({ children }) => {
-  const [mode, setModeState] = useState(() => {
-    return localStorage.getItem(STORAGE_KEY) || 'auto';
-  });
-
+  // Always fit dynamically to the current device on startup/refresh
+  const [mode, setModeState] = useState('auto');
   const [screenDevice, setScreenDevice] = useState(getScreenDevice);
 
-  // Listen to screen resize for auto detection
+  // Clear any legacy saved device override so every device auto-fits by default
+  useEffect(() => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {}
+  }, []);
+
+  // Listen to screen resize and orientation changes for live responsive adaptation
   useEffect(() => {
     const handleResize = () => {
       setScreenDevice(getScreenDevice());
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
   }, []);
 
-  const activeDevice = mode === 'auto' ? screenDevice : mode;
-  const isOverride = mode !== 'auto';
+  const isRealPhone = screenDevice === 'mobile';
+  const activeDevice = isRealPhone || mode === 'auto' ? screenDevice : mode;
+  const isOverride = !isRealPhone && mode !== 'auto';
 
   // Apply data-device attribute to <html>
   useEffect(() => {
@@ -39,15 +49,12 @@ export const DeviceModeProvider = ({ children }) => {
   }, [activeDevice, isOverride]);
 
   const setMode = useCallback((newMode) => {
-    setModeState(newMode);
-    localStorage.setItem(STORAGE_KEY, newMode);
+    setModeState(newMode || 'auto');
   }, []);
 
   const resetToAuto = useCallback(() => {
-    setMode('auto');
-  }, [setMode]);
-
-  const isRealPhone = typeof window !== 'undefined' && window.innerWidth < 768;
+    setModeState('auto');
+  }, []);
 
   return (
     <DeviceModeContext.Provider
